@@ -1,0 +1,32 @@
+# Environment — never commit secrets (CLAUDE.md §5)
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Logs
+*.log
+
+# Node (future stack)
+node_modules/
+npm-debug.log*
+pnpm-debug.log*
+
+# Build output (future stack)
+dist/
+build/
+out/
+coverage/
+.next/
+.vercel/
+
+# Claude Code local overrides
+.claude/settings.local.json

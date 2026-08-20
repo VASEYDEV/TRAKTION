@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 256" role="img" aria-label="TRAKTION wordmark with tread-mark T badge">
+  <defs>
+    <linearGradient id="trak-lg" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="256" y2="256">
+      <stop offset="0" stop-color="#F59E0B"/>
+      <stop offset="1" stop-color="#EA580C"/>
+    </linearGradient>
+  </defs>
+  <g>
+    <rect x="8" y="8" width="240" height="240" rx="52" fill="url(#trak-lg)"/>
+    <rect x="110" y="80" width="36" height="117" rx="8" fill="#FFFFFF"/>
+    <rect x="58" y="59" width="140" height="36" rx="8" fill="#FFFFFF"/>
+    <rect x="110" y="117" width="36" height="9" fill="url(#trak-lg)"/>
+    <rect x="110" y="141" width="36" height="9" fill="url(#trak-lg)"/>
+    <rect x="110" y="165" width="36" height="9" fill="url(#trak-lg)"/>
+  </g>
+  <!-- neutral gray keeps the wordmark legible on light and dark backgrounds -->
+  <text x="300" y="172" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="118" font-weight="800" letter-spacing="6" fill="#7D8590">TRAKTION</text>
+</svg>
