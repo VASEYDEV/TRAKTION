@@ -7,7 +7,7 @@ cd "$(dirname "$0")/.."
 
 fail=0
 
-required=(README.md LICENSE CHANGELOG.md SECURITY.md CODE_OF_CONDUCT.md CLAUDE.md .editorconfig .gitignore)
+required=(README.md LICENSE CHANGELOG.md SECURITY.md CODE_OF_CONDUCT.md CLAUDE.md AGENTS.md .editorconfig .gitignore)
 for f in "${required[@]}"; do
   if [[ ! -f "$f" ]]; then
     echo "MISSING required file: $f"
