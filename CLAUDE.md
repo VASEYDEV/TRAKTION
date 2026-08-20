@@ -109,7 +109,7 @@ README statements are claims — they pass the same verify-before-claiming rule 
 ## Project Notes
 
 **Project:** TRAKTION — experimental I/O prompting tool: modular inputs that dynamically influence the VIZION enhancement tool. "Be Right on TRAK."
-**Brand:** VASEY/AI
+**Brand:** VASEY/AI — under the Vasey Studios umbrella (new top-level business; its logo is forthcoming, not in this repo yet)
 **Stack:** none yet — docs-only concept stage; framework TBD with the first implementation
 **Package manager:** none yet — decide with the stack (default npm unless it dictates otherwise)
 **Commands:** dev `n/a — no app yet` · gate `bash scripts/gate.sh`

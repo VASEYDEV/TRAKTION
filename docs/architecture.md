@@ -26,9 +26,12 @@ Design intent, not yet built:
 | Dynamic channel | Feeds adjustments to VIZION mid-run so the enhancement is influenced dynamically |
 | Output tap | Reads VIZION output/state back so the next inputs can react to it (the "I/O" loop) |
 
+These components surface to the user as **run flags** — the draft registry and its
+precedence rules live in [`flags.md`](flags.md).
+
 ## Open questions
 
 - Interface contract with VIZION (API, file drop, MCP, or in-process?).
 - Stack selection — decides the package manager, real gate commands, and deploy target.
-- The full flag/characteristics set for run-shaping, discussed outside this repo — to be
-  recorded here and in the README's "Status & flags" table once confirmed by the owner.
+- Reconciling the draft-v0 flag registry in [`flags.md`](flags.md) with the owner's
+  canonical list from the original design discussion.

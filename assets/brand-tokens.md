@@ -1,6 +1,12 @@
 # TRAKTION brand tokens
 
-Brand: **VASEY/AI** (AI tooling). Keep separate from VASEY.AUDIO per `CLAUDE.md` §10.
+Brand hierarchy:
+
+- **Vasey Studios** — the new top-level umbrella business (announced 2026-08-20; its own
+  logo is forthcoming and does not exist in this repo yet).
+- **VASEY/AI** — the AI-tooling brand under Vasey Studios. TRAKTION ships under it.
+- **VASEY.AUDIO** (Sean Vasey Productions — music) is a sibling brand; never conflate it
+  with VASEY/AI per `CLAUDE.md` §10.
 
 ## Color
 

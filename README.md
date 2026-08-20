@@ -17,25 +17,37 @@
 
 TRAKTION is an experimental I/O prompting tool built to sit alongside **VIZION**, our enhancement tool. Where VIZION enhances, TRAKTION steers: the goal is a set of **modular inputs** through which an enhancement can be **dynamically influenced** — composed per run instead of locked into one monolithic, up-front prompt.
 
-## Status & flags
+## Status
 
 **Pre-alpha, concept stage.** This repository currently carries the project's documentation, brand assets, and engineering standard; no application code has landed yet.
 
-| Flag | Meaning |
+| Status flag | Meaning |
 | --- | --- |
 | `experimental` | Interfaces, naming, and scope can change without notice. |
 | `concept` | Docs and standards only — nothing runnable ships from this repo yet. |
 | `companion` | Designed to pair with VIZION, not to stand alone. |
-| `modular-io` | Inputs are composed from interchangeable modules, not one fixed prompt. |
-| `dynamic` | Built to influence an enhancement while it runs, not only before it starts. |
 
 ## Design goals
 
 These are direction, not shipped features:
 
-- **Modular inputs** — prompting building blocks that combine per run.
+- **Modular inputs** — prompting building blocks that combine per run, not one fixed prompt.
 - **Dynamic influence** — steer the enhancement mid-run through a live input channel.
 - **VIZION-native I/O** — the input/output contract is designed around the VIZION enhancement loop from day one.
+
+## Run flags — draft v0
+
+TRAKTION's modular inputs surface as **run flags**: each flag maps to one input module or channel of the [architecture](docs/architecture.md). This registry is the current design spec — nothing is implemented yet, and the full semantics, precedence rules, and open questions live in [`docs/flags.md`](docs/flags.md).
+
+| Flag | Kind | What it does |
+| --- | --- | --- |
+| `--trak <name>` | module stack | Loads a named stack of input modules (a *trak*) as the run's baseline intent. |
+| `--grip <0–100>` | influence weight | How firmly the composed inputs hold VIZION to that intent (100 = strict adherence). |
+| `--drift` | latitude | Loosens the hold — VIZION may explore beyond the composed intent where grip allows. |
+| `--steer <input>` | live input | Injects a mid-run adjustment through the dynamic channel. Repeatable. |
+| `--lock <aspect>` | constraint | Pins an aspect (subject, palette, composition, …) so neither steer nor drift can alter it. Repeatable. |
+| `--tap` | feedback | Streams VIZION's output state back to the composer so later inputs can react to it. |
+| `--dry` | safety | Composes and prints the full I/O payload without sending anything to VIZION. |
 
 ## Quick start
 
@@ -73,4 +85,4 @@ Source-available under the [PolyForm Noncommercial License 1.0.0](LICENSE): read
 
 ---
 
-<p align="center"><sub><strong>VASEY/AI</strong> · AI tooling by Sean Vasey — Vasey Multimedia</sub></p>
+<p align="center"><sub><strong>VASEY/AI</strong> · AI tooling by Sean Vasey · a Vasey Studios project</sub></p>

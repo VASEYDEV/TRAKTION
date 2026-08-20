@@ -9,7 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.2.0] - 2026-08-20
 
+### Added
+
+- **Run-flag registry, draft v0** (`docs/flags.md` + README "Run flags" table): seven
+  traction-named flags (`--trak`, `--grip`, `--drift`, `--steer`, `--lock`, `--tap`,
+  `--dry`) mapping 1:1 to the architecture's components, with precedence rules and open
+  questions. Design spec only — nothing implemented yet.
+- ADR 0002 (license switch) and ADR 0003 (brand hierarchy).
+
 ### Changed
+
+- **Brand hierarchy recorded:** VASEY/AI now sits under the forthcoming **Vasey Studios**
+  umbrella; README footer and `assets/brand-tokens.md` updated (no Vasey Studios logo in
+  this repo until the owner's forthcoming mark lands).
+- README "Status & flags" split into a compact status table and the new run-flag
+  registry.
 
 - **License replaced: Unlicense → PolyForm Noncommercial 1.0.0** (owner decision,
   [ADR 0002](docs/decisions/0002-license-polyform-pending-mit.md)). TRAKTION is now
