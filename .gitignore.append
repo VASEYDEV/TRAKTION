@@ -1,0 +1,10 @@
+# TRAKTION private/local additions
+.env
+.env.*
+*.xcuserstate
+DerivedData/
+.traktion-local/
+Tests/RealWorldFixtures/Private/
+Tests/RealWorldFixtures/Local/
+Secrets/
+diagnostics/local/

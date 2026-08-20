@@ -1,15 +1,29 @@
 name: ci
-
 on:
   pull_request:
   push:
     branches: [main]
 
 jobs:
-  gate:
-    name: repo-standard gate
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Run verification gate
+      - uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: "6.1"
+      - name: Install zlib headers
+        run: sudo apt-get update && sudo apt-get install -y zlib1g-dev
+      - name: Repository gate
         run: bash scripts/gate.sh
+      - name: Test
+        run: swift test
+      - name: Release build
+        run: swift build -c release
+      - name: End-to-end fixture
+        run: |
+          swift run fixture-forge "$RUNNER_TEMP/fixture"
+          swift run traktion-lab reconstruct --axis vertical --output "$RUNNER_TEMP/fixture/composite.png" "$RUNNER_TEMP/fixture/capture-001.png" "$RUNNER_TEMP/fixture/capture-002.png"
+          cmp "$RUNNER_TEMP/fixture/source.png" "$RUNNER_TEMP/fixture/composite.png"
+          test -f "$RUNNER_TEMP/fixture/composite.reconstruction.json"
+          test -f "$RUNNER_TEMP/fixture/composite.joint-001.json"

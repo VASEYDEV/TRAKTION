@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TRAKTION Agent Task",
+  "type": "object",
+  "required": [
+    "title",
+    "goal",
+    "requiredBehavior",
+    "nonGoals",
+    "acceptanceCriteria",
+    "writer",
+    "reviewer"
+  ],
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "goal": {
+      "type": "string"
+    },
+    "whyItMatters": {
+      "type": "string"
+    },
+    "currentBehavior": {
+      "type": "string"
+    },
+    "requiredBehavior": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "nonGoals": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "allowedPaths": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "forbiddenChanges": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "fixtures": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "acceptanceCriteria": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "commands": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "requiredEvidence": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "writer": {
+      "type": "string"
+    },
+    "reviewer": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

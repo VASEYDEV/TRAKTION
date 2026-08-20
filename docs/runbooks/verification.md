@@ -1,28 +1,23 @@
-# Runbook — verification gate
+# Verification runbook
 
-## Run it locally
+Run these commands from the repository root on every material change:
 
 ```bash
+swift format lint --recursive --strict Package.swift App Packages Tools Tests
+swift test
+swift build -c release
 bash scripts/gate.sh
 ```
 
-Exit code 0 and a final `GATE: PASS` line mean the repo standard holds.
+For an end-to-end reconstruction check:
 
-## What CI runs
+```bash
+rm -rf /tmp/traktion-fixture
+swift run fixture-forge /tmp/traktion-fixture
+swift run traktion-lab reconstruct --axis vertical --output /tmp/traktion-fixture/composite.png /tmp/traktion-fixture/capture-001.png /tmp/traktion-fixture/capture-002.png
+cmp /tmp/traktion-fixture/source.png /tmp/traktion-fixture/composite.png
+test -f /tmp/traktion-fixture/composite.reconstruction.json
+test -f /tmp/traktion-fixture/composite.joint-001.json
+```
 
-`.github/workflows/ci.yml` runs the same script on every pull request and every push to
-`main`, so local and CI verification never diverge.
-
-## What the gate checks today (docs-only stage)
-
-1. Required files exist: `README.md`, `LICENSE`, `CHANGELOG.md`, `SECURITY.md`,
-   `CODE_OF_CONDUCT.md`, `CLAUDE.md`, `.editorconfig`, `.gitignore`.
-2. No unfilled double-brace template placeholders remain outside `docs/legal/`.
-3. `CLAUDE.md` stays under 200 lines (§2 context-hygiene rule).
-4. No env files are committed (`.env.example` excepted) and no private-key material
-   appears anywhere in the tree (§5).
-
-## When application code lands
-
-Replace the shell checks with the real §3 gate — lint · typecheck · unit ·
-integration · build — in the same PR that introduces the code, and update this runbook.
+`cmp` proves byte-identical PNG output for the deterministic exact fixture. Unit tests additionally compare decoded pixels, exercise three captures, and cover ambiguous repetition, insufficient overlap, width mismatch, and duplicate inputs.
