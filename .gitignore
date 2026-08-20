@@ -30,3 +30,12 @@ coverage/
 
 # Claude Code local overrides
 .claude/settings.local.json
+
+# TRAKTION private/local additions (from Foundation Kit)
+*.xcuserstate
+DerivedData/
+.traktion-local/
+Tests/RealWorldFixtures/Private/
+Tests/RealWorldFixtures/Local/
+Secrets/
+diagnostics/local/

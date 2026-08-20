@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-08-20
+
+### Added
+
+- **TRAKTION Foundation Kit v1 installed at repo root** (owner upload, all 49 files
+  sha256-verified against `MANIFEST.json`): canonical agent contract `AGENTS.md`, product
+  and architecture spec under `docs/` (PRODUCT, ARCHITECTURE, RECONSTRUCTION_SPEC,
+  EDITING_MODEL, EVALUATION, MODEL_POLICY, ROADMAP, PRIVACY, SECURITY, REPO_LAYOUT,
+  DEVELOPMENT_WORKFLOW), product ADRs `docs/adr/ADR-001..010`, phased agent prompts
+  (`prompts/`), issue/PR templates (`.github/`, `templates/`), and task/review JSON
+  schemas (`config/`).
+- Repo-governance ADR 0004 recording the kit adoption and reconciliation.
+
+### Changed
+
+- **Product pivot (breaking for docs):** TRAKTION is a native Swift precision
+  reconstruction utility — overlapping screenshots, scroll captures, and recording
+  frames stitched into one continuous, editable image. The earlier "modular I/O
+  prompting for VIZION" concept framing is retired. **Upgrade note:** links to
+  `docs/architecture.md` and `docs/flags.md` are gone; see `docs/ARCHITECTURE.md` and
+  `docs/PRODUCT.md`.
+- `CLAUDE.md` is now the kit's agent-compatibility shim (canonical contract:
+  `AGENTS.md`) plus non-canonical repository facts; the v3.0 engineering-standard text
+  moved out of the root per the kit's single-policy-layer rule (kept in git history).
+- README rewritten to the kit's product statement: design invariants, planned modes,
+  confidence states, spec reading order, and Swift/`TraktionLab` stack notes.
+- `.gitignore` gains the kit's private/local entries (Xcode state, private fixtures,
+  secrets, local diagnostics); `scripts/gate.sh` now also requires `AGENTS.md`.
+
+### Removed
+
+- `TRAKTION_Foundation_Kit_v1.zip` (unpacked; original preserved in git history).
+- Concept-stage `docs/architecture.md` (superseded; case-collided with the kit's
+  `docs/ARCHITECTURE.md`) and draft-v0 `docs/flags.md` (the kit defines no run-flag
+  surface).
+
 ## [0.2.0] - 2026-08-20
 
 ### Added
