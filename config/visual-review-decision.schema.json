@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TRAKTION Visual Review Decision",
+  "type": "object",
+  "required": [
+    "action",
+    "confidence",
+    "abstain",
+    "reasonCode"
+  ],
+  "properties": {
+    "action": {
+      "type": "string",
+      "enum": [
+        "no_change",
+        "suggest_reorder",
+        "classify_region",
+        "prefer_source",
+        "suspect_missing_coverage",
+        "manual_review"
+      ]
+    },
+    "targetId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "classification": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        null,
+        "sticky_header",
+        "sticky_footer",
+        "floating_control",
+        "transient_content",
+        "document_content",
+        "unknown"
+      ]
+    },
+    "preferredSourceAssetId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "suggestedOrder": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "string"
+      }
+    },
+    "missingCoverageSuspected": {
+      "type": "boolean"
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "abstain": {
+      "type": "boolean"
+    },
+    "reasonCode": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}
