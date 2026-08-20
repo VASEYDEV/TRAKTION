@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="TRAKTION icon: white letter T with tire-tread notches on an amber badge">
+  <defs>
+    <linearGradient id="trak-g" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="512" y2="512">
+      <stop offset="0" stop-color="#F59E0B"/>
+      <stop offset="1" stop-color="#EA580C"/>
+    </linearGradient>
+  </defs>
+  <!-- badge -->
+  <rect x="16" y="16" width="480" height="480" rx="104" fill="url(#trak-g)"/>
+  <!-- T stem (drawn first so its rounded top tucks under the bar) -->
+  <rect x="220" y="160" width="72" height="234" rx="16" fill="#FFFFFF"/>
+  <!-- T bar -->
+  <rect x="116" y="118" width="280" height="72" rx="16" fill="#FFFFFF"/>
+  <!-- tread notches: gradient-filled so they read as cuts through the stem -->
+  <rect x="220" y="234" width="72" height="18" fill="url(#trak-g)"/>
+  <rect x="220" y="282" width="72" height="18" fill="url(#trak-g)"/>
+  <rect x="220" y="330" width="72" height="18" fill="url(#trak-g)"/>
+</svg>
