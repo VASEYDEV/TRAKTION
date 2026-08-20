@@ -8,8 +8,8 @@
 
 <p align="center">
   <a href="https://github.com/vaseydev/traktion/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/vaseydev/traktion/ci.yml?branch=main&label=gate" alt="CI gate status"></a>
-  <img src="https://img.shields.io/badge/version-0.1.0-blue" alt="Version 0.1.0">
-  <img src="https://img.shields.io/badge/license-Unlicense-lightgrey" alt="License: Unlicense">
+  <img src="https://img.shields.io/badge/version-0.2.0-blue" alt="Version 0.2.0">
+  <img src="https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-crimson" alt="License: PolyForm Noncommercial 1.0.0">
   <img src="https://img.shields.io/badge/status-experimental-orange" alt="Status: experimental">
 </p>
 
@@ -63,9 +63,13 @@ bash scripts/gate.sh   # run the repo-standard verification gate
 
 All changes follow the engineering standard in [`CLAUDE.md`](CLAUDE.md). Conduct is governed by the [Code of Conduct](CODE_OF_CONDUCT.md); vulnerabilities go through the [security policy](SECURITY.md), not public issues.
 
+Contributions are accepted on the understanding that the project will relicense to MIT when it goes open source — by contributing you grant the maintainer the right to include your contribution under that future license.
+
 ## License
 
-Released into the public domain under [the Unlicense](LICENSE).
+Source-available under the [PolyForm Noncommercial License 1.0.0](LICENSE): read, use, modify, and share it for any noncommercial purpose; commercial use is reserved while the project incubates. The plan of record is to relicense under MIT at public open-sourcing (see [`docs/decisions/0002-license-polyform-pending-mit.md`](docs/decisions/0002-license-polyform-pending-mit.md)).
+
+> Required Notice: Copyright 2026 Sean Vasey
 
 ---
 

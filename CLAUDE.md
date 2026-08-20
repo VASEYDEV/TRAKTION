@@ -115,6 +115,6 @@ README statements are claims — they pass the same verify-before-claiming rule 
 **Commands:** dev `n/a — no app yet` · gate `bash scripts/gate.sh`
 **Deploy:** none yet — Vercel per §9 once a deployable app exists
 **Repo-specific invariants** (§1.8 corrected-twice rules land here):
-- LICENSE is the Unlicense, chosen at repo creation — do not swap to MIT without explicit owner approval.
+- LICENSE is PolyForm Noncommercial 1.0.0 (owner decision 2026-08-20, ADR 0002): restrictive while the project incubates, with a planned relicense to MIT at public open-sourcing. Do not change it without explicit owner approval; external contributions must carry a grant permitting the MIT relicense.
 - Until an application stack lands, the §3 gate is `bash scripts/gate.sh` (repo-standard checks); replace it with real lint/typecheck/test/build in the same PR that introduces code.
 - Working notes are dated files in `docs/notes/` (`YYYY-MM-DD-topic.md`); every meaningful change also gets a `CHANGELOG.md` entry.

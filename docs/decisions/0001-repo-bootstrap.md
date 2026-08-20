@@ -15,6 +15,8 @@ created before any application code lands.
 2. **License stays the Unlicense.** The standard defaults to MIT, but this repo was
    created under the Unlicense — treated as "the project specifies otherwise" (§7).
    Swapping licenses requires explicit owner approval.
+   *Superseded by [ADR 0002](0002-license-polyform-pending-mit.md) (2026-08-20): the
+   owner directed a restrictive license; now PolyForm Noncommercial 1.0.0.*
 3. **Shell gate until a stack exists.** There is no package.json or framework yet, so the
    §3 gate is `scripts/gate.sh` (required files present, no template placeholders,
    `CLAUDE.md` under 200 lines, no committed env files or key material), run locally and

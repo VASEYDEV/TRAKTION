@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-08-20
+
+### Changed
+
+- **License replaced: Unlicense → PolyForm Noncommercial 1.0.0** (owner decision,
+  [ADR 0002](docs/decisions/0002-license-polyform-pending-mit.md)). TRAKTION is now
+  source-available for noncommercial use only while it incubates; the plan of record is a
+  relicense to MIT at public open-sourcing. **Upgrade note:** anything obtained from the
+  repo before this change remains public domain under the Unlicense; everything from
+  0.2.0 onward is PolyForm NC.
+- README Contributing section now states the inbound relicense grant (contributions must
+  permit the future MIT switch).
+
 ## [0.1.0] - 2026-08-20
 
 ### Added
