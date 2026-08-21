@@ -58,7 +58,8 @@ The repository currently specifies deterministic reconstruction but cannot build
 - `Package.swift`
 - `scripts/`
 - `README.md`, `CHANGELOG.md`, `FOUNDATION_CHECKLIST.md`
-- `docs/runbooks/`, `docs/notes/`, `docs/tasks/`
+- `CLAUDE.md`
+- `docs/adr/`, `docs/runbooks/`, `docs/notes/`, `docs/tasks/`
 
 No license, brand asset, product-invariant, or model-policy change is authorized.
 

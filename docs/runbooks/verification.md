@@ -1,28 +1,49 @@
-# Runbook — verification gate
+# Runbook — verification gates
 
-## Run it locally
+## Portable repository check
+
+```bash
+bash scripts/check-repository.sh
+```
+
+This validates required project files, unfilled placeholders, the compact `CLAUDE.md`
+shim, committed environment/private-key material, and every tracked JSON document. It
+searches tracked files only, so generated SwiftPM/Xcode output cannot create false hits.
+
+## Platform-neutral Swift verification
+
+```bash
+bash scripts/verify-core.sh
+```
+
+This requires Swift 6, parses the package manifest, builds every SwiftPM target, and runs
+the unit, golden, failure-path, determinism, performance-shape, and conditional PNG tests.
+The PNG test explicitly skips when Apple ImageIO is unavailable.
+
+## Complete Apple gate
 
 ```bash
 bash scripts/gate.sh
 ```
 
-Exit code 0 and a final `GATE: PASS` line mean the repo standard holds.
+The complete gate requires macOS. It runs the repository check and Swift suite, then:
 
-## What CI runs
+1. builds release `fixture-forge` and `traktion-lab` executables;
+2. generates three synthetic PNG captures and untouched source truth;
+3. reconstructs the captures through the shipping core;
+4. writes the composite, deterministic manifest, and two joints' JSON/difference PNGs;
+5. decodes the source and composite and requires exact RGBA equality.
 
-`.github/workflows/ci.yml` runs the same script on every pull request and every push to
-`main`, so local and CI verification never diverge.
+Successful completion ends with `GATE: PASS (repository · Swift build/tests · Apple PNG smoke)`.
 
-## What the gate checks today (docs-only stage)
+## CI lanes
 
-1. Required files exist: `README.md`, `LICENSE`, `CHANGELOG.md`, `SECURITY.md`,
-   `CODE_OF_CONDUCT.md`, `CLAUDE.md`, `.editorconfig`, `.gitignore`.
-2. No unfilled double-brace template placeholders remain outside `docs/legal/`.
-3. `CLAUDE.md` stays under 200 lines (§2 context-hygiene rule).
-4. No env files are committed (`.env.example` excepted) and no private-key material
-   appears anywhere in the tree (§5).
+`.github/workflows/ci.yml` runs on every pull request and push to `main`:
 
-## When application code lands
+- `verify / repository` on Ubuntu;
+- `verify / core (Linux)` in the official Swift 6 Ubuntu image;
+- `verify / Apple package and PNG smoke` on `macos-15`;
+- `verification / required`, an `always()` aggregator that fails unless all three pass.
 
-Replace the shell checks with the real §3 gate — lint · typecheck · unit ·
-integration · build — in the same PR that introduces the code, and update this runbook.
+On Apple-smoke failure, CI retains only the generated synthetic fixture, composite,
+manifest, and diagnostics. Private/real captures must never enter Actions artifacts.

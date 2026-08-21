@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://github.com/vaseydev/traktion/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/vaseydev/traktion/ci.yml?branch=main&label=gate" alt="CI gate status"></a>
-  <img src="https://img.shields.io/badge/version-0.3.0-blue" alt="Version 0.3.0">
+  <img src="https://img.shields.io/badge/version-0.4.0--dev-blue" alt="Version 0.4.0 development">
   <img src="https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-crimson" alt="License: PolyForm Noncommercial 1.0.0">
   <img src="https://img.shields.io/badge/status-experimental-orange" alt="Status: experimental">
 </p>
@@ -21,7 +21,16 @@ Full-page capture often fails: content scrolls inside nested frames, headers sta
 
 ## Status
 
-**Foundation stage — no application code yet.** The repository carries the canonical agent contract ([`AGENTS.md`](AGENTS.md)), the full product and architecture spec ([`docs/`](docs/)), phased build prompts ([`prompts/`](prompts/)), and the repo's governance docs. Milestone 1 (a native Swift reconstruction lab, `TraktionLab`) is specified and ready to build — see [`README_FIRST.md`](README_FIRST.md) and [`FOUNDATION_CHECKLIST.md`](FOUNDATION_CHECKLIST.md).
+**Milestone 1 development.** The first Swift foundation now includes a deterministic reconstruction core, synthetic fixture generator, diagnostic CLI, golden tests, Apple PNG adapter, and deliberately minimal SwiftUI preview shell. The supported slice is narrow and explicit while its GitHub Actions evidence is hardened.
+
+| Current capability | State |
+| --- | --- |
+| Supplied-order vertical reconstruction | Implemented for 2–10 opaque, equal-width PNG captures |
+| Exact suffix/prefix overlap and seam plan | Implemented with ambiguity rejection |
+| Decoded-pixel golden comparison | Implemented for deterministic synthetic fixtures |
+| Composite, manifest, and joint diagnostics | Implemented in `traktion-lab` |
+| Horizontal, ordering, sticky UI, video, web capture | Later milestones; fail or remain disabled |
+| Native application | macOS SwiftUI preview shell only; installable iOS target is not yet present |
 
 ## Design invariants
 
@@ -41,19 +50,35 @@ Every joint in a reconstruction carries a confidence state — `exact` · `stron
 
 ## Quick start
 
-Nothing to build yet — the fastest way in is the spec:
+The platform-neutral core uses Swift 6. The complete PNG gate requires macOS because the codec adapter uses Apple ImageIO.
 
 ```bash
 git clone https://github.com/vaseydev/traktion.git
 cd traktion
-bash scripts/gate.sh   # run the repo-standard verification gate
+bash scripts/check-repository.sh  # repository policy on any host
+bash scripts/verify-core.sh       # Swift build + tests
+bash scripts/gate.sh              # complete macOS build/test/PNG smoke gate
 ```
 
-Read in order: [`AGENTS.md`](AGENTS.md) → [`docs/PRODUCT.md`](docs/PRODUCT.md) → [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) → [`docs/RECONSTRUCTION_SPEC.md`](docs/RECONSTRUCTION_SPEC.md). Coding agents start at [`prompts/00_BOOTSTRAP_AGENT.md`](prompts/00_BOOTSTRAP_AGENT.md).
+Generate and reconstruct the baseline fixture on macOS:
+
+```bash
+swift run fixture-forge baseline --output-dir /tmp/traktion-fixture
+swift run traktion-lab reconstruct \
+  --output /tmp/traktion-composite.png \
+  /tmp/traktion-fixture/capture-001.png \
+  /tmp/traktion-fixture/capture-002.png \
+  /tmp/traktion-fixture/capture-003.png
+swift run traktion-lab compare \
+  /tmp/traktion-fixture/source.png \
+  /tmp/traktion-composite.png
+```
+
+The Lab writes a reconstruction JSON sidecar plus per-joint JSON and absolute-difference PNGs. It refuses to overwrite outputs or turn unsupported/ambiguous evidence into a successful composite.
 
 ## Tech stack & environment
 
-- **Stack:** native Swift ([ADR-001](docs/adr/ADR-001-native-swift.md)); Milestone 1 targets the `TraktionLab` diagnostic CLI before any polished app.
+- **Stack:** Swift 6 and SwiftPM, native SwiftUI preview shell, Apple ImageIO PNG boundary, dependency-free platform-neutral reconstruction core ([ADR-001](docs/adr/ADR-001-native-swift.md)).
 - **Environment variables:** none yet; a documented `.env.example` lands with the first code that needs one.
 - **Architecture:** module boundaries and data flow in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md); layout in [`docs/REPO_LAYOUT.md`](docs/REPO_LAYOUT.md).
 
