@@ -33,11 +33,11 @@ jobs:
   apple:
     name: verify / Apple package and PNG smoke
     runs-on: macos-15
-    env:
-      TRAKTION_SMOKE_DIR: ${{ runner.temp }}/traktion-smoke
     steps:
       - uses: actions/checkout@v4
       - name: Run complete verification gate
+        env:
+          TRAKTION_SMOKE_DIR: ${{ runner.temp }}/traktion-smoke
         run: bash scripts/gate.sh
       - name: Retain synthetic diagnostics on failure
         if: failure()
