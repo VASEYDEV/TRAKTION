@@ -21,7 +21,7 @@ Full-page capture often fails: content scrolls inside nested frames, headers sta
 
 ## Status
 
-**Milestone 1 development.** The first Swift foundation now includes a deterministic reconstruction core, synthetic fixture generator, diagnostic CLI, golden tests, Apple PNG adapter, and deliberately minimal SwiftUI preview shell. The supported slice is narrow and explicit while its GitHub Actions evidence is hardened.
+**Milestone 1 draft review.** The first Swift foundation now includes a deterministic reconstruction core, synthetic fixture generator, diagnostic CLI, golden tests, Apple PNG adapter, and deliberately minimal SwiftUI preview shell. Its repository, Swift/Linux, macOS, PNG round-trip, and end-to-end synthetic reconstruction gates pass in the stacked draft pull request.
 
 | Current capability | State |
 | --- | --- |

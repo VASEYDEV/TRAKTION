@@ -13,9 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `TraktionUI`, `TraktionAI`, `TraktionLab`, `FixtureForge`, and a macOS SwiftUI preview
   shell.
 - Deterministic vertical reconstruction for 2–10 supplied-order, opaque, equal-width
-  captures: bounded overlap candidate search, raw exact verification, ambiguity rejection,
-  midpoint/low-difference seam selection, half-open reconstruction spans, and one final
-  output allocation.
+  captures: admissible sampled bounds, budgeted full candidate verification, raw exact
+  verification, ambiguity rejection, midpoint/low-difference seam selection, half-open
+  reconstruction spans, and one final output allocation.
 - Typed failures for unsupported axis, invalid capture count, incompatible width,
   duplicate input, insufficient overlap, ambiguous overlap, invalid plans, and unsafe
   output dimensions.

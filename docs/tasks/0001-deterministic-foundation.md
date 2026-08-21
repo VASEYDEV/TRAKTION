@@ -1,6 +1,6 @@
 # Task 0001: Deterministic Swift foundation
 
-Status: In progress
+Status: Implemented — draft review
 
 Writer: Codex (`codex/m0-m1-deterministic-foundation`)
 
@@ -16,11 +16,11 @@ Create the first runnable TRAKTION foundation and a bounded Milestone 1 vertical
 
 The repository currently specifies deterministic reconstruction but cannot build, generate controlled evidence, reconstruct a fixture, or prove pixel continuity.
 
-## Current behavior
+## Starting behavior
 
-- Foundation Kit documentation is installed on the base branch.
-- CI verifies repository hygiene only.
-- No Swift package, reconstruction engine, PNG adapter, diagnostic tool, fixture generator, app shell, or golden test exists.
+- Foundation Kit documentation was installed on the base branch.
+- CI verified repository hygiene only.
+- No Swift package, reconstruction engine, PNG adapter, diagnostic tool, fixture generator, app shell, or golden test existed.
 
 ## Required behavior
 
@@ -93,7 +93,8 @@ bash scripts/verify-core.sh
 bash scripts/gate.sh
 ```
 
-`scripts/gate.sh` is the complete Apple gate. The current coding container has no Swift toolchain, so the change remains incomplete until the macOS CI execution passes.
+`scripts/gate.sh` is the complete Apple gate. The coding container has no Swift
+toolchain, so the authoritative Swift/Linux and Apple verification ran in GitHub Actions.
 
 ## Required evidence
 
@@ -102,3 +103,8 @@ bash scripts/gate.sh
 - Reconstruction manifest
 - Per-joint diagnostic JSON and difference images
 - Exact command results in the PR handoff
+
+GitHub Actions run
+[`32529179089`](https://github.com/VASEYDEV/TRAKTION/actions/runs/32529179089)
+passed the repository, Linux Swift, Apple PNG smoke, and required-aggregator jobs before
+the final CI trigger cleanup. The same matrix remains required on the draft PR head.
