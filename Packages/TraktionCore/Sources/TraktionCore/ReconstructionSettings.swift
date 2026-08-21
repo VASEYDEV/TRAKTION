@@ -11,6 +11,8 @@ public struct ReconstructionSettings: Equatable, Sendable {
   public let maximumTotalInputPixels: Int
   public let maximumOutputPixels: Int
   public let maximumOverlapSearchRows: Int
+  public let maximumSampleComparisonsPerJoint: Int
+  public let maximumFullComparisonPixelsPerJoint: Int
 
   public init(
     minimumOverlapRows: Int = 8,
@@ -24,7 +26,9 @@ public struct ReconstructionSettings: Equatable, Sendable {
     maximumCapturePixels: Int = 16_777_216,
     maximumTotalInputPixels: Int = 67_108_864,
     maximumOutputPixels: Int = 67_108_864,
-    maximumOverlapSearchRows: Int = 16_384
+    maximumOverlapSearchRows: Int = 16_384,
+    maximumSampleComparisonsPerJoint: Int = 33_554_432,
+    maximumFullComparisonPixelsPerJoint: Int = 33_554_432
   ) {
     self.minimumOverlapRows = max(1, minimumOverlapRows)
     self.maximumNormalizedMeanAbsoluteError = max(
@@ -41,5 +45,13 @@ public struct ReconstructionSettings: Equatable, Sendable {
     self.maximumTotalInputPixels = max(1, maximumTotalInputPixels)
     self.maximumOutputPixels = max(1, maximumOutputPixels)
     self.maximumOverlapSearchRows = max(1, maximumOverlapSearchRows)
+    self.maximumSampleComparisonsPerJoint = max(
+      1,
+      maximumSampleComparisonsPerJoint
+    )
+    self.maximumFullComparisonPixelsPerJoint = max(
+      1,
+      maximumFullComparisonPixelsPerJoint
+    )
   }
 }

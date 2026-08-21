@@ -111,6 +111,13 @@ private extension ReconstructionEngine {
     let confidence: JointConfidence
   }
 
+  struct SampledCandidate: Sendable {
+    let rows: Int
+    let rankingError: Double
+    let normalizedMeanAbsoluteErrorLowerBound: Double
+    let changedPixelFractionLowerBound: Double
+  }
+
   func register(
     preceding: CaptureAsset,
     following: CaptureAsset
@@ -142,52 +149,88 @@ private extension ReconstructionEngine {
       maximumOverlap: maximumOverlap
     )
 
-    var sampled: [(rows: Int, score: Double)] = []
+    var sampled: [SampledCandidate] = []
     sampled.reserveCapacity(maximumOverlap - settings.minimumOverlapRows + 1)
+    var sampleComparisons = 0
     for overlapRows in settings.minimumOverlapRows...maximumOverlap {
+      let sampleRowCount = min(overlapRows, settings.sampledRows)
+      let sampleColumnCount = min(preceding.image.width, settings.sampledColumns)
+      let (candidateComparisons, comparisonOverflow) =
+        sampleRowCount.multipliedReportingOverflow(by: sampleColumnCount)
+      let (nextComparisons, totalOverflow) =
+        sampleComparisons.addingReportingOverflow(candidateComparisons)
+      guard !comparisonOverflow,
+        !totalOverflow,
+        nextComparisons <= settings.maximumSampleComparisonsPerJoint
+      else {
+        throw ReconstructionFailure.resourceLimitExceeded(
+          reason: "sample search for pair \(preceding.id)/\(following.id) exceeds \(settings.maximumSampleComparisonsPerJoint) pixel comparisons"
+        )
+      }
+      sampleComparisons = nextComparisons
       sampled.append(
-        (
-          rows: overlapRows,
-          score: sampledError(
-            preceding: preceding.image,
-            following: following.image,
-            overlapRows: overlapRows
-          )
+        sampledCandidate(
+          preceding: preceding.image,
+          following: following.image,
+          overlapRows: overlapRows
         )
       )
     }
     sampled.sort {
-      if $0.score == $1.score {
+      let lhsExact = exactRows.contains($0.rows)
+      let rhsExact = exactRows.contains($1.rows)
+      if lhsExact != rhsExact {
+        return lhsExact
+      }
+      if $0.rankingError == $1.rankingError {
         return $0.rows > $1.rows
       }
-      return $0.score < $1.score
+      return $0.rankingError < $1.rankingError
     }
 
     let plausible = sampled.filter {
-      $0.score <= settings.maximumNormalizedMeanAbsoluteError
-    }
-    guard plausible.count <= settings.candidateLimit else {
-      throw ReconstructionFailure.ambiguousOverlap(
-        preceding: preceding.id,
-        following: following.id,
-        candidateRows: plausible.prefix(settings.candidateLimit + 1).map(\.rows).sorted()
-      )
+      $0.normalizedMeanAbsoluteErrorLowerBound
+        <= settings.maximumNormalizedMeanAbsoluteError
+        && $0.changedPixelFractionLowerBound
+          <= settings.maximumChangedPixelFraction
     }
 
-    var candidateRows = Set(exactRows)
-    candidateRows.formUnion(plausible.map(\.rows))
+    var candidatesToScore: [SampledCandidate] = []
+    candidatesToScore.reserveCapacity(min(plausible.count, settings.candidateLimit))
+    var fullComparisonPixels = 0
+    for candidate in plausible.prefix(settings.candidateLimit) {
+      let (candidatePixels, candidateOverflow) =
+        preceding.image.width.multipliedReportingOverflow(by: candidate.rows)
+      let (nextPixels, totalOverflow) =
+        fullComparisonPixels.addingReportingOverflow(candidatePixels)
+      guard !candidateOverflow,
+        !totalOverflow,
+        nextPixels <= settings.maximumFullComparisonPixelsPerJoint
+      else {
+        break
+      }
+      candidatesToScore.append(candidate)
+      fullComparisonPixels = nextPixels
+    }
 
-    var scored = candidateRows.map {
+    var scored = candidatesToScore.map {
       score(
         preceding: preceding.image,
         following: following.image,
-        overlapRows: $0
+        overlapRows: $0.rows
       )
     }
     scored.sort(by: candidateOrdering)
+    let scoredRows = Set(candidatesToScore.map(\.rows))
+    let unscored = plausible.filter { !scoredRows.contains($0.rows) }
 
     let acceptable = scored.filter(isAcceptable)
     guard let best = acceptable.first else {
+      guard unscored.isEmpty else {
+        throw ReconstructionFailure.resourceLimitExceeded(
+          reason: "full verification for pair \(preceding.id)/\(following.id) exceeds its candidate or pixel-comparison budget"
+        )
+      }
       throw ReconstructionFailure.insufficientOverlap(
         preceding: preceding.id,
         following: following.id,
@@ -195,9 +238,20 @@ private extension ReconstructionEngine {
       )
     }
 
-    if let competing = acceptable.dropFirst().first,
-      overlapsAreAmbiguous(best, competing)
-    {
+    if let unresolved = unscored.first(where: {
+      $0.normalizedMeanAbsoluteErrorLowerBound
+        <= best.normalizedMeanAbsoluteError + settings.ambiguityTolerance
+    }) {
+      throw ReconstructionFailure.ambiguousOverlap(
+        preceding: preceding.id,
+        following: following.id,
+        candidateRows: [best.overlapRows, unresolved.rows].sorted()
+      )
+    }
+
+    if let competing = acceptable.dropFirst().first(where: {
+      overlapsAreAmbiguous(best, $0)
+    }) {
       throw ReconstructionFailure.ambiguousOverlap(
         preceding: preceding.id,
         following: following.id,
@@ -383,15 +437,16 @@ private extension ReconstructionEngine {
     return hashes
   }
 
-  func sampledError(
+  func sampledCandidate(
     preceding: RasterImage,
     following: RasterImage,
     overlapRows: Int
-  ) -> Double {
+  ) -> SampledCandidate {
     let rows = sampleIndices(count: overlapRows, maximum: settings.sampledRows)
     let columns = sampleIndices(count: preceding.width, maximum: settings.sampledColumns)
     let precedingStartRow = preceding.height - overlapRows
     var difference: UInt64 = 0
+    var changedPixels = 0
 
     for row in rows {
       for column in columns {
@@ -400,22 +455,39 @@ private extension ReconstructionEngine {
           y: precedingStartRow + row
         )
         let followingOffset = following.byteOffset(x: column, y: row)
+        var pixelChanged = false
         for channel in 0..<RasterImage.channelsPerPixel {
-          difference += UInt64(
-            abs(
-              Int(preceding.pixels[precedingOffset + channel])
-                - Int(following.pixels[followingOffset + channel])
-            )
+          let channelDifference = abs(
+            Int(preceding.pixels[precedingOffset + channel])
+              - Int(following.pixels[followingOffset + channel])
           )
+          difference += UInt64(channelDifference)
+          if channelDifference > Int(settings.changedChannelThreshold) {
+            pixelChanged = true
+          }
+        }
+        if pixelChanged {
+          changedPixels += 1
         }
       }
     }
 
-    let denominator = Double(rows.count)
+    let rankingDenominator = Double(rows.count)
       * Double(columns.count)
       * Double(RasterImage.channelsPerPixel)
       * 255
-    return Double(difference) / denominator
+    let fullPixelCount = overlapRows * preceding.width
+    let fullErrorDenominator = Double(fullPixelCount)
+      * Double(RasterImage.channelsPerPixel)
+      * 255
+    return SampledCandidate(
+      rows: overlapRows,
+      rankingError: Double(difference) / rankingDenominator,
+      normalizedMeanAbsoluteErrorLowerBound: Double(difference)
+        / fullErrorDenominator,
+      changedPixelFractionLowerBound: Double(changedPixels)
+        / Double(fullPixelCount)
+    )
   }
 
   func score(

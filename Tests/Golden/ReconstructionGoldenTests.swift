@@ -30,34 +30,53 @@ final class ReconstructionGoldenTests: XCTestCase {
   }
 
   func testBoundedNearExactOverlapUsesTheUniqueRegistration() throws {
-    let fixture = try SyntheticFixtureFactory.exactTwoCapture()
-    var changedPixels = fixture.captures[1].image.pixels
-    for row in 0..<2 {
-      for column in 0..<8 {
-        let offset = fixture.captures[1].image.byteOffset(x: column, y: row)
-        changedPixels[offset] ^= 1
+    let source = try SyntheticFixtureFactory.document(
+      width: 40,
+      height: 40,
+      seed: 0x5341_4D50
+    )
+    let preceding = try crop(source, startRow: 0, rowCount: 30)
+    let following = try crop(source, startRow: 10, rowCount: 30)
+    var changedPixels = following.pixels
+    for column in [0, following.width - 1] {
+      let offset = following.byteOffset(x: column, y: 0)
+      for channel in 0..<3 {
+        changedPixels[offset + channel] ^= 255
       }
     }
     let changedFollowing = CaptureAsset(
-      id: fixture.captures[1].id,
-      sourceName: fixture.captures[1].sourceName,
+      id: "sampled-002",
+      sourceName: "sampled-002.png",
       image: try RasterImage(
-        width: fixture.captures[1].image.width,
-        height: fixture.captures[1].image.height,
+        width: following.width,
+        height: following.height,
         pixels: changedPixels
       )
     )
     let sequence = CaptureSequence(
-      captures: [fixture.captures[0], changedFollowing]
+      captures: [
+        CaptureAsset(
+          id: "sampled-001",
+          sourceName: "sampled-001.png",
+          image: preceding
+        ),
+        changedFollowing,
+      ]
     )
-    let engine = ReconstructionEngine()
+    let engine = ReconstructionEngine(
+      settings: ReconstructionSettings(
+        sampledRows: 2,
+        sampledColumns: 2,
+        candidateLimit: 64
+      )
+    )
 
     let first = try engine.reconstruct(sequence)
     let second = try engine.reconstruct(sequence)
 
-    XCTAssertEqual(first.plan.joints.map(\.overlapRows), fixture.expectedOverlaps)
+    XCTAssertEqual(first.plan.joints.map(\.overlapRows), [20])
     XCTAssertEqual(first.plan.joints.map(\.confidence), [.strong])
-    XCTAssertEqual(first.image, fixture.source)
+    XCTAssertEqual(first.image, source)
     XCTAssertEqual(first, second)
   }
 
@@ -180,9 +199,40 @@ final class ReconstructionGoldenTests: XCTestCase {
       }
     }
   }
+
+  func testFullComparisonBudgetFailsClosed() throws {
+    let fixture = try SyntheticFixtureFactory.exactTwoCapture()
+    let engine = ReconstructionEngine(
+      settings: ReconstructionSettings(
+        maximumFullComparisonPixelsPerJoint: 1
+      )
+    )
+
+    XCTAssertThrowsError(try engine.reconstruct(fixture.sequence)) { error in
+      guard let failure = error as? ReconstructionFailure,
+        case .resourceLimitExceeded = failure
+      else {
+        return XCTFail("Expected resourceLimitExceeded; received \(error)")
+      }
+    }
+  }
 }
 
 private extension ReconstructionGoldenTests {
+  func crop(
+    _ image: RasterImage,
+    startRow: Int,
+    rowCount: Int
+  ) throws -> RasterImage {
+    let start = startRow * image.rowByteCount
+    let end = (startRow + rowCount) * image.rowByteCount
+    return try RasterImage(
+      width: image.width,
+      height: rowCount,
+      pixels: Array(image.pixels[start..<end])
+    )
+  }
+
   func periodicImage(uniqueTail: Bool) throws -> RasterImage {
     let width = 12
     let height = 20
