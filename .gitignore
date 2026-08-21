@@ -23,6 +23,8 @@ pnpm-debug.log*
 # Build output (future stack)
 dist/
 build/
+.build/
+.swiftpm/
 out/
 coverage/
 .next/

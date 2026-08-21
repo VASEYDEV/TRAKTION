@@ -5,11 +5,57 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  gate:
-    name: repo-standard gate
+  repository:
+    name: verify / repository
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Run verification gate
+      - name: Check repository policy and structured files
+        run: bash scripts/check-repository.sh
+
+  core-linux:
+    name: verify / core (Linux)
+    runs-on: ubuntu-24.04
+    container: swift:6.0-noble
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test platform-neutral targets
+        run: bash scripts/verify-core.sh
+
+  apple:
+    name: verify / Apple package and PNG smoke
+    runs-on: macos-15
+    env:
+      TRAKTION_SMOKE_DIR: ${{ runner.temp }}/traktion-smoke
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run complete verification gate
         run: bash scripts/gate.sh
+      - name: Retain synthetic diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: traktion-synthetic-smoke-diagnostics
+          path: ${{ runner.temp }}/traktion-smoke
+          if-no-files-found: ignore
+
+  required:
+    name: verification / required
+    if: always()
+    needs: [repository, core-linux, apple]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every verification lane
+        env:
+          REPOSITORY_RESULT: ${{ needs.repository.result }}
+          CORE_LINUX_RESULT: ${{ needs.core-linux.result }}
+          APPLE_RESULT: ${{ needs.apple.result }}
+        run: |
+          test "$REPOSITORY_RESULT" = success
+          test "$CORE_LINUX_RESULT" = success
+          test "$APPLE_RESULT" = success
