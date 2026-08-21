@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Root Swift 6 package with `TraktionDomain`, `TraktionCore`, `TraktionVision`,
+  `TraktionUI`, `TraktionAI`, `TraktionLab`, `FixtureForge`, and a macOS SwiftUI preview
+  shell.
+- Deterministic vertical reconstruction for 2–10 supplied-order, opaque, equal-width
+  captures: admissible sampled bounds, budgeted full candidate verification, raw exact
+  verification, ambiguity rejection, midpoint/low-difference seam selection, half-open
+  reconstruction spans, and one final output allocation.
+- Typed failures for unsupported axis, invalid capture count, incompatible width,
+  duplicate input, insufficient overlap, ambiguous overlap, invalid plans, and unsafe
+  output dimensions.
+- Apple ImageIO PNG adapter, `traktion-lab` composite/manifest/joint-diagnostic commands,
+  and deterministic `fixture-forge` baseline generation.
+- Golden, determinism, repeated-row, typed-failure, performance-shape, and PNG round-trip
+  tests plus the tracked Task 0001 acceptance packet.
+
+### Changed
+
+- CI now separates repository policy, Linux Swift core verification, Apple package/PNG
+  smoke verification, and a stable required aggregator.
+- `scripts/gate.sh` is now the complete macOS build/test/synthetic-PNG gate; portable
+  repository and core checks have dedicated scripts.
+- SwiftPM `.build/` and `.swiftpm/` local state are ignored.
+
 ## [0.3.0] - 2026-08-20
 
 ### Added
