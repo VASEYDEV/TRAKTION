@@ -2,8 +2,11 @@ name: ci
 
 on:
   pull_request:
+  workflow_dispatch:
   push:
-    branches: [main]
+    branches:
+      - main
+      - "codex/**"
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}

@@ -118,6 +118,7 @@ public enum ReconstructionFailure: Error, Equatable, Sendable {
     following: CaptureID,
     candidateRows: [Int]
   )
+  case resourceLimitExceeded(reason: String)
   case outputDimensionsOverflow
   case invalidPlan(reason: String)
 }
@@ -137,6 +138,8 @@ extension ReconstructionFailure: CustomStringConvertible {
       return "No valid overlap of at least \(minimumRows) rows exists between \(preceding) and \(following)."
     case .ambiguousOverlap(let preceding, let following, let candidateRows):
       return "Overlap between \(preceding) and \(following) is ambiguous at rows \(candidateRows)."
+    case .resourceLimitExceeded(let reason):
+      return "The reconstruction exceeds a configured resource limit: \(reason)."
     case .outputDimensionsOverflow:
       return "The reconstructed output dimensions exceed safe integer or memory limits."
     case .invalidPlan(let reason):

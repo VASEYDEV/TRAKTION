@@ -29,6 +29,38 @@ final class ReconstructionGoldenTests: XCTestCase {
     XCTAssertEqual(first.plan.joints.map(\.overlapRows), fixture.expectedOverlaps)
   }
 
+  func testBoundedNearExactOverlapUsesTheUniqueRegistration() throws {
+    let fixture = try SyntheticFixtureFactory.exactTwoCapture()
+    var changedPixels = fixture.captures[1].image.pixels
+    for row in 0..<2 {
+      for column in 0..<8 {
+        let offset = fixture.captures[1].image.byteOffset(x: column, y: row)
+        changedPixels[offset] ^= 1
+      }
+    }
+    let changedFollowing = CaptureAsset(
+      id: fixture.captures[1].id,
+      sourceName: fixture.captures[1].sourceName,
+      image: try RasterImage(
+        width: fixture.captures[1].image.width,
+        height: fixture.captures[1].image.height,
+        pixels: changedPixels
+      )
+    )
+    let sequence = CaptureSequence(
+      captures: [fixture.captures[0], changedFollowing]
+    )
+    let engine = ReconstructionEngine()
+
+    let first = try engine.reconstruct(sequence)
+    let second = try engine.reconstruct(sequence)
+
+    XCTAssertEqual(first.plan.joints.map(\.overlapRows), fixture.expectedOverlaps)
+    XCTAssertEqual(first.plan.joints.map(\.confidence), [.strong])
+    XCTAssertEqual(first.image, fixture.source)
+    XCTAssertEqual(first, second)
+  }
+
   func testRepeatedLookingRowsRetainTheUniqueAnchoredSequence() throws {
     let fixture = try SyntheticFixtureFactory.repeatedRows()
     let result = try ReconstructionEngine().reconstruct(fixture.sequence)
@@ -108,6 +140,44 @@ final class ReconstructionGoldenTests: XCTestCase {
       XCTAssertEqual(preceding, "periodic-001")
       XCTAssertEqual(following, "periodic-002")
       XCTAssertEqual(rows.count, 2)
+    }
+  }
+
+  func testCandidateBudgetFailsClosedInsteadOfSelectingAnArbitraryOverlap() throws {
+    let first = try periodicImage(uniqueTail: false)
+    let second = try periodicImage(uniqueTail: true)
+    let sequence = CaptureSequence(captures: [
+      CaptureAsset(id: "budget-001", sourceName: "budget-001.png", image: first),
+      CaptureAsset(id: "budget-002", sourceName: "budget-002.png", image: second),
+    ])
+    let engine = ReconstructionEngine(
+      settings: ReconstructionSettings(
+        minimumOverlapRows: 4,
+        candidateLimit: 2
+      )
+    )
+
+    XCTAssertThrowsError(try engine.reconstruct(sequence)) { error in
+      guard let failure = error as? ReconstructionFailure,
+        case .ambiguousOverlap = failure
+      else {
+        return XCTFail("Expected ambiguousOverlap; received \(error)")
+      }
+    }
+  }
+
+  func testCapturePixelLimitIsEnforcedBeforeRegistration() throws {
+    let fixture = try SyntheticFixtureFactory.exactTwoCapture()
+    let engine = ReconstructionEngine(
+      settings: ReconstructionSettings(maximumCapturePixels: 1_000)
+    )
+
+    XCTAssertThrowsError(try engine.reconstruct(fixture.sequence)) { error in
+      guard let failure = error as? ReconstructionFailure,
+        case .resourceLimitExceeded = failure
+      else {
+        return XCTFail("Expected resourceLimitExceeded; received \(error)")
+      }
     }
   }
 }

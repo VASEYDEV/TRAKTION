@@ -7,6 +7,7 @@ public enum PNGCodecError: Error, Equatable, Sendable {
   case outputExists(String)
   case unsupportedFormat(String)
   case unsupportedTransparency(String)
+  case resourceLimitExceeded(String)
   case decodeFailed(String)
   case encodeFailed(String)
 }
@@ -24,6 +25,8 @@ extension PNGCodecError: CustomStringConvertible {
       return "Input is not a supported PNG: \(name)"
     case .unsupportedTransparency(let name):
       return "Milestone 1 requires opaque PNG input: \(name)"
+    case .resourceLimitExceeded(let name):
+      return "PNG dimensions exceed the Milestone 1 resource limit: \(name)"
     case .decodeFailed(let name):
       return "Could not decode PNG input: \(name)"
     case .encodeFailed(let name):
@@ -39,6 +42,7 @@ extension PNGCodecError: CustomStringConvertible {
 
   public enum PNGCodec {
     public static let isAvailable = true
+    public static let maximumPixelCount = 16_777_216
 
     public static func decodeOpaqueRGBA8(from url: URL) throws -> RasterImage {
       let name = url.lastPathComponent
@@ -51,12 +55,26 @@ extension PNGCodecError: CustomStringConvertible {
       else {
         throw PNGCodecError.unsupportedFormat(name)
       }
+      guard
+        let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil)
+          as? [CFString: Any],
+        let widthNumber = properties[kCGImagePropertyPixelWidth] as? NSNumber,
+        let heightNumber = properties[kCGImagePropertyPixelHeight] as? NSNumber
+      else {
+        throw PNGCodecError.decodeFailed(name)
+      }
+      try validateDimensions(
+        width: widthNumber.intValue,
+        height: heightNumber.intValue,
+        name: name
+      )
       guard let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
         throw PNGCodecError.decodeFailed(name)
       }
 
       let width = image.width
       let height = image.height
+      try validateDimensions(width: width, height: height, name: name)
       let (pixelCount, pixelOverflow) = width.multipliedReportingOverflow(by: height)
       let (byteCount, byteOverflow) = pixelCount.multipliedReportingOverflow(
         by: RasterImage.channelsPerPixel
@@ -86,7 +104,12 @@ extension PNGCodecError: CustomStringConvertible {
         context.setBlendMode(.copy)
         context.draw(
           image,
-          in: CGRect(x: 0, y: 0, width: width, height: height)
+          in: CGRect(
+            x: 0,
+            y: 0,
+            width: CGFloat(width),
+            height: CGFloat(height)
+          )
         )
         return true
       }
@@ -115,6 +138,7 @@ extension PNGCodecError: CustomStringConvertible {
       {
         throw PNGCodecError.unsupportedTransparency(name)
       }
+      try validateDimensions(width: image.width, height: image.height, name: name)
 
       let data = Data(image.pixels)
       guard let provider = CGDataProvider(data: data as CFData) else {
@@ -153,10 +177,26 @@ extension PNGCodecError: CustomStringConvertible {
         throw PNGCodecError.encodeFailed(name)
       }
     }
+
+    private static func validateDimensions(
+      width: Int,
+      height: Int,
+      name: String
+    ) throws {
+      let (pixelCount, overflow) = width.multipliedReportingOverflow(by: height)
+      guard width > 0,
+        height > 0,
+        !overflow,
+        pixelCount <= maximumPixelCount
+      else {
+        throw PNGCodecError.resourceLimitExceeded(name)
+      }
+    }
   }
 #else
   public enum PNGCodec {
     public static let isAvailable = false
+    public static let maximumPixelCount = 16_777_216
 
     public static func decodeOpaqueRGBA8(from url: URL) throws -> RasterImage {
       _ = url

@@ -20,6 +20,7 @@ public struct ReconstructionEngine: Sendable {
         allowed: 2...10
       )
     }
+    try validateResourceBounds(sequence.captures)
 
     let expectedWidth = sequence.captures[0].image.width
     for capture in sequence.captures.dropFirst() {
@@ -129,6 +130,11 @@ private extension ReconstructionEngine {
         minimumRows: settings.minimumOverlapRows
       )
     }
+    guard maximumOverlap <= settings.maximumOverlapSearchRows else {
+      throw ReconstructionFailure.resourceLimitExceeded(
+        reason: "pair \(preceding.id)/\(following.id) requires \(maximumOverlap) overlap rows; maximum is \(settings.maximumOverlapSearchRows)"
+      )
+    }
 
     let exactRows = exactOverlapCandidates(
       preceding: preceding.image,
@@ -157,10 +163,19 @@ private extension ReconstructionEngine {
       return $0.score < $1.score
     }
 
-    var candidateRows = Set(exactRows)
-    for candidate in sampled.prefix(settings.candidateLimit) {
-      candidateRows.insert(candidate.rows)
+    let plausible = sampled.filter {
+      $0.score <= settings.maximumNormalizedMeanAbsoluteError
     }
+    guard plausible.count <= settings.candidateLimit else {
+      throw ReconstructionFailure.ambiguousOverlap(
+        preceding: preceding.id,
+        following: following.id,
+        candidateRows: plausible.prefix(settings.candidateLimit + 1).map(\.rows).sorted()
+      )
+    }
+
+    var candidateRows = Set(exactRows)
+    candidateRows.formUnion(plausible.map(\.rows))
 
     var scored = candidateRows.map {
       score(
@@ -540,6 +555,27 @@ private extension ReconstructionEngine {
     }
   }
 
+  func validateResourceBounds(_ captures: [CaptureAsset]) throws {
+    var totalPixels = 0
+    for capture in captures {
+      let (pixels, pixelOverflow) = capture.image.width.multipliedReportingOverflow(
+        by: capture.image.height
+      )
+      guard !pixelOverflow, pixels <= settings.maximumCapturePixels else {
+        throw ReconstructionFailure.resourceLimitExceeded(
+          reason: "capture \(capture.id) exceeds \(settings.maximumCapturePixels) pixels"
+        )
+      }
+      let (nextTotal, totalOverflow) = totalPixels.addingReportingOverflow(pixels)
+      guard !totalOverflow, nextTotal <= settings.maximumTotalInputPixels else {
+        throw ReconstructionFailure.resourceLimitExceeded(
+          reason: "input sequence exceeds \(settings.maximumTotalInputPixels) pixels"
+        )
+      }
+      totalPixels = nextTotal
+    }
+  }
+
   func safeByteCount(width: Int, height: Int) throws -> Int {
     let (pixels, pixelOverflow) = width.multipliedReportingOverflow(by: height)
     let (bytes, byteOverflow) = pixels.multipliedReportingOverflow(
@@ -547,6 +583,11 @@ private extension ReconstructionEngine {
     )
     guard width > 0, height > 0, !pixelOverflow, !byteOverflow else {
       throw ReconstructionFailure.outputDimensionsOverflow
+    }
+    guard pixels <= settings.maximumOutputPixels else {
+      throw ReconstructionFailure.resourceLimitExceeded(
+        reason: "output exceeds \(settings.maximumOutputPixels) pixels"
+      )
     }
     return bytes
   }
