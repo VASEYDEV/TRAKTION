@@ -4,9 +4,7 @@ on:
   pull_request:
   workflow_dispatch:
   push:
-    branches:
-      - main
-      - "codex/**"
+    branches: [main]
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
