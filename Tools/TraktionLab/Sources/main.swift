@@ -115,12 +115,6 @@ private enum TraktionLab {
       axis: arguments.axis
     )
 
-    try fileManager.createDirectory(
-      at: arguments.outputURL.deletingLastPathComponent(),
-      withIntermediateDirectories: true
-    )
-    try PNGCodec.encodeOpaqueRGBA8(result.image, to: arguments.outputURL)
-
     let manifest = LabManifest(
       schemaVersion: labSchemaVersion,
       algorithmVersion: algorithmVersion,
@@ -135,34 +129,54 @@ private enum TraktionLab {
       outputFileName: arguments.outputURL.lastPathComponent,
       plan: result.plan
     )
-    try writeJSON(manifest, to: arguments.manifestURL)
 
-    try fileManager.createDirectory(
-      at: arguments.diagnosticsURL,
-      withIntermediateDirectories: false
-    )
-    for index in result.plan.joints.indices {
-      let joint = result.plan.joints[index]
-      let stem = String(format: "joint-%03d", index + 1)
-      let differenceName = "\(stem)-difference.png"
-      let differenceURL = arguments.diagnosticsURL.appendingPathComponent(
-        differenceName
+    let artifactURLs = [
+      arguments.outputURL,
+      arguments.manifestURL,
+      arguments.diagnosticsURL,
+    ]
+    do {
+      try fileManager.createDirectory(
+        at: arguments.outputURL.deletingLastPathComponent(),
+        withIntermediateDirectories: true
       )
-      let difference = try engine.differenceImage(
-        preceding: captures[index],
-        following: captures[index + 1],
-        joint: joint
+      try PNGCodec.encodeOpaqueRGBA8(result.image, to: arguments.outputURL)
+      try writeJSON(manifest, to: arguments.manifestURL)
+
+      try fileManager.createDirectory(
+        at: arguments.diagnosticsURL,
+        withIntermediateDirectories: true
       )
-      try PNGCodec.encodeOpaqueRGBA8(difference, to: differenceURL)
-      try writeJSON(
-        JointManifest(
-          schemaVersion: labSchemaVersion,
-          algorithmVersion: algorithmVersion,
-          diagnosis: joint,
-          differenceFileName: differenceName
-        ),
-        to: arguments.diagnosticsURL.appendingPathComponent("\(stem).json")
-      )
+      for index in result.plan.joints.indices {
+        let joint = result.plan.joints[index]
+        let stem = String(format: "joint-%03d", index + 1)
+        let differenceName = "\(stem)-difference.png"
+        let differenceURL = arguments.diagnosticsURL.appendingPathComponent(
+          differenceName
+        )
+        let difference = try engine.differenceImage(
+          preceding: captures[index],
+          following: captures[index + 1],
+          joint: joint
+        )
+        try PNGCodec.encodeOpaqueRGBA8(difference, to: differenceURL)
+        try writeJSON(
+          JointManifest(
+            schemaVersion: labSchemaVersion,
+            algorithmVersion: algorithmVersion,
+            diagnosis: joint,
+            differenceFileName: differenceName
+          ),
+          to: arguments.diagnosticsURL.appendingPathComponent("\(stem).json")
+        )
+      }
+    } catch {
+      for url in artifactURLs.reversed()
+        where fileManager.fileExists(atPath: url.path)
+      {
+        try? fileManager.removeItem(at: url)
+      }
+      throw error
     }
 
     print("Reconstructed \(captures.count) captures → \(arguments.outputURL.path)")

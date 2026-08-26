@@ -34,6 +34,9 @@ The repository currently specifies deterministic reconstruction but cannot build
 8. Generate a deterministic synthetic fixture independent of the production compositor.
 9. Add a minimal SwiftUI preview shell without claiming an installable iOS application bundle.
 10. Replace the docs-only CI gate with repository, cross-platform core, and Apple PNG smoke verification.
+11. Detect duplicate pixels anywhere in the supplied sequence, not only in adjacent pairs.
+12. Accept a full-height overlap when a following capture contains and extends the preceding capture.
+13. Remove every artifact created by a failed Lab publication so the command can be retried safely.
 
 ## Non-goals
 
@@ -75,6 +78,8 @@ No license, brand asset, product-invariant, or model-policy change is authorized
 - Unrelated captures
 - Width mismatch
 - Duplicate capture
+- Nonadjacent duplicate capture
+- Full-height prefix overlap followed by additional coverage
 - Larger deterministic performance fixture
 
 ## Acceptance tests
@@ -86,9 +91,13 @@ No license, brand asset, product-invariant, or model-policy change is authorized
   produces `ambiguousOverlap` and no composite.
 - Unrelated captures produce `insufficientOverlap` and no composite.
 - Width mismatch and duplicate inputs produce their typed failures.
+- Nonadjacent duplicates produce `duplicateCapture` before pair registration.
+- A full-height prefix overlap reconstructs the taller following capture without duplication.
 - Horizontal input produces `unsupportedAxis`.
 - Apple PNG encode/decode preserves decoded RGBA pixels.
 - The CLI smoke path generates captures, reconstructs, compares decoded pixels, and writes all diagnostics.
+- Explicit nested diagnostics paths are created recursively, and a forced late publication
+  failure leaves no composite, manifest, or diagnostics behind.
 
 ## Verification commands
 

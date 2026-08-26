@@ -38,6 +38,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   band from silently outranking a longer near-exact overlap and duplicating rows.
 - Fail with an explicit resource-limit error when the configured budget cannot fully
   verify every still-plausible placement instead of selecting from a partial ranking.
+- Detect byte-identical captures anywhere in a supplied sequence and accept a valid
+  full-height prefix overlap when the following capture extends the document.
+- Create explicit diagnostics paths recursively and remove partial Lab artifacts after
+  any failed publication so the same command can be retried safely.
 
 ## [0.3.0] - 2026-08-20
 

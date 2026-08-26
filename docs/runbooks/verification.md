@@ -34,6 +34,9 @@ The complete gate requires macOS. It runs the repository check and Swift suite, 
 4. writes the composite, deterministic manifest, and two joints' JSON/difference PNGs;
 5. decodes the source and composite and requires exact RGBA equality.
 
+The smoke path also verifies recursive diagnostics-directory creation and forces a late
+manifest-publication failure to prove that partial artifacts are removed before exit.
+
 Successful completion ends with `GATE: PASS (repository · Swift build/tests · Apple PNG smoke)`.
 
 ## CI lanes

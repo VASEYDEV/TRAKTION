@@ -192,6 +192,57 @@ final class ReconstructionGoldenTests: XCTestCase {
     }
   }
 
+  func testNonadjacentDuplicateCaptureFailsBeforeRegistration() throws {
+    let fixture = try SyntheticFixtureFactory.exactTwoCapture()
+    let duplicate = CaptureAsset(
+      id: "duplicate-003",
+      sourceName: "duplicate-003.png",
+      image: fixture.captures[0].image
+    )
+    let sequence = CaptureSequence(captures: [
+      fixture.captures[0],
+      fixture.captures[1],
+      duplicate,
+    ])
+
+    XCTAssertThrowsError(try ReconstructionEngine().reconstruct(sequence)) {
+      XCTAssertEqual(
+        $0 as? ReconstructionFailure,
+        .duplicateCapture(
+          preceding: fixture.captures[0].id,
+          following: duplicate.id
+        )
+      )
+    }
+  }
+
+  func testFullHeightOverlapAllowsFollowingCaptureToExtendDocument() throws {
+    let source = try SyntheticFixtureFactory.document(
+      width: 40,
+      height: 40,
+      seed: 0x5052_4546
+    )
+    let preceding = try crop(source, startRow: 0, rowCount: 20)
+    let sequence = CaptureSequence(captures: [
+      CaptureAsset(
+        id: "prefix-001",
+        sourceName: "prefix-001.png",
+        image: preceding
+      ),
+      CaptureAsset(
+        id: "prefix-002",
+        sourceName: "prefix-002.png",
+        image: source
+      ),
+    ])
+
+    let result = try ReconstructionEngine().reconstruct(sequence)
+
+    XCTAssertEqual(result.image, source)
+    XCTAssertEqual(result.plan.joints.map(\.overlapRows), [20])
+    XCTAssertEqual(result.plan.placements.map(\.originY), [0, 0])
+  }
+
   func testHorizontalAxisIsExplicitlyUnsupported() throws {
     let sequence = try SyntheticFixtureFactory.exactTwoCapture().sequence
     XCTAssertThrowsError(

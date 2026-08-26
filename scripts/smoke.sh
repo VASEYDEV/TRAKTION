@@ -34,7 +34,7 @@ bin_dir=$(swift build --configuration release --show-bin-path)
 fixture_dir="$smoke_dir/fixture"
 composite="$smoke_dir/composite.png"
 manifest="$smoke_dir/composite.reconstruction.json"
-diagnostics="$smoke_dir/diagnostics"
+diagnostics="$smoke_dir/nested/diagnostics"
 
 "$bin_dir/fixture-forge" baseline --output-dir "$fixture_dir"
 "$bin_dir/traktion-lab" reconstruct \
@@ -53,6 +53,27 @@ test -s "$diagnostics/joint-001-difference.png"
 test -s "$diagnostics/joint-002.json"
 test -s "$diagnostics/joint-002-difference.png"
 python3 -m json.tool "$manifest" >/dev/null
+
+failure_output="$smoke_dir/failure-composite.png"
+failure_parent_blocker="$smoke_dir/manifest-parent-blocker"
+failure_manifest="$failure_parent_blocker/manifest.json"
+failure_diagnostics="$smoke_dir/failure-diagnostics"
+touch "$failure_parent_blocker"
+if "$bin_dir/traktion-lab" reconstruct \
+  --axis vertical \
+  --output "$failure_output" \
+  --manifest "$failure_manifest" \
+  --diagnostics-dir "$failure_diagnostics" \
+  "$fixture_dir/capture-001.png" \
+  "$fixture_dir/capture-002.png" \
+  "$fixture_dir/capture-003.png"
+then
+  echo "Expected artifact publication failure."
+  exit 1
+fi
+test ! -e "$failure_output"
+test ! -e "$failure_manifest"
+test ! -e "$failure_diagnostics"
 
 echo "APPLE PNG SMOKE: PASS"
 echo "Artifacts: $smoke_dir"

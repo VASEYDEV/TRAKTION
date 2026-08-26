@@ -21,6 +21,7 @@ public struct ReconstructionEngine: Sendable {
       )
     }
     try validateResourceBounds(sequence.captures)
+    try validateUniqueCaptures(sequence.captures)
 
     let expectedWidth = sequence.captures[0].image.width
     for capture in sequence.captures.dropFirst() {
@@ -129,7 +130,7 @@ private extension ReconstructionEngine {
       )
     }
 
-    let maximumOverlap = min(preceding.image.height, following.image.height) - 1
+    let maximumOverlap = min(preceding.image.height, following.image.height)
     guard maximumOverlap >= settings.minimumOverlapRows else {
       throw ReconstructionFailure.insufficientOverlap(
         preceding: preceding.id,
@@ -279,7 +280,7 @@ private extension ReconstructionEngine {
       let contribution = captures[index].image.height
         - registrations[index].candidate.overlapRows
       let (nextOrigin, overflow) = previousOrigin.addingReportingOverflow(contribution)
-      guard !overflow, contribution > 0 else {
+      guard !overflow, contribution >= 0 else {
         throw ReconstructionFailure.outputDimensionsOverflow
       }
       origins.append(nextOrigin)
@@ -623,6 +624,19 @@ private extension ReconstructionEngine {
         )
       }
       totalPixels = nextTotal
+    }
+  }
+
+  func validateUniqueCaptures(_ captures: [CaptureAsset]) throws {
+    for followingIndex in captures.indices.dropFirst() {
+      for precedingIndex in captures.indices.prefix(upTo: followingIndex)
+        where captures[precedingIndex].image == captures[followingIndex].image
+      {
+        throw ReconstructionFailure.duplicateCapture(
+          preceding: captures[precedingIndex].id,
+          following: captures[followingIndex].id
+        )
+      }
     }
   }
 
