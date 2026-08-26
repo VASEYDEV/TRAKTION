@@ -80,6 +80,72 @@ final class ReconstructionGoldenTests: XCTestCase {
     XCTAssertEqual(first, second)
   }
 
+  func testShortExactRepeatedBandCannotOverrideLongerNearExactOverlap() throws {
+    let width = 40
+    let height = 40
+    let rowByteCount = width * RasterImage.channelsPerPixel
+    let original = try SyntheticFixtureFactory.document(
+      width: width,
+      height: height,
+      seed: 0x4641_4C53
+    )
+    var sourcePixels = original.pixels
+
+    // Repeat source rows 10...17 at 22...29. For captures beginning at rows
+    // 0 and 10, this creates a false exact 8-row placement inside the real
+    // 20-row overlap.
+    for row in 0..<8 {
+      let repeatedStart = (10 + row) * rowByteCount
+      let targetStart = (22 + row) * rowByteCount
+      let repeatedRow = Array(
+        sourcePixels[repeatedStart..<(repeatedStart + rowByteCount)]
+      )
+      sourcePixels.replaceSubrange(
+        targetStart..<(targetStart + rowByteCount),
+        with: repeatedRow
+      )
+    }
+
+    let source = try RasterImage(
+      width: width,
+      height: height,
+      pixels: sourcePixels
+    )
+    let preceding = try crop(source, startRow: 0, rowCount: 30)
+    let following = try crop(source, startRow: 10, rowCount: 30)
+    var changedPixels = following.pixels
+    let changedOffset = following.byteOffset(x: width / 2, y: 10)
+    changedPixels[changedOffset] = changedPixels[changedOffset] > 127 ? 0 : 255
+
+    let sequence = CaptureSequence(captures: [
+      CaptureAsset(
+        id: "repeated-band-001",
+        sourceName: "repeated-band-001.png",
+        image: preceding
+      ),
+      CaptureAsset(
+        id: "repeated-band-002",
+        sourceName: "repeated-band-002.png",
+        image: try RasterImage(
+          width: following.width,
+          height: following.height,
+          pixels: changedPixels
+        )
+      ),
+    ])
+
+    XCTAssertThrowsError(try ReconstructionEngine().reconstruct(sequence)) { error in
+      guard let failure = error as? ReconstructionFailure,
+        case .ambiguousOverlap(let precedingID, let followingID, let rows) = failure
+      else {
+        return XCTFail("Expected ambiguousOverlap; received \(error)")
+      }
+      XCTAssertEqual(precedingID, "repeated-band-001")
+      XCTAssertEqual(followingID, "repeated-band-002")
+      XCTAssertEqual(rows, [8, 20])
+    }
+  }
+
   func testRepeatedLookingRowsRetainTheUniqueAnchoredSequence() throws {
     let fixture = try SyntheticFixtureFactory.repeatedRows()
     let result = try ReconstructionEngine().reconstruct(fixture.sequence)
@@ -158,7 +224,7 @@ final class ReconstructionGoldenTests: XCTestCase {
       }
       XCTAssertEqual(preceding, "periodic-001")
       XCTAssertEqual(following, "periodic-002")
-      XCTAssertEqual(rows.count, 2)
+      XCTAssertEqual(rows, [4, 8, 12, 16])
     }
   }
 
@@ -178,9 +244,9 @@ final class ReconstructionGoldenTests: XCTestCase {
 
     XCTAssertThrowsError(try engine.reconstruct(sequence)) { error in
       guard let failure = error as? ReconstructionFailure,
-        case .ambiguousOverlap = failure
+        case .resourceLimitExceeded = failure
       else {
-        return XCTFail("Expected ambiguousOverlap; received \(error)")
+        return XCTFail("Expected resourceLimitExceeded; received \(error)")
       }
     }
   }

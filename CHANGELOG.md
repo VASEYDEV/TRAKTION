@@ -32,6 +32,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   repository and core checks have dedicated scripts.
 - SwiftPM `.build/` and `.swiftpm/` local state are ignored.
 
+### Fixed
+
+- Require a unique fully verified overlap placement, preventing a short exact repeated
+  band from silently outranking a longer near-exact overlap and duplicating rows.
+- Fail with an explicit resource-limit error when the configured budget cannot fully
+  verify every still-plausible placement instead of selecting from a partial ranking.
+
 ## [0.3.0] - 2026-08-20
 
 ### Added

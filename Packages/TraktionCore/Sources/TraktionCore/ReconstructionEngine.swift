@@ -213,6 +213,12 @@ private extension ReconstructionEngine {
       fullComparisonPixels = nextPixels
     }
 
+    guard candidatesToScore.count == plausible.count else {
+      throw ReconstructionFailure.resourceLimitExceeded(
+        reason: "full verification for pair \(preceding.id)/\(following.id) exceeds its candidate or pixel-comparison budget"
+      )
+    }
+
     var scored = candidatesToScore.map {
       score(
         preceding: preceding.image,
@@ -221,16 +227,9 @@ private extension ReconstructionEngine {
       )
     }
     scored.sort(by: candidateOrdering)
-    let scoredRows = Set(candidatesToScore.map(\.rows))
-    let unscored = plausible.filter { !scoredRows.contains($0.rows) }
 
     let acceptable = scored.filter(isAcceptable)
     guard let best = acceptable.first else {
-      guard unscored.isEmpty else {
-        throw ReconstructionFailure.resourceLimitExceeded(
-          reason: "full verification for pair \(preceding.id)/\(following.id) exceeds its candidate or pixel-comparison budget"
-        )
-      }
       throw ReconstructionFailure.insufficientOverlap(
         preceding: preceding.id,
         following: following.id,
@@ -238,24 +237,15 @@ private extension ReconstructionEngine {
       )
     }
 
-    if let unresolved = unscored.first(where: {
-      $0.normalizedMeanAbsoluteErrorLowerBound
-        <= best.normalizedMeanAbsoluteError + settings.ambiguityTolerance
-    }) {
+    // Every acceptable overlap length represents a different translation. A lower
+    // error alone cannot prove which translation is correct: a short exact repeated
+    // band can otherwise outrank the true, longer near-exact overlap and duplicate
+    // documentary rows. Milestone 1 therefore requires a unique acceptable offset.
+    if acceptable.count > 1 {
       throw ReconstructionFailure.ambiguousOverlap(
         preceding: preceding.id,
         following: following.id,
-        candidateRows: [best.overlapRows, unresolved.rows].sorted()
-      )
-    }
-
-    if let competing = acceptable.dropFirst().first(where: {
-      overlapsAreAmbiguous(best, $0)
-    }) {
-      throw ReconstructionFailure.ambiguousOverlap(
-        preceding: preceding.id,
-        following: following.id,
-        candidateRows: [best.overlapRows, competing.overlapRows].sorted()
+        candidateRows: acceptable.map(\.overlapRows).sorted()
       )
     }
 
@@ -552,18 +542,6 @@ private extension ReconstructionEngine {
     candidate.normalizedMeanAbsoluteError
       <= settings.maximumNormalizedMeanAbsoluteError
       && candidate.changedPixelFraction <= settings.maximumChangedPixelFraction
-  }
-
-  func overlapsAreAmbiguous(
-    _ best: OverlapCandidate,
-    _ competing: OverlapCandidate
-  ) -> Bool {
-    abs(
-      best.normalizedMeanAbsoluteError
-        - competing.normalizedMeanAbsoluteError
-    ) <= settings.ambiguityTolerance
-      && abs(best.changedPixelFraction - competing.changedPixelFraction)
-        <= settings.ambiguityTolerance
   }
 
   func chooseSeam(

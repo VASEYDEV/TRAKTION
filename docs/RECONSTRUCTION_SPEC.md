@@ -15,6 +15,11 @@ Generate working representations without mutating originals: canonical orientati
 ### 3. Candidate overlap search
 For adjacent captures A and B, search plausible overlap lengths between the bottom region of A and top region of B. Use coarse-to-fine search.
 
+For Milestone 1, a joint succeeds only when exactly one fully verified overlap length
+meets the acceptance thresholds. Distinct acceptable lengths represent distinct
+translations and must return `ambiguousOverlap`, even when one is an exact short band
+and another is a longer near-exact match. Score alone is not proof of placement.
+
 ### 4. Registration
 Estimate relative translation. Prefer integer translation first; subpixel translation only when necessary. Affine/homographic transforms belong to later milestones and require evidence. Screenshot reconstruction should strongly prefer integer-pixel placement to avoid softened text.
 
@@ -44,7 +49,7 @@ Screen-recording reconstruction should extract candidate frames, estimate scroll
 
 ## Failure policy
 
-Never fabricate missing documentary content. Return typed states such as `insufficientOverlap`, `missingCoverage`, `incompatibleDimensions`, `dynamicConflict`, `ambiguousOrder`, or `unsupportedTransform`.
+Never fabricate missing documentary content. Return typed states such as `insufficientOverlap`, `ambiguousOverlap`, `missingCoverage`, `incompatibleDimensions`, `dynamicConflict`, `ambiguousOrder`, or `unsupportedTransform`.
 
 ## Determinism
 
