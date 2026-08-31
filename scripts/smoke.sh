@@ -52,6 +52,69 @@ test -s "$diagnostics/joint-002.json"
 test -s "$diagnostics/joint-002-difference.png"
 python3 -m json.tool "$manifest" >/dev/null
 
+# Typed failures must leave a deterministic machine-readable failure manifest
+# (docs/tasks/0002): duplicate capture exercises the reconstruct stage, a
+# corrupt input exercises the decode stage.
+duplicate_manifest="$smoke_dir/duplicate.reconstruction.json"
+if "$bin_dir/traktion-lab" reconstruct \
+  --axis vertical \
+  --output "$smoke_dir/duplicate-composite.png" \
+  --manifest "$duplicate_manifest" \
+  --diagnostics-dir "$smoke_dir/duplicate-diagnostics" \
+  "$fixture_dir/capture-001.png" \
+  "$fixture_dir/capture-001.png"
+then
+  echo "Expected duplicate-capture reconstruction failure."
+  exit 1
+fi
+test ! -e "$smoke_dir/duplicate-composite.png"
+test ! -e "$smoke_dir/duplicate-diagnostics"
+python3 - "$duplicate_manifest" <<'PYEOF'
+import json, sys
+manifest = json.load(open(sys.argv[1]))
+assert manifest["schemaVersion"] == 2, manifest
+assert manifest["status"] == "failed", manifest
+assert manifest["stage"] == "reconstruct", manifest
+assert manifest["failureCode"] == "duplicateCapture", manifest
+assert "duplicateCapture" in manifest["reconstructionFailure"], manifest
+assert len(manifest["captures"]) == 2, manifest
+PYEOF
+
+duplicate_repeat="$smoke_dir/duplicate-repeat.reconstruction.json"
+"$bin_dir/traktion-lab" reconstruct \
+  --axis vertical \
+  --output "$smoke_dir/duplicate-repeat-composite.png" \
+  --manifest "$duplicate_repeat" \
+  --diagnostics-dir "$smoke_dir/duplicate-repeat-diagnostics" \
+  "$fixture_dir/capture-001.png" \
+  "$fixture_dir/capture-001.png" || true
+cmp "$duplicate_manifest" "$duplicate_repeat"
+
+corrupt_input="$smoke_dir/corrupt.png"
+printf 'not a png' > "$corrupt_input"
+decode_manifest="$smoke_dir/decode.reconstruction.json"
+if "$bin_dir/traktion-lab" reconstruct \
+  --axis vertical \
+  --output "$smoke_dir/decode-composite.png" \
+  --manifest "$decode_manifest" \
+  --diagnostics-dir "$smoke_dir/decode-diagnostics" \
+  "$fixture_dir/capture-001.png" \
+  "$corrupt_input"
+then
+  echo "Expected decode failure."
+  exit 1
+fi
+python3 - "$decode_manifest" <<'PYEOF'
+import json, sys
+manifest = json.load(open(sys.argv[1]))
+assert manifest["status"] == "failed", manifest
+assert manifest["stage"] == "decode", manifest
+assert manifest["failureCode"] == "unsupportedFormat", manifest
+assert manifest.get("reconstructionFailure") is None, manifest
+assert len(manifest["captures"]) == 1, manifest
+assert manifest["inputFileNames"] == ["capture-001.png", "corrupt.png"], manifest
+PYEOF
+
 failure_output="$smoke_dir/failure-composite.png"
 failure_parent_blocker="$smoke_dir/manifest-parent-blocker"
 failure_manifest="$failure_parent_blocker/manifest.json"

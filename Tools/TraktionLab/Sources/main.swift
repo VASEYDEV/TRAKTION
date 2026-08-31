@@ -9,7 +9,7 @@ import TraktionVision
   import Glibc
 #endif
 
-private let labSchemaVersion = 1
+private let labSchemaVersion = 2
 private let algorithmVersion = "vertical-suffix-prefix-v1"
 
 private enum LabError: Error, CustomStringConvertible {
@@ -19,6 +19,8 @@ private enum LabError: Error, CustomStringConvertible {
   case missingOptionValue(String)
   case outputExists(String)
   case imagesDiffer
+  case reconstructionFailed(failureDescription: String, manifestPath: String)
+  case failureUnpublished(failureDescription: String, writeError: String)
 
   var description: String {
     switch self {
@@ -34,6 +36,10 @@ private enum LabError: Error, CustomStringConvertible {
       return "Refusing to overwrite existing output: \(name)"
     case .imagesDiffer:
       return "Decoded images differ."
+    case .reconstructionFailed(let failureDescription, let manifestPath):
+      return "\(failureDescription)\nFailure manifest → \(manifestPath)"
+    case .failureUnpublished(let failureDescription, let writeError):
+      return "\(failureDescription)\nAdditionally, the failure manifest could not be written: \(writeError)"
     }
   }
 }
@@ -48,9 +54,29 @@ private struct CaptureManifest: Encodable {
 private struct LabManifest: Encodable {
   let schemaVersion: Int
   let algorithmVersion: String
+  let status: String
   let captures: [CaptureManifest]
   let outputFileName: String
   let plan: ReconstructionPlan
+}
+
+/// Written to the manifest path when decoding or reconstruction fails with a
+/// typed error, so a failed run always leaves a deterministic machine-readable
+/// record (docs/tasks/0002). Publication (IO) failures keep the
+/// clean-and-retry behavior instead.
+private struct FailureManifest: Encodable {
+  let schemaVersion: Int
+  let algorithmVersion: String
+  let status: String
+  /// "decode" (an input could not be loaded) or "reconstruct" (typed engine failure).
+  let stage: String
+  let failureCode: String
+  let failureDescription: String
+  /// Present for the reconstruct stage only.
+  let reconstructionFailure: ReconstructionFailure?
+  /// Captures successfully decoded before the failure, in supplied order.
+  let captures: [CaptureManifest]
+  let inputFileNames: [String]
 }
 
 private struct JointManifest: Encodable {
@@ -98,26 +124,55 @@ private enum TraktionLab {
       throw LabError.outputExists(url.lastPathComponent)
     }
 
-    let captures = try arguments.inputURLs.enumerated().map { index, url in
-      CaptureAsset(
-        id: CaptureID(String(format: "capture-%03d", index + 1)),
-        sourceName: url.lastPathComponent,
-        image: try PNGCodec.decodeOpaqueRGBA8(from: url)
-      )
+    var captures: [CaptureAsset] = []
+    captures.reserveCapacity(arguments.inputURLs.count)
+    for (index, url) in arguments.inputURLs.enumerated() {
+      do {
+        captures.append(
+          CaptureAsset(
+            id: CaptureID(String(format: "capture-%03d", index + 1)),
+            sourceName: url.lastPathComponent,
+            image: try PNGCodec.decodeOpaqueRGBA8(from: url)
+          )
+        )
+      } catch let error as PNGCodecError {
+        try publishFailure(
+          arguments,
+          stage: "decode",
+          failureCode: failureCode(for: error),
+          failureDescription: String(describing: error),
+          reconstructionFailure: nil,
+          captures: captures
+        )
+      }
     }
+
     let engine = ReconstructionEngine(
       settings: ReconstructionSettings(
         minimumOverlapRows: arguments.minimumOverlapRows
       )
     )
-    let result = try engine.reconstruct(
-      CaptureSequence(captures: captures),
-      axis: arguments.axis
-    )
+    let result: ReconstructionResult
+    do {
+      result = try engine.reconstruct(
+        CaptureSequence(captures: captures),
+        axis: arguments.axis
+      )
+    } catch let failure as ReconstructionFailure {
+      try publishFailure(
+        arguments,
+        stage: "reconstruct",
+        failureCode: failure.code,
+        failureDescription: failure.description,
+        reconstructionFailure: failure,
+        captures: captures
+      )
+    }
 
     let manifest = LabManifest(
       schemaVersion: labSchemaVersion,
       algorithmVersion: algorithmVersion,
+      status: "reconstructed",
       captures: captures.map {
         CaptureManifest(
           id: $0.id,
@@ -182,6 +237,63 @@ private enum TraktionLab {
     print("Reconstructed \(captures.count) captures → \(arguments.outputURL.path)")
     print("Manifest → \(arguments.manifestURL.path)")
     print("Diagnostics → \(arguments.diagnosticsURL.path)")
+  }
+
+  /// Writes the failure manifest to the manifest path, then throws the
+  /// user-facing error. Never returns: a typed failure always ends the run,
+  /// with the manifest as its durable record. If even the manifest cannot be
+  /// written, the original failure is still reported.
+  static func publishFailure(
+    _ arguments: ReconstructArguments,
+    stage: String,
+    failureCode: String,
+    failureDescription: String,
+    reconstructionFailure: ReconstructionFailure?,
+    captures: [CaptureAsset]
+  ) throws -> Never {
+    let manifest = FailureManifest(
+      schemaVersion: labSchemaVersion,
+      algorithmVersion: algorithmVersion,
+      status: "failed",
+      stage: stage,
+      failureCode: failureCode,
+      failureDescription: failureDescription,
+      reconstructionFailure: reconstructionFailure,
+      captures: captures.map {
+        CaptureManifest(
+          id: $0.id,
+          fileName: $0.sourceName,
+          width: $0.image.width,
+          height: $0.image.height
+        )
+      },
+      inputFileNames: arguments.inputURLs.map(\.lastPathComponent)
+    )
+    do {
+      try writeJSON(manifest, to: arguments.manifestURL)
+    } catch {
+      throw LabError.failureUnpublished(
+        failureDescription: failureDescription,
+        writeError: String(describing: error)
+      )
+    }
+    throw LabError.reconstructionFailed(
+      failureDescription: failureDescription,
+      manifestPath: arguments.manifestURL.path
+    )
+  }
+
+  static func failureCode(for error: PNGCodecError) -> String {
+    switch error {
+    case .unsupportedPlatform: return "unsupportedPlatform"
+    case .fileNotFound: return "fileNotFound"
+    case .outputExists: return "outputExists"
+    case .unsupportedFormat: return "unsupportedFormat"
+    case .unsupportedTransparency: return "unsupportedTransparency"
+    case .resourceLimitExceeded: return "resourceLimitExceeded"
+    case .decodeFailed: return "decodeFailed"
+    case .encodeFailed: return "encodeFailed"
+    }
   }
 
   static func compare(_ arguments: [String]) throws {
