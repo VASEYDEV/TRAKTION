@@ -1,0 +1,19 @@
+{
+  "axis": "vertical",
+  "captureCount": 3,
+  "expectedOverlapRows": [
+    24,
+    24
+  ],
+  "expectedStatus": "exact",
+  "fixtureName": "baseline-three-capture",
+  "origins": [
+    0,
+    72,
+    144
+  ],
+  "seed": 1414676811,
+  "sourceHeight": 240,
+  "sourceWidth": 64,
+  "viewportHeight": 96
+}

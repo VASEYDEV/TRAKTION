@@ -2,31 +2,61 @@ name: ci
 
 on:
   pull_request:
+  workflow_dispatch:
   push:
     branches: [main]
 
-jobs:
-  linux:
-    name: gate + build + test (Linux)
-    runs-on: ubuntu-latest
-    container: swift:6.1-noble
-    steps:
-      - name: Install git
-        run: apt-get update -q && apt-get install -y -q git
-      - uses: actions/checkout@v4
-      - name: Mark workspace safe for git
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-      - name: Run verification gate (hygiene + swift build + swift test)
-        run: bash scripts/gate.sh
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
-  macos:
-    name: build + test (macOS, includes app shell)
+jobs:
+  repository:
+    name: verify / repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check repository policy and structured files
+        run: bash scripts/check-repository.sh
+
+  core-linux:
+    name: verify / core (Linux)
+    runs-on: ubuntu-24.04
+    container: swift:6.0-noble
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test platform-neutral targets
+        run: bash scripts/verify-core.sh
+
+  apple:
+    name: verify / Apple package and PNG smoke
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
-      - name: Toolchain versions
-        run: swift --version && xcodebuild -version
-      - name: Build (all targets, including TraktionUI and the app shell)
-        run: swift build
-      - name: Test
-        run: swift test
+      - name: Run complete verification gate
+        env:
+          TRAKTION_SMOKE_DIR: ${{ runner.temp }}/traktion-smoke
+        run: bash scripts/gate.sh
+      - name: Retain synthetic diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: traktion-synthetic-smoke-diagnostics
+          path: ${{ runner.temp }}/traktion-smoke
+          if-no-files-found: ignore
+
+  required:
+    name: verification / required
+    if: always()
+    needs: [repository, core-linux, apple]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every verification lane
+        env:
+          REPOSITORY_RESULT: ${{ needs.repository.result }}
+          CORE_LINUX_RESULT: ${{ needs.core-linux.result }}
+          APPLE_RESULT: ${{ needs.apple.result }}
+        run: |
+          test "$REPOSITORY_RESULT" = success
+          test "$CORE_LINUX_RESULT" = success
+          test "$APPLE_RESULT" = success

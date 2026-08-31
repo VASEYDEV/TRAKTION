@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://github.com/vaseydev/traktion/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/vaseydev/traktion/ci.yml?branch=main&label=gate" alt="CI gate status"></a>
-  <img src="https://img.shields.io/badge/version-0.4.0-blue" alt="Version 0.4.0">
+  <img src="https://img.shields.io/badge/version-0.4.0--dev-blue" alt="Version 0.4.0 development">
   <img src="https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-crimson" alt="License: PolyForm Noncommercial 1.0.0">
   <img src="https://img.shields.io/badge/status-experimental-orange" alt="Status: experimental">
 </p>
@@ -21,7 +21,16 @@ Full-page capture often fails: content scrolls inside nested frames, headers sta
 
 ## Status
 
-**Foundation stage — buildable Swift package, engine work in progress.** The repository carries the canonical agent contract ([`AGENTS.md`](AGENTS.md)), the full product and architecture spec ([`docs/`](docs/)), phased build prompts ([`prompts/`](prompts/)), and a bootstrapped Swift foundation: domain contracts, a deterministic PNG pipeline, the `fixtureforge` and `traktion-lab` CLIs, golden/unit/performance tests, and CI on Linux + macOS ([ADR-011](docs/adr/ADR-011-swiftpm-monopackage-pure-codec.md)). Milestone 1 reconstruction (overlap → seam → composite in `TraktionLab`) is the next engineering target — see [`FOUNDATION_CHECKLIST.md`](FOUNDATION_CHECKLIST.md) and [`prompts/01_PHASE1_CORE_LAB.md`](prompts/01_PHASE1_CORE_LAB.md).
+**Milestone 1 draft review.** The first Swift foundation now includes a deterministic reconstruction core, synthetic fixture generator, diagnostic CLI, golden tests, Apple PNG adapter, and deliberately minimal SwiftUI preview shell. Its repository, Swift/Linux, macOS, PNG round-trip, and end-to-end synthetic reconstruction gates pass in the stacked draft pull request.
+
+| Current capability | State |
+| --- | --- |
+| Supplied-order vertical reconstruction | Implemented for 2–10 opaque, equal-width PNG captures |
+| Exact suffix/prefix overlap and seam plan | Implemented with ambiguity rejection |
+| Decoded-pixel golden comparison | Implemented for deterministic synthetic fixtures |
+| Composite, manifest, and joint diagnostics | Implemented in `traktion-lab` |
+| Horizontal, ordering, sticky UI, video, web capture | Later milestones; fail or remain disabled |
+| Native application | macOS SwiftUI preview shell only; installable iOS target is not yet present |
 
 ## Design invariants
 
@@ -41,29 +50,35 @@ Every joint in a reconstruction carries a confidence state — `exact` · `stron
 
 ## Quick start
 
-Requires a Swift 6+ toolchain ([swift.org](https://www.swift.org/install/) on Linux, Xcode 16+ on macOS):
+The platform-neutral core uses Swift 6. The complete PNG gate requires macOS because the codec adapter uses Apple ImageIO.
 
 ```bash
 git clone https://github.com/vaseydev/traktion.git
 cd traktion
-swift build            # all packages and CLIs (plus the app shell on macOS)
-swift test             # unit + golden + performance suites
-bash scripts/gate.sh   # repo hygiene + build + test (what CI runs)
+bash scripts/check-repository.sh  # repository policy on any host
+bash scripts/verify-core.sh       # Swift build + tests
+bash scripts/gate.sh              # complete macOS build/test/PNG smoke gate
 ```
 
-Try the deterministic end-to-end path:
+Generate and reconstruct the baseline fixture on macOS:
 
 ```bash
-.build/debug/fixtureforge generate --output /tmp/fixture --seed 42
-.build/debug/traktion-lab ingest --output /tmp/run/demo /tmp/fixture/capture-*.png
-cat /tmp/run/demo.reconstruction.json
+swift run fixture-forge baseline --output-dir /tmp/traktion-fixture
+swift run traktion-lab reconstruct \
+  --output /tmp/traktion-composite.png \
+  /tmp/traktion-fixture/capture-001.png \
+  /tmp/traktion-fixture/capture-002.png \
+  /tmp/traktion-fixture/capture-003.png
+swift run traktion-lab compare \
+  /tmp/traktion-fixture/source.png \
+  /tmp/traktion-composite.png
 ```
 
-Read in order: [`AGENTS.md`](AGENTS.md) → [`docs/PRODUCT.md`](docs/PRODUCT.md) → [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) → [`docs/RECONSTRUCTION_SPEC.md`](docs/RECONSTRUCTION_SPEC.md). Coding agents start at [`prompts/00_BOOTSTRAP_AGENT.md`](prompts/00_BOOTSTRAP_AGENT.md).
+The Lab writes a reconstruction JSON sidecar plus per-joint JSON and absolute-difference PNGs. It refuses to overwrite outputs or turn unsupported/ambiguous evidence into a successful composite.
 
 ## Tech stack & environment
 
-- **Stack:** native Swift ([ADR-001](docs/adr/ADR-001-native-swift.md)); Milestone 1 targets the `TraktionLab` diagnostic CLI before any polished app.
+- **Stack:** Swift 6 and SwiftPM, native SwiftUI preview shell, Apple ImageIO PNG boundary, dependency-free platform-neutral reconstruction core ([ADR-001](docs/adr/ADR-001-native-swift.md)).
 - **Environment variables:** none yet; a documented `.env.example` lands with the first code that needs one.
 - **Architecture:** module boundaries and data flow in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md); layout in [`docs/REPO_LAYOUT.md`](docs/REPO_LAYOUT.md).
 

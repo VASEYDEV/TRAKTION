@@ -7,38 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.4.0] - 2026-08-31
-
 ### Added
 
-- **Swift foundation (prompt 00 bootstrap):** root `Package.swift` (Swift 6) with
-  targets on the documented layout — `TraktionDomain` (Milestone 1 value types, typed
-  `ReconstructionFailure`, deterministic manifest JSON), `TraktionCore`
-  (`Milestone1Policy`, `SequenceValidator`, pure-Swift SHA-256), `TraktionVision`
-  (`PixelBuffer`, pure-Swift deterministic PNG codec: full inflate, all filters,
-  stored-block encode), `TraktionAI` (`VisualReviewer` protocol + disabled/mock
-  adapters only), and macOS-only `TraktionUI` + unpolished SwiftUI app shell.
-- **Tools:** `fixtureforge generate` (deterministic seeded canvas, overlapping
-  vertical captures, `fixture.json` ground truth) and `traktion-lab ingest`
-  (ordered load, Milestone 1 validation, `*.reconstruction.json` sidecar; typed
-  failures still write a manifest).
-- **Tests:** 33 across unit (`Tests/Unit`), golden end-to-end incl. failure paths
-  (`Tests/Golden`), and performance smoke (`Tests/Performance`); committed baseline
-  fixture `Tests/SyntheticFixtures/baseline-vertical-3` with a byte-identity
-  regeneration test. PNG/zlib decode proven against CPython-generated vectors.
-- ADR-011 (single SwiftPM package, macOS-gated UI targets, pure-Swift codec) and
-  the session note `docs/notes/2026-08-31-swift-bootstrap.md`.
+- Root Swift 6 package with `TraktionDomain`, `TraktionCore`, `TraktionVision`,
+  `TraktionUI`, `TraktionAI`, `TraktionLab`, `FixtureForge`, and a macOS SwiftUI preview
+  shell.
+- Deterministic vertical reconstruction for 2–10 supplied-order, opaque, equal-width
+  captures: admissible sampled bounds, budgeted full candidate verification, raw exact
+  verification, ambiguity rejection, midpoint/low-difference seam selection, half-open
+  reconstruction spans, and one final output allocation.
+- Typed failures for unsupported axis, invalid capture count, incompatible width,
+  duplicate input, insufficient overlap, ambiguous overlap, invalid plans, and unsafe
+  output dimensions.
+- Apple ImageIO PNG adapter, `traktion-lab` composite/manifest/joint-diagnostic commands,
+  and deterministic `fixture-forge` baseline generation.
+- Golden, determinism, repeated-row, typed-failure, performance-shape, and PNG round-trip
+  tests plus the tracked Task 0001 acceptance packet.
 
 ### Changed
 
-- `scripts/gate.sh` graduates from docs-only checks to hygiene + `swift build` +
-  `swift test` (a missing toolchain fails the gate; build output excluded from the
-  placeholder scan).
-- CI now runs the gate on Linux (`swift:6.1-noble` container) and build+test on
-  macOS 15 (which also compiles the app shell); `.gitignore` adds `.build/` and
-  `.swiftpm/`.
-- README Status/Quick start rewritten for the buildable foundation; `CLAUDE.md`
-  verification-gate fact updated; `FOUNDATION_CHECKLIST.md` items checked off.
+- CI now separates repository policy, Linux Swift core verification, Apple package/PNG
+  smoke verification, and a stable required aggregator.
+- `scripts/gate.sh` is now the complete macOS build/test/synthetic-PNG gate; portable
+  repository and core checks have dedicated scripts.
+- SwiftPM `.build/` and `.swiftpm/` local state are ignored.
+
+### Fixed
+
+- Require a unique fully verified overlap placement, preventing a short exact repeated
+  band from silently outranking a longer near-exact overlap and duplicating rows.
+- Fail with an explicit resource-limit error when the configured budget cannot fully
+  verify every still-plausible placement instead of selecting from a partial ranking.
+- Detect byte-identical captures anywhere in a supplied sequence and accept a valid
+  full-height prefix overlap when the following capture extends the document.
+- Create explicit diagnostics paths recursively and remove partial Lab artifacts after
+  any failed publication so the same command can be retried safely.
 
 ## [0.3.0] - 2026-08-20
 
