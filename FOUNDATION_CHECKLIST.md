@@ -13,4 +13,4 @@
 - [x] Keep private real-world captures ignored.
 - [x] Implement Milestone 1 without model integration.
 - [x] Require golden comparisons before claiming seamless reconstruction.
-- [ ] Record any architecture deviation as an ADR.
+- [x] Record any architecture deviation as an ADR (ADR-011 codec boundary, ADR-012 registration policy; standing rule for future deviations).

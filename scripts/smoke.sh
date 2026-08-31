@@ -2,10 +2,8 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-if [[ "$(uname -s)" != "Darwin" ]]; then
-  echo "Apple ImageIO smoke verification requires macOS."
-  exit 1
-fi
+# Runs on any host: PNGCodec is Apple ImageIO on Darwin and the pure-Swift
+# fallback elsewhere (docs/adr/ADR-011), behind one contract.
 
 if [[ -n "${TRAKTION_SMOKE_DIR:-}" ]]; then
   smoke_dir="$TRAKTION_SMOKE_DIR"
@@ -75,5 +73,5 @@ test ! -e "$failure_output"
 test ! -e "$failure_manifest"
 test ! -e "$failure_diagnostics"
 
-echo "APPLE PNG SMOKE: PASS"
+echo "PNG SMOKE: PASS ($(uname -s) codec path)"
 echo "Artifacts: $smoke_dir"

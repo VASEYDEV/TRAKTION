@@ -194,22 +194,63 @@ extension PNGCodecError: CustomStringConvertible {
     }
   }
 #else
+  // Non-Apple fallback: the deterministic pure-Swift codec (docs/adr/ADR-011)
+  // behind the identical contract — opaque input only, the same error cases,
+  // and the same dimension limit. Decoded-pixel parity with the Apple path is
+  // asserted by Tests/Integration/PNGCodecParityTests.swift.
   public enum PNGCodec {
-    public static let isAvailable = false
+    public static let isAvailable = true
     public static let maximumPixelCount = 16_777_216
 
     public static func decodeOpaqueRGBA8(from url: URL) throws -> RasterImage {
-      _ = url
-      throw PNGCodecError.unsupportedPlatform
+      let name = url.lastPathComponent
+      guard FileManager.default.fileExists(atPath: url.path) else {
+        throw PNGCodecError.fileNotFound(name)
+      }
+      let bytes: [UInt8]
+      do {
+        bytes = [UInt8](try Data(contentsOf: url))
+      } catch {
+        throw PNGCodecError.decodeFailed(name)
+      }
+      do {
+        return try PurePNGCodec.decode(bytes, maximumPixelCount: maximumPixelCount)
+      } catch PurePNGError.notAPNG {
+        throw PNGCodecError.unsupportedFormat(name)
+      } catch let PurePNGError.unsupportedFormat(details) {
+        throw PNGCodecError.unsupportedFormat("\(name) (\(details))")
+      } catch PurePNGError.nonOpaque {
+        throw PNGCodecError.unsupportedTransparency(name)
+      } catch PurePNGError.dimensionLimitExceeded {
+        throw PNGCodecError.resourceLimitExceeded(name)
+      } catch {
+        throw PNGCodecError.decodeFailed(name)
+      }
     }
 
     public static func encodeOpaqueRGBA8(
       _ image: RasterImage,
       to url: URL
     ) throws {
-      _ = image
-      _ = url
-      throw PNGCodecError.unsupportedPlatform
+      let name = url.lastPathComponent
+      guard !FileManager.default.fileExists(atPath: url.path) else {
+        throw PNGCodecError.outputExists(name)
+      }
+      for alphaOffset in stride(from: 3, to: image.pixels.count, by: 4)
+        where image.pixels[alphaOffset] != 255
+      {
+        throw PNGCodecError.unsupportedTransparency(name)
+      }
+      let (pixelCount, overflow) = image.width.multipliedReportingOverflow(by: image.height)
+      guard !overflow, pixelCount <= maximumPixelCount else {
+        throw PNGCodecError.resourceLimitExceeded(name)
+      }
+
+      do {
+        try Data(PurePNGCodec.encode(image)).write(to: url, options: .withoutOverwriting)
+      } catch {
+        throw PNGCodecError.encodeFailed(name)
+      }
     }
   }
 #endif
