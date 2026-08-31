@@ -33,6 +33,10 @@ coverage/
 # Claude Code local overrides
 .claude/settings.local.json
 
+# Swift Package Manager
+.build/
+.swiftpm/
+
 # TRAKTION private/local additions (from Foundation Kit)
 *.xcuserstate
 DerivedData/

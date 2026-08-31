@@ -23,6 +23,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and deterministic `fixture-forge` baseline generation.
 - Golden, determinism, repeated-row, typed-failure, performance-shape, and PNG round-trip
   tests plus the tracked Task 0001 acceptance packet.
+- **Pure-Swift fallback PNG codec** behind the unchanged `PNGCodec` contract on non-Apple
+  hosts (full RFC-1951 inflate, all five filters, stored-block encode; opaque-only, same
+  typed errors and pixel limit), so Linux runs the complete decode → reconstruct → encode
+  → compare path. Cross-backend parity and CPython-zlib interop vectors pinned by
+  `Tests/Unit/TraktionVisionPureCodecTests` and `Tests/Integration/PNGCodecParityTests`.
+- **Schema-aligned semantic-review contract:** `VisualReviewDecision` now mirrors
+  `config/visual-review-decision.schema.json` (action, classification, confidence,
+  abstain, reasonCode, …) with disabled and mock adapters and contract tests; still
+  protocol/adapters only, no provider SDK.
+- ADR-011 (ImageIO boundary with pure-Swift fallback) and ADR-012 (unique acceptable
+  translation, ratifying the RECONSTRUCTION_SPEC edit), closing the process findings of
+  the PR #4 independent review; session note
+  `docs/notes/2026-08-31-foundation-review-and-adaptation.md`.
 
 ### Changed
 
@@ -30,6 +43,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   smoke verification, and a stable required aggregator.
 - `scripts/gate.sh` is now the complete macOS build/test/synthetic-PNG gate; portable
   repository and core checks have dedicated scripts.
+- `scripts/smoke.sh` runs on any host (Apple ImageIO on Darwin, the pure-Swift codec
+  elsewhere), and the Linux CI lane now runs it end to end after core verification.
 - SwiftPM `.build/` and `.swiftpm/` local state are ignored.
 
 ### Fixed

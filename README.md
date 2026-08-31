@@ -50,17 +50,18 @@ Every joint in a reconstruction carries a confidence state — `exact` · `stron
 
 ## Quick start
 
-The platform-neutral core uses Swift 6. The complete PNG gate requires macOS because the codec adapter uses Apple ImageIO.
+The platform-neutral core uses Swift 6. PNG I/O uses Apple ImageIO on macOS and a deterministic pure-Swift codec elsewhere, behind one contract ([ADR-011](docs/adr/ADR-011-imageio-boundary-pure-swift-fallback.md)) — so the end-to-end PNG smoke runs on any host, and `gate.sh` on macOS additionally verifies the ImageIO path.
 
 ```bash
 git clone https://github.com/vaseydev/traktion.git
 cd traktion
 bash scripts/check-repository.sh  # repository policy on any host
-bash scripts/verify-core.sh       # Swift build + tests
-bash scripts/gate.sh              # complete macOS build/test/PNG smoke gate
+bash scripts/verify-core.sh       # Swift build + tests on any host
+bash scripts/smoke.sh             # fixture → reconstruct → compare on any host
+bash scripts/gate.sh              # complete macOS gate (adds ImageIO verification)
 ```
 
-Generate and reconstruct the baseline fixture on macOS:
+Generate and reconstruct the baseline fixture:
 
 ```bash
 swift run fixture-forge baseline --output-dir /tmp/traktion-fixture

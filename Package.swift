@@ -83,5 +83,15 @@ let package = Package(
       dependencies: ["TraktionDomain", "TraktionVision", "FixtureForgeKit"],
       path: "Tests/Integration"
     ),
+    .testTarget(
+      name: "TraktionVisionPureCodecTests",
+      dependencies: ["TraktionDomain", "TraktionVision"],
+      path: "Tests/Unit/TraktionVisionPureCodecTests"
+    ),
+    .testTarget(
+      name: "TraktionAITests",
+      dependencies: ["TraktionAI", "TraktionDomain"],
+      path: "Tests/Unit/TraktionAITests"
+    ),
   ]
 )
