@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Typed failure manifests** (task 0002): a failed `traktion-lab reconstruct` now
+  writes a deterministic `status: failed` manifest — stage (`decode`/`reconstruct`),
+  stable `failureCode`, human-readable description, the typed `ReconstructionFailure`
+  (now `Codable`, with a `code` wire contract), captures decoded before the failure,
+  and all input names. Success manifests gain `status: reconstructed`; lab manifest
+  `schemaVersion` is now 2. Publication (IO) failures keep clean-retry behavior.
+- **FixtureForge control set** (task 0003, prompt 02): configurable deterministic
+  generation (`fixture-forge generate --scenario …`) of duplicate-capture,
+  reversed-order, missing-middle, sticky-header, sticky-footer, floating-control,
+  scrollbar, one-pixel-offset, and degraded fixtures — plus horizontal-axis
+  generation — each with Codable ground truth recording semantic status,
+  the failure code today's engine must return, capture origins, expected order,
+  overlaps, and a platform-independent source-pixel fingerprint.
+- **Adversarial golden coverage** (`Tests/Golden/FixtureControlSetTests.swift`,
+  16 tests; suite now 59): every adversarial variant ends in its pinned typed
+  failure with no composite; positive controls (baseline, one-pixel offset,
+  degraded, 10–80% overlap sweep) reconstruct with expected overlaps and
+  row-verbatim output. Empirically pinned: the scrollbar variant reconstructs
+  faithfully (thumb artifacts preserved verbatim; scrollbar handling is
+  Milestone 4), while sticky chrome and floating controls fail closed with
+  `insufficientOverlap`. Smoke now exercises both failure-manifest stages and
+  their byte-determinism.
+
 - Root Swift 6 package with `TraktionDomain`, `TraktionCore`, `TraktionVision`,
   `TraktionUI`, `TraktionAI`, `TraktionLab`, `FixtureForge`, and a macOS SwiftUI preview
   shell.
