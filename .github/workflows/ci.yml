@@ -6,10 +6,27 @@ on:
     branches: [main]
 
 jobs:
-  gate:
-    name: repo-standard gate
+  linux:
+    name: gate + build + test (Linux)
     runs-on: ubuntu-latest
+    container: swift:6.1-noble
+    steps:
+      - name: Install git
+        run: apt-get update -q && apt-get install -y -q git
+      - uses: actions/checkout@v4
+      - name: Mark workspace safe for git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Run verification gate (hygiene + swift build + swift test)
+        run: bash scripts/gate.sh
+
+  macos:
+    name: build + test (macOS, includes app shell)
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
-      - name: Run verification gate
-        run: bash scripts/gate.sh
+      - name: Toolchain versions
+        run: swift --version && xcodebuild -version
+      - name: Build (all targets, including TraktionUI and the app shell)
+        run: swift build
+      - name: Test
+        run: swift test

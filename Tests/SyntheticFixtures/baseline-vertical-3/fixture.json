@@ -1,0 +1,44 @@
+{
+  "axis" : "vertical",
+  "captures" : [
+    {
+      "expectedOrderIndex" : 0,
+      "fileName" : "capture-001.png",
+      "id" : "capture-001",
+      "originY" : 0,
+      "pixelHeight" : 64,
+      "pixelWidth" : 96,
+      "sha256" : "cd26c4fd2e040d98af44b291f3a112541f46b583a54e80876e91bfb8c0a2c091"
+    },
+    {
+      "expectedOrderIndex" : 1,
+      "fileName" : "capture-002.png",
+      "id" : "capture-002",
+      "originY" : 48,
+      "pixelHeight" : 64,
+      "pixelWidth" : 96,
+      "sha256" : "cc13b54d0a3d19045d5aeffb1238a9b9f7087304dd1363999fe38ed82bee76c0"
+    },
+    {
+      "expectedOrderIndex" : 2,
+      "fileName" : "capture-003.png",
+      "id" : "capture-003",
+      "originY" : 96,
+      "pixelHeight" : 64,
+      "pixelWidth" : 96,
+      "sha256" : "9e0a437c314212eb7f5821c5c38e0c94eaf148595644e757e246bd384c77c15c"
+    }
+  ],
+  "expectedOverlaps" : [
+    16,
+    16
+  ],
+  "expectedStatus" : "reconstructable",
+  "formatVersion" : 1,
+  "seed" : 20260831,
+  "sourceFileName" : "source.png",
+  "sourceHeight" : 160,
+  "sourceID" : "baseline-vertical-3",
+  "sourceSHA256" : "371e198ef37118d936ab349851d7962d29b02c697619290694a5400e8ad12466",
+  "sourceWidth" : 96
+}

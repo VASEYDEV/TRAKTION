@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-08-31
+
+### Added
+
+- **Swift foundation (prompt 00 bootstrap):** root `Package.swift` (Swift 6) with
+  targets on the documented layout — `TraktionDomain` (Milestone 1 value types, typed
+  `ReconstructionFailure`, deterministic manifest JSON), `TraktionCore`
+  (`Milestone1Policy`, `SequenceValidator`, pure-Swift SHA-256), `TraktionVision`
+  (`PixelBuffer`, pure-Swift deterministic PNG codec: full inflate, all filters,
+  stored-block encode), `TraktionAI` (`VisualReviewer` protocol + disabled/mock
+  adapters only), and macOS-only `TraktionUI` + unpolished SwiftUI app shell.
+- **Tools:** `fixtureforge generate` (deterministic seeded canvas, overlapping
+  vertical captures, `fixture.json` ground truth) and `traktion-lab ingest`
+  (ordered load, Milestone 1 validation, `*.reconstruction.json` sidecar; typed
+  failures still write a manifest).
+- **Tests:** 33 across unit (`Tests/Unit`), golden end-to-end incl. failure paths
+  (`Tests/Golden`), and performance smoke (`Tests/Performance`); committed baseline
+  fixture `Tests/SyntheticFixtures/baseline-vertical-3` with a byte-identity
+  regeneration test. PNG/zlib decode proven against CPython-generated vectors.
+- ADR-011 (single SwiftPM package, macOS-gated UI targets, pure-Swift codec) and
+  the session note `docs/notes/2026-08-31-swift-bootstrap.md`.
+
+### Changed
+
+- `scripts/gate.sh` graduates from docs-only checks to hygiene + `swift build` +
+  `swift test` (a missing toolchain fails the gate; build output excluded from the
+  placeholder scan).
+- CI now runs the gate on Linux (`swift:6.1-noble` container) and build+test on
+  macOS 15 (which also compiles the app shell); `.gitignore` adds `.build/` and
+  `.swiftpm/`.
+- README Status/Quick start rewritten for the buildable foundation; `CLAUDE.md`
+  verification-gate fact updated; `FOUNDATION_CHECKLIST.md` items checked off.
+
 ## [0.3.0] - 2026-08-20
 
 ### Added

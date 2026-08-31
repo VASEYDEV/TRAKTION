@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://github.com/vaseydev/traktion/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/vaseydev/traktion/ci.yml?branch=main&label=gate" alt="CI gate status"></a>
-  <img src="https://img.shields.io/badge/version-0.3.0-blue" alt="Version 0.3.0">
+  <img src="https://img.shields.io/badge/version-0.4.0-blue" alt="Version 0.4.0">
   <img src="https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-crimson" alt="License: PolyForm Noncommercial 1.0.0">
   <img src="https://img.shields.io/badge/status-experimental-orange" alt="Status: experimental">
 </p>
@@ -21,7 +21,7 @@ Full-page capture often fails: content scrolls inside nested frames, headers sta
 
 ## Status
 
-**Foundation stage — no application code yet.** The repository carries the canonical agent contract ([`AGENTS.md`](AGENTS.md)), the full product and architecture spec ([`docs/`](docs/)), phased build prompts ([`prompts/`](prompts/)), and the repo's governance docs. Milestone 1 (a native Swift reconstruction lab, `TraktionLab`) is specified and ready to build — see [`README_FIRST.md`](README_FIRST.md) and [`FOUNDATION_CHECKLIST.md`](FOUNDATION_CHECKLIST.md).
+**Foundation stage — buildable Swift package, engine work in progress.** The repository carries the canonical agent contract ([`AGENTS.md`](AGENTS.md)), the full product and architecture spec ([`docs/`](docs/)), phased build prompts ([`prompts/`](prompts/)), and a bootstrapped Swift foundation: domain contracts, a deterministic PNG pipeline, the `fixtureforge` and `traktion-lab` CLIs, golden/unit/performance tests, and CI on Linux + macOS ([ADR-011](docs/adr/ADR-011-swiftpm-monopackage-pure-codec.md)). Milestone 1 reconstruction (overlap → seam → composite in `TraktionLab`) is the next engineering target — see [`FOUNDATION_CHECKLIST.md`](FOUNDATION_CHECKLIST.md) and [`prompts/01_PHASE1_CORE_LAB.md`](prompts/01_PHASE1_CORE_LAB.md).
 
 ## Design invariants
 
@@ -41,12 +41,22 @@ Every joint in a reconstruction carries a confidence state — `exact` · `stron
 
 ## Quick start
 
-Nothing to build yet — the fastest way in is the spec:
+Requires a Swift 6+ toolchain ([swift.org](https://www.swift.org/install/) on Linux, Xcode 16+ on macOS):
 
 ```bash
 git clone https://github.com/vaseydev/traktion.git
 cd traktion
-bash scripts/gate.sh   # run the repo-standard verification gate
+swift build            # all packages and CLIs (plus the app shell on macOS)
+swift test             # unit + golden + performance suites
+bash scripts/gate.sh   # repo hygiene + build + test (what CI runs)
+```
+
+Try the deterministic end-to-end path:
+
+```bash
+.build/debug/fixtureforge generate --output /tmp/fixture --seed 42
+.build/debug/traktion-lab ingest --output /tmp/run/demo /tmp/fixture/capture-*.png
+cat /tmp/run/demo.reconstruction.json
 ```
 
 Read in order: [`AGENTS.md`](AGENTS.md) → [`docs/PRODUCT.md`](docs/PRODUCT.md) → [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) → [`docs/RECONSTRUCTION_SPEC.md`](docs/RECONSTRUCTION_SPEC.md). Coding agents start at [`prompts/00_BOOTSTRAP_AGENT.md`](prompts/00_BOOTSTRAP_AGENT.md).

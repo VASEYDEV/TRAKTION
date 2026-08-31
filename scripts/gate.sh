@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Verification gate (CLAUDE.md §3) — docs-only stage.
-# Replace with real lint / typecheck / test / build when application code lands
-# (see docs/decisions/0001-repo-bootstrap.md).
+# Verification gate (CLAUDE.md §3) — foundation stage.
+# Repo-hygiene checks plus a clean Swift build and full test run
+# (see docs/decisions/0001-repo-bootstrap.md and docs/adr/ADR-011).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -15,8 +15,9 @@ for f in "${required[@]}"; do
   fi
 done
 
-# Unfilled template placeholders (bootstrap protocol) — docs/legal/ and this script excepted
-if grep -rn --exclude-dir=.git --exclude-dir=legal --exclude=gate.sh '{{' .; then
+# Unfilled template placeholders (bootstrap protocol) — docs/legal/, build output,
+# and this script excepted
+if grep -rnI --exclude-dir=.git --exclude-dir=.build --exclude-dir=.swiftpm --exclude-dir=legal --exclude=gate.sh '{{' .; then
   echo "Unfilled template placeholders found (see lines above)"
   fail=1
 fi
@@ -42,7 +43,21 @@ if grep -rln --exclude-dir=.git -- '-----BEGIN .*PRIVATE KEY''-----' .; then
 fi
 
 if (( fail )); then
+  echo "GATE: FAIL (repo hygiene)"
+  exit 1
+fi
+
+# Build and test. A missing toolchain is a typed failure, not a silent skip.
+if ! command -v swift >/dev/null 2>&1; then
+  echo "Swift toolchain not found on PATH; the gate requires swift build + swift test (see README Quick start)"
   echo "GATE: FAIL"
   exit 1
 fi
-echo "GATE: PASS (docs-only stage: required files · placeholders · CLAUDE.md size · secrets)"
+
+echo "GATE: swift build"
+swift build
+
+echo "GATE: swift test"
+swift test
+
+echo "GATE: PASS (hygiene · swift build · swift test)"
