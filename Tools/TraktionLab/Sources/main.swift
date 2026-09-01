@@ -1,6 +1,7 @@
 import Foundation
 import TraktionCore
 import TraktionDomain
+import TraktionLabEvaluation
 import TraktionVision
 
 #if canImport(Darwin)
@@ -21,6 +22,7 @@ private enum LabError: Error, CustomStringConvertible {
   case imagesDiffer
   case reconstructionFailed(failureDescription: String, manifestPath: String)
   case failureUnpublished(failureDescription: String, writeError: String)
+  case evaluationGateFailed(reportPath: String)
 
   var description: String {
     switch self {
@@ -40,6 +42,8 @@ private enum LabError: Error, CustomStringConvertible {
       return "\(failureDescription)\nFailure manifest → \(manifestPath)"
     case .failureUnpublished(let failureDescription, let writeError):
       return "\(failureDescription)\nAdditionally, the failure manifest could not be written: \(writeError)"
+    case .evaluationGateFailed(let reportPath):
+      return "Evaluation gate failed (false-safe, false-warning, wrong-failure, or nondeterminism); see \(reportPath)"
     }
   }
 }
@@ -107,6 +111,8 @@ private enum TraktionLab {
       try reconstruct(parseReconstruct(Array(arguments.dropFirst())))
     case "compare":
       try compare(Array(arguments.dropFirst()))
+    case "evaluate":
+      try evaluate(Array(arguments.dropFirst()))
     case "--help", "-h", "help":
       printHelp()
     case "--version", "version":
@@ -314,6 +320,30 @@ private enum TraktionLab {
     print("Decoded RGBA pixels match exactly.")
   }
 
+  /// Runs the standard evaluation corpus (docs/tasks/0004) and writes the
+  /// metrics report. Exits non-zero when the summary is unacceptable —
+  /// any false-safe, false-warning, wrong-failure, or nondeterminism.
+  static func evaluate(_ arguments: [String]) throws {
+    guard arguments.count == 2, arguments[0] == "--output" else {
+      throw LabError.usage("Usage: traktion-lab evaluate --output <report.json>")
+    }
+    let reportURL = URL(fileURLWithPath: arguments[1])
+
+    let report = try EvaluationHarness.evaluate()
+    try writeJSON(report, to: reportURL)
+
+    let summary = report.summary
+    print("Evaluation report → \(reportURL.path)")
+    print(
+      "cases: \(summary.cases)  pass: \(summary.pass)  false-safe: \(summary.falseSafe)  "
+        + "false-warning: \(summary.falseWarning)  wrong-failure: \(summary.wrongFailure)  "
+        + "nondeterministic: \(summary.nondeterministic)"
+    )
+    guard summary.isAcceptable else {
+      throw LabError.evaluationGateFailed(reportPath: reportURL.path)
+    }
+  }
+
   static func parseReconstruct(_ arguments: [String]) throws -> ReconstructArguments {
     var axis = ReconstructionAxis.vertical
     var outputURL: URL?
@@ -412,6 +442,7 @@ private enum TraktionLab {
       Usage:
         traktion-lab reconstruct --output <composite.png> [options] <capture-001.png> <capture-002.png> [...]
         traktion-lab compare <expected.png> <actual.png>
+        traktion-lab evaluate --output <report.json>
 
       Options:
         --axis vertical|horizontal       Horizontal fails explicitly in Milestone 1.

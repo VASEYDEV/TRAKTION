@@ -31,6 +31,18 @@ jobs:
         run: apt-get update -q && apt-get install -y -q python3
       - name: PNG smoke (pure-Swift fallback codec end to end)
         run: bash scripts/smoke.sh
+      - name: Evaluation harness (EVALUATION.md metrics gate)
+        run: |
+          swift build --configuration release --product traktion-lab
+          "$(swift build --configuration release --show-bin-path)/traktion-lab" evaluate --output evaluation-report.json
+          python3 -m json.tool evaluation-report.json >/dev/null
+      - name: Upload evaluation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: traktion-evaluation-report
+          path: evaluation-report.json
+          if-no-files-found: ignore
 
   apple:
     name: verify / Apple package and PNG smoke

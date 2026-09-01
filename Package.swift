@@ -53,9 +53,16 @@ let package = Package(
       dependencies: ["TraktionUI"],
       path: "App/TRAKTION/Sources"
     ),
+    .target(
+      name: "TraktionLabEvaluation",
+      dependencies: ["TraktionDomain", "TraktionCore", "FixtureForgeKit"],
+      path: "Tools/TraktionLab/Evaluation"
+    ),
     .executableTarget(
       name: "TraktionLab",
-      dependencies: ["TraktionDomain", "TraktionCore", "TraktionVision"],
+      dependencies: [
+        "TraktionDomain", "TraktionCore", "TraktionVision", "TraktionLabEvaluation",
+      ],
       path: "Tools/TraktionLab/Sources"
     ),
     .executableTarget(
@@ -70,7 +77,9 @@ let package = Package(
     ),
     .testTarget(
       name: "TraktionCoreGoldenTests",
-      dependencies: ["TraktionDomain", "TraktionCore", "FixtureForgeKit"],
+      dependencies: [
+        "TraktionDomain", "TraktionCore", "FixtureForgeKit", "TraktionLabEvaluation",
+      ],
       path: "Tests/Golden"
     ),
     .testTarget(
