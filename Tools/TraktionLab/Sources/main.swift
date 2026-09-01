@@ -10,7 +10,7 @@ import TraktionVision
   import Glibc
 #endif
 
-private let labSchemaVersion = 2
+private let labSchemaVersion = 3
 private let algorithmVersion = "vertical-suffix-prefix-v1"
 
 private enum LabError: Error, CustomStringConvertible {
@@ -59,6 +59,12 @@ private struct LabManifest: Encodable {
   let schemaVersion: Int
   let algorithmVersion: String
   let status: String
+  /// True when `--recover-order` chose the capture order (docs/tasks/0007).
+  let orderRecovered: Bool
+  /// Capture IDs in recovered documentary order; absent for supplied-order runs.
+  let recoveredOrder: [CaptureID]?
+  /// Captures in reconstruction order (the recovered order when
+  /// `orderRecovered` is true, otherwise the supplied order).
   let captures: [CaptureManifest]
   let outputFileName: String
   let plan: ReconstructionPlan
@@ -96,6 +102,7 @@ private struct ReconstructArguments {
   let manifestURL: URL
   let diagnosticsURL: URL
   let minimumOverlapRows: Int
+  let recoverOrder: Bool
   let inputURLs: [URL]
 }
 
@@ -116,7 +123,7 @@ private enum TraktionLab {
     case "--help", "-h", "help":
       printHelp()
     case "--version", "version":
-      print("traktion-lab 0.4.0")
+      print("traktion-lab 0.5.0")
     default:
       throw LabError.unknownCommand(command)
     }
@@ -159,11 +166,25 @@ private enum TraktionLab {
       )
     )
     let result: ReconstructionResult
+    var recoveredOrder: [CaptureID]?
     do {
-      result = try engine.reconstruct(
-        CaptureSequence(captures: captures),
-        axis: arguments.axis
-      )
+      if arguments.recoverOrder {
+        let ordered = try engine.reconstructRecoveringOrder(
+          captures,
+          axis: arguments.axis
+        )
+        recoveredOrder = ordered.order.captureIDs
+        // Reorder for the manifest and per-joint diagnostics, which pair
+        // adjacent captures; IDs are unique by construction (capture-NNN).
+        let byID = Dictionary(uniqueKeysWithValues: captures.map { ($0.id, $0) })
+        captures = ordered.order.captureIDs.map { byID[$0]! }
+        result = ordered.result
+      } else {
+        result = try engine.reconstruct(
+          CaptureSequence(captures: captures),
+          axis: arguments.axis
+        )
+      }
     } catch let failure as ReconstructionFailure {
       try publishFailure(
         arguments,
@@ -179,6 +200,8 @@ private enum TraktionLab {
       schemaVersion: labSchemaVersion,
       algorithmVersion: algorithmVersion,
       status: "reconstructed",
+      orderRecovered: arguments.recoverOrder,
+      recoveredOrder: recoveredOrder,
       captures: captures.map {
         CaptureManifest(
           id: $0.id,
@@ -350,6 +373,7 @@ private enum TraktionLab {
     var manifestURL: URL?
     var diagnosticsURL: URL?
     var minimumOverlapRows = 8
+    var recoverOrder = false
     var inputURLs: [URL] = []
     var index = 0
 
@@ -380,6 +404,8 @@ private enum TraktionLab {
           throw LabError.usage("Minimum overlap rows must be a positive integer.")
         }
         minimumOverlapRows = parsed
+      case "--recover-order":
+        recoverOrder = true
       default:
         if argument.hasPrefix("-") {
           throw LabError.unknownOption(argument)
@@ -404,6 +430,7 @@ private enum TraktionLab {
       diagnosticsURL: diagnosticsURL
         ?? defaultStem.appendingPathExtension("diagnostics"),
       minimumOverlapRows: minimumOverlapRows,
+      recoverOrder: recoverOrder,
       inputURLs: inputURLs
     )
   }
@@ -449,6 +476,9 @@ private enum TraktionLab {
         --manifest <path>                Reconstruction JSON sidecar.
         --diagnostics-dir <path>         Per-joint JSON and difference PNGs.
         --minimum-overlap-rows <count>   Default: 8.
+        --recover-order                  Recover the documentary order before
+                                         reconstructing (unique acceptable
+                                         order required; ADR-014).
       """
     )
   }

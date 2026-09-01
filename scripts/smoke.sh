@@ -72,7 +72,7 @@ test ! -e "$smoke_dir/duplicate-diagnostics"
 python3 - "$duplicate_manifest" <<'PYEOF'
 import json, sys
 manifest = json.load(open(sys.argv[1]))
-assert manifest["schemaVersion"] == 2, manifest
+assert manifest["schemaVersion"] == 3, manifest
 assert manifest["status"] == "failed", manifest
 assert manifest["stage"] == "reconstruct", manifest
 assert manifest["failureCode"] == "duplicateCapture", manifest
@@ -113,6 +113,79 @@ assert manifest["failureCode"] == "unsupportedFormat", manifest
 assert manifest.get("reconstructionFailure") is None, manifest
 assert len(manifest["captures"]) == 1, manifest
 assert manifest["inputFileNames"] == ["capture-001.png", "corrupt.png"], manifest
+PYEOF
+
+# Order recovery (docs/tasks/0007, ADR-014): shuffled inputs must produce a
+# composite byte-identical to the supplied-order one, deterministically, and
+# a coverage gap must refuse with the typed missingCoverage manifest.
+recovered="$smoke_dir/recovered.png"
+recovered_manifest="$smoke_dir/recovered.reconstruction.json"
+"$bin_dir/traktion-lab" reconstruct \
+  --axis vertical \
+  --recover-order \
+  --output "$recovered" \
+  --manifest "$recovered_manifest" \
+  --diagnostics-dir "$smoke_dir/recovered-diagnostics" \
+  "$fixture_dir/capture-002.png" \
+  "$fixture_dir/capture-003.png" \
+  "$fixture_dir/capture-001.png"
+"$bin_dir/traktion-lab" compare "$fixture_dir/source.png" "$recovered"
+cmp "$composite" "$recovered"
+python3 - "$recovered_manifest" <<'PYEOF'
+import json, sys
+manifest = json.load(open(sys.argv[1]))
+assert manifest["schemaVersion"] == 3, manifest
+assert manifest["status"] == "reconstructed", manifest
+assert manifest["orderRecovered"] is True, manifest
+# IDs are positional (argument order); the documentary order is files 001..003.
+assert manifest["recoveredOrder"] == ["capture-003", "capture-001", "capture-002"], manifest
+assert [c["fileName"] for c in manifest["captures"]] == [
+    "capture-001.png", "capture-002.png", "capture-003.png"
+], manifest
+PYEOF
+
+recovered_repeat="$smoke_dir/recovered-repeat.png"
+"$bin_dir/traktion-lab" reconstruct \
+  --axis vertical \
+  --recover-order \
+  --output "$recovered_repeat" \
+  --manifest "$smoke_dir/recovered-repeat.reconstruction.json" \
+  --diagnostics-dir "$smoke_dir/recovered-repeat-diagnostics" \
+  "$fixture_dir/capture-002.png" \
+  "$fixture_dir/capture-003.png" \
+  "$fixture_dir/capture-001.png"
+cmp "$recovered" "$recovered_repeat"
+
+coverage_manifest="$smoke_dir/coverage.reconstruction.json"
+if "$bin_dir/traktion-lab" reconstruct \
+  --axis vertical \
+  --recover-order \
+  --output "$smoke_dir/coverage-composite.png" \
+  --manifest "$coverage_manifest" \
+  --diagnostics-dir "$smoke_dir/coverage-diagnostics" \
+  "$fixture_dir/capture-003.png" \
+  "$fixture_dir/capture-001.png"
+then
+  echo "Expected missing-coverage recovery failure."
+  exit 1
+fi
+test ! -e "$smoke_dir/coverage-composite.png"
+python3 - "$coverage_manifest" <<'PYEOF'
+import json, sys
+manifest = json.load(open(sys.argv[1]))
+assert manifest["status"] == "failed", manifest
+assert manifest["stage"] == "reconstruct", manifest
+assert manifest["failureCode"] == "missingCoverage", manifest
+assert "missingCoverage" in manifest["reconstructionFailure"], manifest
+PYEOF
+
+plain_manifest_check="$manifest"
+python3 - "$plain_manifest_check" <<'PYEOF'
+import json, sys
+manifest = json.load(open(sys.argv[1]))
+assert manifest["schemaVersion"] == 3, manifest
+assert manifest["orderRecovered"] is False, manifest
+assert "recoveredOrder" not in manifest, manifest
 PYEOF
 
 failure_output="$smoke_dir/failure-composite.png"

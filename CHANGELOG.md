@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Automatic order recovery** (task 0006, ADR-014, Milestone 2): the engine
+  recovers the documentary order of an unordered 2–10 capture set from the
+  pairwise overlap graph — `recoverOrder` returns the order plus per-junction
+  evidence, `reconstructRecoveringOrder` re-verifies it through the reviewed
+  supplied-order pipeline. The order must be uniquely provable: several
+  acceptable orders refuse with the new typed `ambiguousOrder` (deterministic
+  candidate sample + exact count), an unconnectable set refuses with
+  `missingCoverage` (longest chain + unconnected captures), pair-level
+  ambiguity contributes no edge, and any probe budget exhaustion fails the
+  whole recovery. Supplied-order behavior is byte-identical (the registration
+  path was refactored, not changed). Goldens: shuffled and fully reversed
+  sets reconstruct pixel-identically; symmetric content refuses with both
+  orders listed; periodic content still refuses; tiny budgets fail closed.
+- **Order-recovery tooling** (task 0007): `traktion-lab reconstruct
+  --recover-order` (manifest schemaVersion 3 with `orderRecovered` /
+  `recoveredOrder`, captures listed in reconstruction order), smoke coverage
+  (shuffled run byte-identical to supplied-order, deterministic across runs;
+  missing-middle leaves a typed `missingCoverage` failure manifest), and
+  three ordering cases in the evaluation corpus (19 total) with a
+  recovered-order-mismatch false-safe rule; report schemaVersion 2 adds
+  `recoveredOrder` per case.
+
 - **Evaluation harness** (task 0004): `traktion-lab evaluate --output <report.json>`
   runs the standard corpus (all control-set variants, the 10–80% overlap sweep, a
   horizontal case) and emits the EVALUATION.md metrics — per-case verdicts with

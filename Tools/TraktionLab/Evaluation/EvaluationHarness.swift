@@ -11,16 +11,40 @@ public struct EvaluationCase: Sendable {
   public let name: String
   public let configuration: FixtureControlConfiguration
   public let engineAxis: ReconstructionAxis
+  /// Non-nil turns this into an order-recovery case (docs/tasks/0007): the
+  /// generated captures are permuted, the engine runs with recovery, and the
+  /// expectation below replaces the supplied-order ground-truth pin.
+  public let ordering: OrderingCase?
 
   public init(
     name: String,
     configuration: FixtureControlConfiguration,
-    engineAxis: ReconstructionAxis = .vertical
+    engineAxis: ReconstructionAxis = .vertical,
+    ordering: OrderingCase? = nil
   ) {
     self.name = name
     self.configuration = configuration
     self.engineAxis = engineAxis
+    self.ordering = ordering
   }
+}
+
+public struct OrderingCase: Sendable {
+  /// Applied to the generated captures before the run.
+  public let permutation: [Int]
+  public let expected: ExpectedRecoveryOutcome
+
+  public init(permutation: [Int], expected: ExpectedRecoveryOutcome) {
+    self.permutation = permutation
+    self.expected = expected
+  }
+}
+
+public enum ExpectedRecoveryOutcome: Sendable {
+  /// Recovery must reconstruct, and the recovered order must equal the
+  /// ground-truth documentary order.
+  case reconstruct
+  case fail(code: String)
 }
 
 public enum EvaluationVerdict: String, Codable, Equatable, Sendable {
@@ -53,6 +77,8 @@ public struct EvaluationCaseResult: Codable, Equatable, Sendable {
   /// Per joint, mean absolute channel difference between the two captures at
   /// the chosen seam row, normalized to 0...1.
   public let seamEnergies: [Double]?
+  /// Order-recovery cases only: the recovered capture IDs.
+  public let recoveredOrder: [String]?
   /// Two runs produced identical plans and pixels (or identical failures).
   public let deterministic: Bool
   public var milliseconds: Int
@@ -79,7 +105,7 @@ public struct EvaluationReport: Codable, Equatable, Sendable {
 }
 
 public enum EvaluationHarness {
-  public static let generatorName = "traktion-lab evaluate v1"
+  public static let generatorName = "traktion-lab evaluate v2"
 
   /// The corpus the Milestone 1 audit runs: every control-set variant, the
   /// 10–80% overlap sweep, and a horizontal-axis case. Seeds are fixed so the
@@ -135,6 +161,49 @@ public enum EvaluationHarness {
         engineAxis: .horizontal
       )
     )
+    // Order-recovery cases (docs/tasks/0007, ADR-014). The permutations are
+    // fixed so the report is comparable run to run; recovery must reproduce
+    // the ground-truth documentary order or refuse with the pinned code.
+    cases.append(
+      EvaluationCase(
+        name: "order-shuffled-baseline",
+        configuration: FixtureControlConfiguration(
+          sourceID: "order-shuffled",
+          captureCount: 5,
+          seed: 4000,
+          variant: .baseline
+        ),
+        ordering: OrderingCase(
+          permutation: [2, 4, 0, 3, 1],
+          expected: .reconstruct
+        )
+      )
+    )
+    cases.append(
+      EvaluationCase(
+        name: "order-reversed",
+        configuration: FixtureControlConfiguration(
+          sourceID: "order-reversed",
+          seed: 4001,
+          variant: .baseline
+        ),
+        ordering: OrderingCase(permutation: [2, 1, 0], expected: .reconstruct)
+      )
+    )
+    cases.append(
+      EvaluationCase(
+        name: "order-missing-middle",
+        configuration: FixtureControlConfiguration(
+          sourceID: "order-missing-middle",
+          seed: 4002,
+          variant: .missingMiddle
+        ),
+        ordering: OrderingCase(
+          permutation: [1, 0],
+          expected: .fail(code: "missingCoverage")
+        )
+      )
+    )
     return cases
   }
 
@@ -148,20 +217,39 @@ public enum EvaluationHarness {
 
     for evaluationCase in cases {
       let bundle = try FixtureControlGenerator.generate(evaluationCase.configuration)
-      let sequence = CaptureSequence(captures: bundle.captures)
+      let captures: [CaptureAsset]
+      if let ordering = evaluationCase.ordering {
+        captures = ordering.permutation.map { bundle.captures[$0] }
+      } else {
+        captures = bundle.captures
+      }
+      let recover = evaluationCase.ordering != nil
 
       let clock = ContinuousClock()
       let start = clock.now
-      let first = run(engine, sequence, axis: evaluationCase.engineAxis)
+      let first = run(
+        engine,
+        captures,
+        axis: evaluationCase.engineAxis,
+        recoverOrder: recover
+      )
       let elapsed = clock.now - start
-      let second = run(engine, sequence, axis: evaluationCase.engineAxis)
-      let deterministic = outcomesMatch(first, second)
+      let second = run(
+        engine,
+        captures,
+        axis: evaluationCase.engineAxis,
+        recoverOrder: recover
+      )
+      let deterministic = outcomesMatch(first.outcome, second.outcome)
+        && first.recoveredOrder == second.recoveredOrder
 
       results.append(
         assess(
           name: evaluationCase.name,
           bundle: bundle,
-          outcome: first,
+          outcome: first.outcome,
+          ordering: evaluationCase.ordering,
+          recoveredOrder: first.recoveredOrder,
           deterministic: deterministic,
           milliseconds: Int(elapsed.components.seconds) * 1000
             + Int(elapsed.components.attoseconds / 1_000_000_000_000_000)
@@ -178,7 +266,7 @@ public enum EvaluationHarness {
       nondeterministic: results.filter { !$0.deterministic }.count
     )
     return EvaluationReport(
-      schemaVersion: 1,
+      schemaVersion: 2,
       generator: generatorName,
       summary: summary,
       cases: results
@@ -195,15 +283,25 @@ public enum EvaluationHarness {
 
   private static func run(
     _ engine: ReconstructionEngine,
-    _ sequence: CaptureSequence,
-    axis: ReconstructionAxis
-  ) -> RunOutcome {
+    _ captures: [CaptureAsset],
+    axis: ReconstructionAxis,
+    recoverOrder: Bool
+  ) -> (outcome: RunOutcome, recoveredOrder: [CaptureID]?) {
     do {
-      return .reconstructed(try engine.reconstruct(sequence, axis: axis))
+      if recoverOrder {
+        let ordered = try engine.reconstructRecoveringOrder(captures, axis: axis)
+        return (.reconstructed(ordered.result), ordered.order.captureIDs)
+      }
+      return (
+        .reconstructed(
+          try engine.reconstruct(CaptureSequence(captures: captures), axis: axis)
+        ),
+        nil
+      )
     } catch let failure as ReconstructionFailure {
-      return .failed(failure)
+      return (.failed(failure), nil)
     } catch {
-      return .unexpectedError(String(describing: error))
+      return (.unexpectedError(String(describing: error)), nil)
     }
   }
 
@@ -220,16 +318,31 @@ public enum EvaluationHarness {
 
   /// Verdict rules: ground truth is authoritative. A composite where a typed
   /// failure is required — or a composite with wrong registration or wrong
-  /// pixels for an exact fixture — is a false-safe. A failure where
-  /// reconstruction is required is a false-warning.
+  /// pixels for an exact fixture, or a recovered order that differs from the
+  /// documentary order — is a false-safe. A failure where reconstruction is
+  /// required is a false-warning. For order-recovery cases the ordering
+  /// expectation replaces the supplied-order ground-truth pin.
   static func assess(
     name: String,
     bundle: FixtureControlBundle,
     outcome: RunOutcome,
+    ordering: OrderingCase? = nil,
+    recoveredOrder: [CaptureID]? = nil,
     deterministic: Bool,
     milliseconds: Int
   ) -> EvaluationCaseResult {
     let truth = bundle.groundTruth
+    let expectedFailureCode: String?
+    if let ordering {
+      switch ordering.expected {
+      case .reconstruct:
+        expectedFailureCode = nil
+      case .fail(let code):
+        expectedFailureCode = code
+      }
+    } else {
+      expectedFailureCode = truth.expectedFailureCode
+    }
     var pixelEqual: Bool?
     var missingRows: Int?
     var duplicatedRows: Int?
@@ -242,7 +355,11 @@ public enum EvaluationHarness {
     switch outcome {
     case .reconstructed(let result):
       outcomeLabel = "reconstructed"
-      if truth.expectedFailureCode != nil {
+      if expectedFailureCode != nil {
+        verdict = .falseSafe
+      } else if ordering != nil,
+        recoveredOrder?.map(\.rawValue) != truth.expectedOrder
+      {
         verdict = .falseSafe
       } else {
         let errors = zip(result.plan.joints.map(\.overlapRows), truth.expectedOverlaps)
@@ -273,7 +390,7 @@ public enum EvaluationHarness {
     case .failed(let failure):
       outcomeLabel = "failed"
       failureCode = failure.code
-      if let expected = truth.expectedFailureCode {
+      if let expected = expectedFailureCode {
         verdict = failure.code == expected ? .pass : .wrongFailure
       } else {
         verdict = .falseWarning
@@ -281,13 +398,13 @@ public enum EvaluationHarness {
     case .unexpectedError(let description):
       outcomeLabel = "failed"
       failureCode = "untyped:\(description)"
-      verdict = truth.expectedFailureCode == nil ? .falseWarning : .wrongFailure
+      verdict = expectedFailureCode == nil ? .falseWarning : .wrongFailure
     }
 
     return EvaluationCaseResult(
       name: name,
       expectedStatus: truth.expectedStatus,
-      expectedFailureCode: truth.expectedFailureCode,
+      expectedFailureCode: expectedFailureCode,
       outcome: outcomeLabel,
       failureCode: failureCode,
       verdict: verdict,
@@ -296,6 +413,7 @@ public enum EvaluationHarness {
       duplicatedRows: duplicatedRows,
       registrationErrors: registrationErrors,
       seamEnergies: seamEnergies,
+      recoveredOrder: recoveredOrder?.map(\.rawValue),
       deterministic: deterministic,
       milliseconds: milliseconds
     )

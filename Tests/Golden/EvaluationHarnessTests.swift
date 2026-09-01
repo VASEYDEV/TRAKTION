@@ -28,6 +28,27 @@ final class EvaluationHarnessTests: XCTestCase {
       XCTAssertGreaterThan(energy, 0)
       XCTAssertLessThan(energy, 0.01, "degraded seams must stay near-exact")
     }
+
+    // Order-recovery cases (docs/tasks/0007): shuffled input must recover the
+    // documentary order and reproduce the source exactly; a coverage gap must
+    // end in the pinned typed refusal.
+    let shuffled = try XCTUnwrap(
+      report.cases.first { $0.name == "order-shuffled-baseline" }
+    )
+    XCTAssertEqual(shuffled.verdict, .pass)
+    XCTAssertEqual(shuffled.pixelEqualToSource, true)
+    XCTAssertEqual(shuffled.missingRows, 0)
+    XCTAssertEqual(shuffled.duplicatedRows, 0)
+    XCTAssertEqual(shuffled.recoveredOrder?.count, 5)
+    let reversed = try XCTUnwrap(report.cases.first { $0.name == "order-reversed" })
+    XCTAssertEqual(reversed.verdict, .pass)
+    XCTAssertEqual(reversed.pixelEqualToSource, true)
+    let gap = try XCTUnwrap(
+      report.cases.first { $0.name == "order-missing-middle" }
+    )
+    XCTAssertEqual(gap.verdict, .pass)
+    XCTAssertEqual(gap.outcome, "failed")
+    XCTAssertEqual(gap.failureCode, "missingCoverage")
   }
 
   func testReportIsDeterministicAsideFromTiming() throws {
@@ -126,5 +147,18 @@ final class EvaluationHarnessTests: XCTestCase {
       milliseconds: 0
     )
     XCTAssertEqual(misregistered.verdict, .falseSafe)
+
+    // A recovered order that differs from the documentary order → false-safe,
+    // even when the composite itself is plausible.
+    let wrongOrder = EvaluationHarness.assess(
+      name: "fabricated",
+      bundle: baselineBundle,
+      outcome: .reconstructed(baselineResult),
+      ordering: OrderingCase(permutation: [0, 1, 2], expected: .reconstruct),
+      recoveredOrder: baselineBundle.captures.reversed().map(\.id),
+      deterministic: true,
+      milliseconds: 0
+    )
+    XCTAssertEqual(wrongOrder.verdict, .falseSafe)
   }
 }
