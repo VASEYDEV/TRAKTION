@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Milestone 1 audit record** (prompt 07): independent auditor session
+  verdict **pass with follow-up** on merged main `aaf5e69` — no false-safe
+  path found, all Linux gates independently reproduced in a pristine clone,
+  ADR-013 bounds verified mathematically and adversarially; follow-ups and
+  one process finding recorded in
+  `docs/notes/2026-09-01-milestone-1-audit.md`.
+
 - **Automatic order recovery** (task 0006, ADR-014, Milestone 2): the engine
   recovers the documentary order of an unordered 2–10 capture set from the
   pairwise overlap graph — `recoverOrder` returns the order plus per-junction
