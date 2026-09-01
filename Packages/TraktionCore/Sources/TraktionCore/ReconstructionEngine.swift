@@ -150,14 +150,10 @@ private extension ReconstructionEngine {
       maximumOverlap: maximumOverlap
     )
 
-    var sampled: [SampledCandidate] = []
-    sampled.reserveCapacity(maximumOverlap - settings.minimumOverlapRows + 1)
     var sampleComparisons = 0
-    for overlapRows in settings.minimumOverlapRows...maximumOverlap {
-      let sampleRowCount = min(overlapRows, settings.sampledRows)
-      let sampleColumnCount = min(preceding.image.width, settings.sampledColumns)
+    func chargeSampleBudget(rows: Int, columns: Int) throws {
       let (candidateComparisons, comparisonOverflow) =
-        sampleRowCount.multipliedReportingOverflow(by: sampleColumnCount)
+        rows.multipliedReportingOverflow(by: columns)
       let (nextComparisons, totalOverflow) =
         sampleComparisons.addingReportingOverflow(candidateComparisons)
       guard !comparisonOverflow,
@@ -169,15 +165,111 @@ private extension ReconstructionEngine {
         )
       }
       sampleComparisons = nextComparisons
+    }
+    func isPlausible(_ candidate: SampledCandidate) -> Bool {
+      candidate.normalizedMeanAbsoluteErrorLowerBound
+        <= settings.maximumNormalizedMeanAbsoluteError
+        && candidate.changedPixelFractionLowerBound
+          <= settings.maximumChangedPixelFraction
+    }
+
+    var sampled: [SampledCandidate] = []
+    sampled.reserveCapacity(maximumOverlap - settings.minimumOverlapRows + 1)
+    for overlapRows in settings.minimumOverlapRows...maximumOverlap {
+      let rows = sampleIndices(count: overlapRows, maximum: settings.sampledRows)
+      let columns = sampleIndices(count: preceding.image.width, maximum: settings.sampledColumns)
+      try chargeSampleBudget(rows: rows.count, columns: columns.count)
       sampled.append(
         sampledCandidate(
           preceding: preceding.image,
           following: following.image,
-          overlapRows: overlapRows
+          overlapRows: overlapRows,
+          rowIndices: rows,
+          columnIndices: columns
         )
       )
     }
-    sampled.sort {
+    var plausible = sampled.filter(isPlausible)
+
+    // Adaptive verification (docs/tasks/0005, ADR-013): when too many
+    // candidates survive the sparse first pass, each survivor is scanned at
+    // full width, rows ordered by the following capture's edge energy —
+    // misalignment is provable exactly where content changes. The running
+    // sums are true lower bounds at every step, so a candidate is pruned
+    // the moment a bound provably exceeds a threshold; a scan that
+    // completes yields the exact score. The true placement can never be
+    // pruned, uniqueness and every fail-closed budget below are untouched,
+    // and refinementRounds == 1 skips this pass entirely — the original
+    // single-pass algorithm, byte for byte.
+    if plausible.count > settings.candidateLimit && settings.refinementRounds > 1 {
+      let energyOrder = rowsByDescendingEdgeEnergy(following.image)
+      let width = preceding.image.width
+      var refined: [SampledCandidate] = []
+      refined.reserveCapacity(plausible.count)
+      for candidate in plausible {
+        let precedingStart = preceding.image.height - candidate.rows
+        let fullPixels = candidate.rows * width
+        let errorDenominator =
+          Double(fullPixels) * Double(RasterImage.channelsPerPixel) * 255
+        var difference: UInt64 = 0
+        var changedPixels = 0
+        var exceeded = false
+        var lastBound = candidate
+
+        for row in energyOrder where row < candidate.rows {
+          try chargeSampleBudget(rows: 1, columns: width)
+          for column in 0..<width {
+            let precedingOffset = preceding.image.byteOffset(
+              x: column,
+              y: precedingStart + row
+            )
+            let followingOffset = following.image.byteOffset(x: column, y: row)
+            var pixelChanged = false
+            for channel in 0..<RasterImage.channelsPerPixel {
+              let channelDifference = abs(
+                Int(preceding.image.pixels[precedingOffset + channel])
+                  - Int(following.image.pixels[followingOffset + channel])
+              )
+              difference += UInt64(channelDifference)
+              if channelDifference > Int(settings.changedChannelThreshold) {
+                pixelChanged = true
+              }
+            }
+            if pixelChanged {
+              changedPixels += 1
+            }
+          }
+
+          let errorBound = Double(difference) / errorDenominator
+          let changedBound = Double(changedPixels) / Double(fullPixels)
+          lastBound = SampledCandidate(
+            rows: candidate.rows,
+            rankingError: errorBound,
+            normalizedMeanAbsoluteErrorLowerBound: max(
+              candidate.normalizedMeanAbsoluteErrorLowerBound,
+              errorBound
+            ),
+            changedPixelFractionLowerBound: max(
+              candidate.changedPixelFractionLowerBound,
+              changedBound
+            )
+          )
+          if errorBound > settings.maximumNormalizedMeanAbsoluteError
+            || changedBound > settings.maximumChangedPixelFraction
+          {
+            exceeded = true
+            break
+          }
+        }
+
+        if !exceeded, isPlausible(lastBound) {
+          refined.append(lastBound)
+        }
+      }
+      plausible = refined
+    }
+
+    plausible.sort {
       let lhsExact = exactRows.contains($0.rows)
       let rhsExact = exactRows.contains($1.rows)
       if lhsExact != rhsExact {
@@ -187,13 +279,6 @@ private extension ReconstructionEngine {
         return $0.rows > $1.rows
       }
       return $0.rankingError < $1.rankingError
-    }
-
-    let plausible = sampled.filter {
-      $0.normalizedMeanAbsoluteErrorLowerBound
-        <= settings.maximumNormalizedMeanAbsoluteError
-        && $0.changedPixelFractionLowerBound
-          <= settings.maximumChangedPixelFraction
     }
 
     var candidatesToScore: [SampledCandidate] = []
@@ -431,10 +516,12 @@ private extension ReconstructionEngine {
   func sampledCandidate(
     preceding: RasterImage,
     following: RasterImage,
-    overlapRows: Int
+    overlapRows: Int,
+    rowIndices: [Int],
+    columnIndices: [Int]
   ) -> SampledCandidate {
-    let rows = sampleIndices(count: overlapRows, maximum: settings.sampledRows)
-    let columns = sampleIndices(count: preceding.width, maximum: settings.sampledColumns)
+    let rows = rowIndices
+    let columns = columnIndices
     let precedingStartRow = preceding.height - overlapRows
     var difference: UInt64 = 0
     var changedPixels = 0
@@ -603,6 +690,28 @@ private extension ReconstructionEngine {
     }
     return (0..<maximum).map { sample in
       sample * (count - 1) / (maximum - 1)
+    }
+  }
+
+  /// Row indices of `image` ordered by descending adjacent-row difference
+  /// (edge-energy proxy; RECONSTRUCTION_SPEC.md §2), ties broken by ascending
+  /// index. Refinement samples these rows first because misalignment is
+  /// provable exactly where content changes.
+  func rowsByDescendingEdgeEnergy(_ image: RasterImage) -> [Int] {
+    var energies = [Int](repeating: 0, count: image.height)
+    for row in 1..<image.height {
+      let currentStart = row * image.rowByteCount
+      let previousStart = currentStart - image.rowByteCount
+      var difference = 0
+      for offset in 0..<image.rowByteCount {
+        difference += abs(
+          Int(image.pixels[currentStart + offset]) - Int(image.pixels[previousStart + offset])
+        )
+      }
+      energies[row] = difference
+    }
+    return (0..<image.height).sorted {
+      energies[$0] != energies[$1] ? energies[$0] > energies[$1] : $0 < $1
     }
   }
 
