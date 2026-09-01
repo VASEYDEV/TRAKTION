@@ -99,7 +99,7 @@ public struct ReconstructionResult: Equatable, Sendable {
   }
 }
 
-public enum ReconstructionFailure: Error, Equatable, Sendable {
+public enum ReconstructionFailure: Error, Equatable, Codable, Sendable {
   case unsupportedAxis(ReconstructionAxis)
   case captureCountOutOfRange(actual: Int, allowed: ClosedRange<Int>)
   case incompatibleDimensions(
@@ -121,6 +121,25 @@ public enum ReconstructionFailure: Error, Equatable, Sendable {
   case resourceLimitExceeded(reason: String)
   case outputDimensionsOverflow
   case invalidPlan(reason: String)
+}
+
+extension ReconstructionFailure {
+  /// Stable machine-readable identifier for this failure case, shared by
+  /// manifests and fixture ground truth. Values are a wire contract; never
+  /// rename them.
+  public var code: String {
+    switch self {
+    case .unsupportedAxis: return "unsupportedAxis"
+    case .captureCountOutOfRange: return "captureCountOutOfRange"
+    case .incompatibleDimensions: return "incompatibleDimensions"
+    case .duplicateCapture: return "duplicateCapture"
+    case .insufficientOverlap: return "insufficientOverlap"
+    case .ambiguousOverlap: return "ambiguousOverlap"
+    case .resourceLimitExceeded: return "resourceLimitExceeded"
+    case .outputDimensionsOverflow: return "outputDimensionsOverflow"
+    case .invalidPlan: return "invalidPlan"
+    }
+  }
 }
 
 extension ReconstructionFailure: CustomStringConvertible {
