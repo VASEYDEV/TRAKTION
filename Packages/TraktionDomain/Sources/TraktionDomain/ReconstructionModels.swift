@@ -99,6 +99,49 @@ public struct ReconstructionResult: Equatable, Sendable {
   }
 }
 
+/// One directed junction accepted while recovering documentary order: the
+/// evidence that `followingCaptureID` continues `precedingCaptureID`.
+public struct RecoveredEdge: Equatable, Codable, Sendable {
+  public let precedingCaptureID: CaptureID
+  public let followingCaptureID: CaptureID
+  public let candidate: OverlapCandidate
+  public let confidence: JointConfidence
+
+  public init(
+    precedingCaptureID: CaptureID,
+    followingCaptureID: CaptureID,
+    candidate: OverlapCandidate,
+    confidence: JointConfidence
+  ) {
+    self.precedingCaptureID = precedingCaptureID
+    self.followingCaptureID = followingCaptureID
+    self.candidate = candidate
+    self.confidence = confidence
+  }
+}
+
+/// The unique acceptable documentary order recovered from an unordered
+/// capture set, with per-junction evidence.
+public struct RecoveredOrder: Equatable, Codable, Sendable {
+  public let captureIDs: [CaptureID]
+  public let edges: [RecoveredEdge]
+
+  public init(captureIDs: [CaptureID], edges: [RecoveredEdge]) {
+    self.captureIDs = captureIDs
+    self.edges = edges
+  }
+}
+
+public struct OrderedReconstruction: Equatable, Sendable {
+  public let order: RecoveredOrder
+  public let result: ReconstructionResult
+
+  public init(order: RecoveredOrder, result: ReconstructionResult) {
+    self.order = order
+    self.result = result
+  }
+}
+
 public enum ReconstructionFailure: Error, Equatable, Codable, Sendable {
   case unsupportedAxis(ReconstructionAxis)
   case captureCountOutOfRange(actual: Int, allowed: ClosedRange<Int>)
@@ -121,6 +164,11 @@ public enum ReconstructionFailure: Error, Equatable, Codable, Sendable {
   case resourceLimitExceeded(reason: String)
   case outputDimensionsOverflow
   case invalidPlan(reason: String)
+  case ambiguousOrder(candidateOrders: [[CaptureID]], totalCandidates: Int)
+  case missingCoverage(
+    coveredCaptureIDs: [CaptureID],
+    uncoveredCaptureIDs: [CaptureID]
+  )
 }
 
 extension ReconstructionFailure {
@@ -138,6 +186,8 @@ extension ReconstructionFailure {
     case .resourceLimitExceeded: return "resourceLimitExceeded"
     case .outputDimensionsOverflow: return "outputDimensionsOverflow"
     case .invalidPlan: return "invalidPlan"
+    case .ambiguousOrder: return "ambiguousOrder"
+    case .missingCoverage: return "missingCoverage"
     }
   }
 }
@@ -163,6 +213,15 @@ extension ReconstructionFailure: CustomStringConvertible {
       return "The reconstructed output dimensions exceed safe integer or memory limits."
     case .invalidPlan(let reason):
       return "The reconstruction plan is invalid: \(reason)"
+    case .ambiguousOrder(let candidateOrders, let totalCandidates):
+      let orders = candidateOrders
+        .map { "[\($0.map(\.rawValue).joined(separator: " → "))]" }
+        .joined(separator: ", ")
+      return "\(totalCandidates) capture orders are acceptable; the documentary order cannot be proven. Candidates include \(orders)."
+    case .missingCoverage(let covered, let uncovered):
+      let coveredChain = covered.map(\.rawValue).joined(separator: " → ")
+      let uncoveredList = uncovered.map(\.rawValue).joined(separator: ", ")
+      return "No acceptable order covers every capture. Longest chain: [\(coveredChain)]; unconnected: \(uncoveredList)."
     }
   }
 }

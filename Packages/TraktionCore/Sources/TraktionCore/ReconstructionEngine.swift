@@ -105,11 +105,21 @@ public struct ReconstructionEngine: Sendable {
   }
 }
 
-private extension ReconstructionEngine {
+extension ReconstructionEngine {
   struct PairRegistration: Sendable {
     let candidate: OverlapCandidate
     let seamRowInOverlap: Int
     let confidence: JointConfidence
+  }
+
+  /// Outcome of probing one directed pair. Pair-local rejections are values
+  /// (order recovery treats them as "no edge"); duplicate captures and every
+  /// budget exhaustion still throw, so no caller can decide from a partial
+  /// search.
+  enum PairOutcome: Sendable {
+    case accepted(PairRegistration)
+    case insufficientOverlap
+    case ambiguousOverlap(candidateRows: [Int])
   }
 
   struct SampledCandidate: Sendable {
@@ -123,6 +133,28 @@ private extension ReconstructionEngine {
     preceding: CaptureAsset,
     following: CaptureAsset
   ) throws -> PairRegistration {
+    switch try probePair(preceding: preceding, following: following) {
+    case .accepted(let registration):
+      return registration
+    case .insufficientOverlap:
+      throw ReconstructionFailure.insufficientOverlap(
+        preceding: preceding.id,
+        following: following.id,
+        minimumRows: settings.minimumOverlapRows
+      )
+    case .ambiguousOverlap(let candidateRows):
+      throw ReconstructionFailure.ambiguousOverlap(
+        preceding: preceding.id,
+        following: following.id,
+        candidateRows: candidateRows
+      )
+    }
+  }
+
+  func probePair(
+    preceding: CaptureAsset,
+    following: CaptureAsset
+  ) throws -> PairOutcome {
     if preceding.image == following.image {
       throw ReconstructionFailure.duplicateCapture(
         preceding: preceding.id,
@@ -132,11 +164,7 @@ private extension ReconstructionEngine {
 
     let maximumOverlap = min(preceding.image.height, following.image.height)
     guard maximumOverlap >= settings.minimumOverlapRows else {
-      throw ReconstructionFailure.insufficientOverlap(
-        preceding: preceding.id,
-        following: following.id,
-        minimumRows: settings.minimumOverlapRows
-      )
+      return .insufficientOverlap
     }
     guard maximumOverlap <= settings.maximumOverlapSearchRows else {
       throw ReconstructionFailure.resourceLimitExceeded(
@@ -316,11 +344,7 @@ private extension ReconstructionEngine {
 
     let acceptable = scored.filter(isAcceptable)
     guard let best = acceptable.first else {
-      throw ReconstructionFailure.insufficientOverlap(
-        preceding: preceding.id,
-        following: following.id,
-        minimumRows: settings.minimumOverlapRows
-      )
+      return .insufficientOverlap
     }
 
     // Every acceptable overlap length represents a different translation. A lower
@@ -328,9 +352,7 @@ private extension ReconstructionEngine {
     // band can otherwise outrank the true, longer near-exact overlap and duplicate
     // documentary rows. Milestone 1 therefore requires a unique acceptable offset.
     if acceptable.count > 1 {
-      throw ReconstructionFailure.ambiguousOverlap(
-        preceding: preceding.id,
-        following: following.id,
+      return .ambiguousOverlap(
         candidateRows: acceptable.map(\.overlapRows).sorted()
       )
     }
@@ -345,10 +367,12 @@ private extension ReconstructionEngine {
       overlapRows: best.overlapRows,
       exact: confidence == .exact
     )
-    return PairRegistration(
-      candidate: best,
-      seamRowInOverlap: seam,
-      confidence: confidence
+    return .accepted(
+      PairRegistration(
+        candidate: best,
+        seamRowInOverlap: seam,
+        confidence: confidence
+      )
     )
   }
 
