@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Evaluation harness** (task 0004): `traktion-lab evaluate --output <report.json>`
+  runs the standard corpus (all control-set variants, the 10–80% overlap sweep, a
+  horizontal case) and emits the EVALUATION.md metrics — per-case verdicts with
+  false-safe/false-warning/wrong-failure accounting, pixel equality, missing and
+  duplicated row counts, per-joint registration error and seam energy, and a
+  two-run determinism check — exiting non-zero on any unacceptable summary. The
+  Linux CI lane runs it and uploads the report artifact.
+- **Adaptive early-exit candidate verification** (task 0005, ADR-013): when the
+  sparse sampling pass cannot discriminate candidates, each survivor is scanned at
+  full width in edge-energy row order with early exit the moment its running lower
+  bound exceeds an acceptance threshold. Phone-scale (1170×2532) and large sparse
+  captures now reconstruct within default budgets where the engine previously
+  failed closed with `resourceLimitExceeded`; `refinementRounds: 1` preserves the
+  original algorithm byte for byte. Golden proofs: the same 400×800 input fails
+  closed single-pass and reconstructs exactly under refinement; genuine periodic
+  ambiguity still refuses; suite now 67 tests.
+
+### Changed
+
+- Default registration budgets recalibrated to measured phone-scale cost:
+  `maximumSampleComparisonsPerJoint` 32M → 128M,
+  `maximumFullComparisonPixelsPerJoint` 32M → 64M (docs/tasks/0005).
+
 - **Typed failure manifests** (task 0002): a failed `traktion-lab reconstruct` now
   writes a deterministic `status: failed` manifest — stage (`decode`/`reconstruct`),
   stable `failureCode`, human-readable description, the typed `ReconstructionFailure`
