@@ -1,5 +1,16 @@
 # TRAKTION Roadmap
 
+## Status (2026-09-03)
+
+| Milestone | State | Evidence |
+| --- | --- | --- |
+| 0 — Foundation | complete | PR #4, PR #5 |
+| 1 — Exact static reconstruction | passed with follow-ups | `docs/audits/2026-09-03-milestone-1.md`; follow-ups are tasks 0011–0013 |
+| 2 — Sequence intelligence | in progress | exact ordering core (task 0007) and tooling (task 0008) landed; near-exact recovery (task 0009), repeated-chrome guard (task 0010), duplicates, missing coverage, confidence states open |
+| 3–7 | not started | — |
+
+Task packets and their status live in `docs/tasks/README.md`.
+
 ## Milestone 0 — Foundation
 Repository structure, shared agent contract, architecture docs, CI, TraktionLab skeleton, FixtureForge skeleton, baseline golden fixtures.
 
