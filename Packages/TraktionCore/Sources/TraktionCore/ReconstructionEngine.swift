@@ -158,6 +158,118 @@ public struct ReconstructionEngine: Sendable {
     )
   }
 
+  /// Recovers documentary order from near-exact evidence: a directed edge
+  /// exists exactly when the unchanged Milestone 1 registration pipeline
+  /// (sampled bounds, adaptive verification, full scoring, the ADR-012
+  /// unique-acceptable-translation rule) accepts one overlap in which the
+  /// following capture continues the preceding one. Exactly one complete
+  /// path is required; a pair-level `ambiguousOverlap` contributes no edge,
+  /// and any budget exhaustion aborts the whole recovery, so no order is
+  /// ever chosen from a partial or unprovable graph (ADR-015). The recovered
+  /// order is replayed through supplied-order `reconstruct`, so final plan
+  /// and pixels are produced and re-verified by the reviewed path.
+  public func reconstructNearExactUnordered(
+    _ captures: [CaptureAsset],
+    axis: ReconstructionAxis = .vertical
+  ) throws -> ReconstructionResult {
+    guard axis == .vertical else {
+      throw ReconstructionFailure.unsupportedAxis(axis)
+    }
+    guard (2...10).contains(captures.count) else {
+      throw ReconstructionFailure.captureCountOutOfRange(
+        actual: captures.count,
+        allowed: 2...10
+      )
+    }
+    try validateResourceBounds(captures)
+    try validateUniqueCaptures(captures)
+
+    let expectedWidth = captures[0].image.width
+    for capture in captures.dropFirst() where capture.image.width != expectedWidth {
+      throw ReconstructionFailure.incompatibleDimensions(
+        expectedWidth: expectedWidth,
+        actualWidth: capture.image.width,
+        captureID: capture.id
+      )
+    }
+
+    // Same stable node order as the exact path, so traversal, diagnostics,
+    // and output are independent of the caller's permutation.
+    let nodes = captures.sorted {
+      $0.id.rawValue != $1.id.rawValue
+        ? $0.id.rawValue < $1.id.rawValue
+        : $0.sourceName < $1.sourceName
+    }
+
+    // Whole-recovery bound, charged before any pair is examined: the full
+    // potential overlap area of every ordered pair, exactly as the exact
+    // path accounts for it. Each probe is additionally held to the per-joint
+    // sample and full-comparison budgets and throws on exhaustion, which
+    // discards the graph rather than deciding from part of it.
+    var orderingComparisonPixels = 0
+    for preceding in nodes.indices {
+      for following in nodes.indices where preceding != following {
+        let overlapRows = min(nodes[preceding].image.height, nodes[following].image.height)
+        let (pairPixels, pairOverflow) = expectedWidth.multipliedReportingOverflow(
+          by: overlapRows
+        )
+        let (nextPixels, totalOverflow) = orderingComparisonPixels.addingReportingOverflow(
+          pairPixels
+        )
+        guard !pairOverflow, !totalOverflow,
+          nextPixels <= settings.maximumOrderingComparisonPixels
+        else {
+          throw ReconstructionFailure.resourceLimitExceeded(
+            reason: "near-exact sequence ordering exceeds "
+              + "\(settings.maximumOrderingComparisonPixels) pixel comparisons"
+          )
+        }
+        orderingComparisonPixels = nextPixels
+      }
+    }
+
+    var successors = [[Int]](repeating: [], count: nodes.count)
+    for preceding in nodes.indices {
+      for following in nodes.indices where preceding != following {
+        if case .accepted = try probePair(
+          preceding: nodes[preceding],
+          following: nodes[following]
+        ) {
+          successors[preceding].append(following)
+        }
+      }
+    }
+
+    var paths: [[Int]] = []
+    for start in nodes.indices {
+      collectOrderingPaths(
+        current: start,
+        successors: successors,
+        path: [start],
+        visited: Set([start]),
+        limit: 2,
+        results: &paths
+      )
+      if paths.count == 2 { break }
+    }
+
+    guard let onlyPath = paths.first else {
+      throw ReconstructionFailure.sequenceOrderNotFound(
+        captureIDs: nodes.map(\.id)
+      )
+    }
+    guard paths.count == 1 else {
+      throw ReconstructionFailure.ambiguousSequenceOrder(
+        candidateOrders: paths.map { path in path.map { nodes[$0].id } }
+      )
+    }
+
+    return try reconstruct(
+      CaptureSequence(captures: onlyPath.map { nodes[$0] }),
+      axis: axis
+    )
+  }
+
   public func differenceImage(
     preceding: CaptureAsset,
     following: CaptureAsset,
@@ -213,6 +325,16 @@ private extension ReconstructionEngine {
     let candidate: OverlapCandidate
     let seamRowInOverlap: Int
     let confidence: JointConfidence
+  }
+
+  /// Outcome of probing one directed pair. Pair-local rejections are values
+  /// so order recovery can treat them as "no edge"; duplicate captures and
+  /// every budget exhaustion still throw, so no caller can decide from a
+  /// partial search.
+  enum PairOutcome: Sendable {
+    case accepted(PairRegistration)
+    case insufficientOverlap
+    case ambiguousOverlap(candidateRows: [Int])
   }
 
   struct SampledCandidate: Sendable {
@@ -292,10 +414,34 @@ private extension ReconstructionEngine {
     }
   }
 
+  /// Supplied-order registration: the probe's outcome mapped back to the
+  /// identical typed throws at the identical decision points.
   func register(
     preceding: CaptureAsset,
     following: CaptureAsset
   ) throws -> PairRegistration {
+    switch try probePair(preceding: preceding, following: following) {
+    case .accepted(let registration):
+      return registration
+    case .insufficientOverlap:
+      throw ReconstructionFailure.insufficientOverlap(
+        preceding: preceding.id,
+        following: following.id,
+        minimumRows: settings.minimumOverlapRows
+      )
+    case .ambiguousOverlap(let candidateRows):
+      throw ReconstructionFailure.ambiguousOverlap(
+        preceding: preceding.id,
+        following: following.id,
+        candidateRows: candidateRows
+      )
+    }
+  }
+
+  func probePair(
+    preceding: CaptureAsset,
+    following: CaptureAsset
+  ) throws -> PairOutcome {
     if preceding.image == following.image {
       throw ReconstructionFailure.duplicateCapture(
         preceding: preceding.id,
@@ -305,11 +451,7 @@ private extension ReconstructionEngine {
 
     let maximumOverlap = min(preceding.image.height, following.image.height)
     guard maximumOverlap >= settings.minimumOverlapRows else {
-      throw ReconstructionFailure.insufficientOverlap(
-        preceding: preceding.id,
-        following: following.id,
-        minimumRows: settings.minimumOverlapRows
-      )
+      return .insufficientOverlap
     }
     guard maximumOverlap <= settings.maximumOverlapSearchRows else {
       throw ReconstructionFailure.resourceLimitExceeded(
@@ -489,11 +631,7 @@ private extension ReconstructionEngine {
 
     let acceptable = scored.filter(isAcceptable)
     guard let best = acceptable.first else {
-      throw ReconstructionFailure.insufficientOverlap(
-        preceding: preceding.id,
-        following: following.id,
-        minimumRows: settings.minimumOverlapRows
-      )
+      return .insufficientOverlap
     }
 
     // Every acceptable overlap length represents a different translation. A lower
@@ -501,11 +639,7 @@ private extension ReconstructionEngine {
     // band can otherwise outrank the true, longer near-exact overlap and duplicate
     // documentary rows. Milestone 1 therefore requires a unique acceptable offset.
     if acceptable.count > 1 {
-      throw ReconstructionFailure.ambiguousOverlap(
-        preceding: preceding.id,
-        following: following.id,
-        candidateRows: acceptable.map(\.overlapRows).sorted()
-      )
+      return .ambiguousOverlap(candidateRows: acceptable.map(\.overlapRows).sorted())
     }
 
     let confidence: JointConfidence =
@@ -518,10 +652,12 @@ private extension ReconstructionEngine {
       overlapRows: best.overlapRows,
       exact: confidence == .exact
     )
-    return PairRegistration(
-      candidate: best,
-      seamRowInOverlap: seam,
-      confidence: confidence
+    return .accepted(
+      PairRegistration(
+        candidate: best,
+        seamRowInOverlap: seam,
+        confidence: confidence
+      )
     )
   }
 
