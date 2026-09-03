@@ -29,11 +29,19 @@ unmerged packet is renumbered on port (see task 0009 for the PR #8 example).
 | [0012](0012-golden-failure-artifacts.md) | Golden-failure CI artifact bundle | 1 follow-up | planned | — | — |
 | [0013](0013-peak-memory-instrumentation.md) | Peak-memory and throughput instrumentation | 1 follow-up | planned | — | — |
 
-## Superseded packets
+## Superseded packets and pull requests
 
-PR #8 (`claude/traktion-dev-setup-f24qtq`) carries packets numbered 0006
-("Automatic order recovery") and 0007 ("Order-recovery tooling") and an
-ADR-014 written before the Codex audit merged its own 0006/0007/ADR-014.
-Those numbers now belong to the merged packets above; the PR #8 work is
-tracked as task 0009 (engine half, to be ported) and task 0008 (tooling
-half, ported here against the exact-only API).
+- **PR #8** (`claude/traktion-dev-setup-f24qtq`, closed 2026-09-03 as
+  superseded) carries packets numbered 0006 ("Automatic order recovery") and
+  0007 ("Order-recovery tooling") and an ADR-014 written before the Codex
+  audit merged its own 0006/0007/ADR-014. Those numbers belong to the merged
+  packets above; the PR #8 tooling half landed as task 0008 (PR #10) and its
+  engine half is task 0009, to be ported onto the merged contract. The branch
+  is kept as the reference implementation for that port and may be deleted
+  once 0009 lands.
+- **PR #2** (`codex/create-initial-structure-for-traktion-project`, closed
+  2026-08 unmerged) was an earlier foundation attempt superseded by PR #4
+  (task 0001); its branch is gone.
+
+Branches of merged pull requests are deleted after merge; `main` is the only
+long-lived branch.
