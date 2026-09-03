@@ -23,6 +23,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   metrics in the summary (correct-sequence 2/3, duplicate identification 1/1,
   missing-capture detection 1/1). A recovered order that differs from the
   documentary order is a false-safe.
+- **Task tracking** (`docs/tasks/README.md`): index of every packet with
+  status, the numbering rule that resolves the PR #8 / PR #9 collision, and
+  planned packets 0009 (near-exact order recovery, porting the PR #8 engine
+  design), 0010 (repeated-chrome guard, a **false-safe finding**: identical
+  top-and-bottom chrome bands reconstruct with `exact` confidence while
+  duplicating rows; reproduction recorded in the packet), 0011 (corpus visual
+  categories), 0012 (golden-failure CI artifacts), 0013 (peak-memory
+  instrumentation). Roadmap gains a milestone status table; `CLAUDE.md`
+  repository facts gain task-tracking and toolchain notes.
+
 - **Fail-closed exact sequence ordering** (task 0007, ADR-014): the opt-in
   `reconstructExactUnordered` core API recovers shuffled captures only when
   exact suffix/prefix evidence forms one unique complete path. Missing and
