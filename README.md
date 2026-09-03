@@ -21,13 +21,15 @@ Full-page capture often fails: content scrolls inside nested frames, headers sta
 
 ## Status
 
-**Milestone 1 draft review.** The first Swift foundation now includes a deterministic reconstruction core, synthetic fixture generator, diagnostic CLI, golden tests, Apple PNG adapter, and deliberately minimal SwiftUI preview shell. Its repository, Swift/Linux, macOS, PNG round-trip, and end-to-end synthetic reconstruction gates pass in the stacked draft pull request.
+**Milestone 1 passed with evidence follow-ups.** The deterministic reconstruction core, synthetic fixture generator, diagnostic CLI, golden tests, cross-platform PNG adapters, evaluation harness, and deliberately minimal SwiftUI preview shell are implemented. The [2026-09-03 milestone audit](docs/audits/2026-09-03-milestone-1.md) records the verified boundary and the evaluation/peak-memory evidence still required while Milestone 2 begins.
 
 | Current capability | State |
 | --- | --- |
 | Supplied-order vertical reconstruction | Implemented for 2–10 opaque, equal-width PNG captures |
+| Exact automatic sequence ordering | Core API implemented; fails closed on gaps or ambiguity |
 | Exact suffix/prefix overlap and seam plan | Implemented with ambiguity rejection |
 | Decoded-pixel golden comparison | Implemented for deterministic synthetic fixtures |
+| Machine-readable evaluation gate | Implemented for the standard 16-case corpus |
 | Composite, manifest, and joint diagnostics | Implemented in `traktion-lab` |
 | Horizontal, ordering, sticky UI, video, web capture | Later milestones; fail or remain disabled |
 | Native application | macOS SwiftUI preview shell only; installable iOS target is not yet present |
@@ -58,6 +60,7 @@ cd traktion
 bash scripts/check-repository.sh  # repository policy on any host
 bash scripts/verify-core.sh       # Swift build + tests on any host
 bash scripts/smoke.sh             # fixture → reconstruct → compare on any host
+swift run traktion-lab evaluate --output /tmp/evaluation-report.json
 bash scripts/gate.sh              # complete macOS gate (adds ImageIO verification)
 ```
 

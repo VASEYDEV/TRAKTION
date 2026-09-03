@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Fail-closed exact sequence ordering** (task 0007, ADR-014): the opt-in
+  `reconstructExactUnordered` core API recovers shuffled captures only when
+  exact suffix/prefix evidence forms one unique complete path. Missing and
+  ambiguous orders have stable typed failures, graph work has an explicit
+  pixel-comparison budget, and supplied-order reconstruction remains unchanged.
+
+- **Milestone 1 evidence audit** (task 0006): verified the merged foundation,
+  67-test suite, PNG smoke, and 16-case evaluation gate; recorded a pass with
+  explicit corpus, CI-artifact, real-device, and peak-memory follow-ups plus
+  fail-closed entry criteria for Milestone 2 sequence intelligence. README
+  status now links the audit and documents the evaluation command.
+
 - **Evaluation harness** (task 0004): `traktion-lab evaluate --output <report.json>`
   runs the standard corpus (all control-set variants, the 10–80% overlap sweep, a
   horizontal case) and emits the EVALUATION.md metrics — per-case verdicts with

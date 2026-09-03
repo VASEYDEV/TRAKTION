@@ -55,6 +55,109 @@ public struct ReconstructionEngine: Sendable {
     return ReconstructionResult(plan: plan, image: image)
   }
 
+  /// Reorders captures only when the supplied pixels prove one unique path of
+  /// exact suffix-to-prefix overlaps. Near-exact edges are deliberately not
+  /// inferred here: refusing uncertain order is safer than turning a local
+  /// similarity score into documentary order.
+  public func reconstructExactUnordered(
+    _ captures: [CaptureAsset],
+    axis: ReconstructionAxis = .vertical
+  ) throws -> ReconstructionResult {
+    guard axis == .vertical else {
+      throw ReconstructionFailure.unsupportedAxis(axis)
+    }
+    guard (2...10).contains(captures.count) else {
+      throw ReconstructionFailure.captureCountOutOfRange(
+        actual: captures.count,
+        allowed: 2...10
+      )
+    }
+    try validateResourceBounds(captures)
+    try validateUniqueCaptures(captures)
+
+    let expectedWidth = captures[0].image.width
+    for capture in captures.dropFirst() where capture.image.width != expectedWidth {
+      throw ReconstructionFailure.incompatibleDimensions(
+        expectedWidth: expectedWidth,
+        actualWidth: capture.image.width,
+        captureID: capture.id
+      )
+    }
+
+    // Stable node order makes both traversal and typed ambiguity diagnostics
+    // independent of the caller's arbitrary input permutation.
+    let nodes = captures.sorted {
+      $0.id.rawValue != $1.id.rawValue
+        ? $0.id.rawValue < $1.id.rawValue
+        : $0.sourceName < $1.sourceName
+    }
+    let tallestCapture = nodes.map(\.image.height).max() ?? 0
+    guard tallestCapture <= settings.maximumOverlapSearchRows else {
+      throw ReconstructionFailure.resourceLimitExceeded(
+        reason: "exact sequence ordering requires up to \(tallestCapture) overlap rows; "
+          + "maximum is \(settings.maximumOverlapSearchRows)"
+      )
+    }
+    var successors = [[Int]](repeating: [], count: nodes.count)
+    var orderingComparisonPixels = 0
+    for preceding in nodes.indices {
+      for following in nodes.indices where preceding != following {
+        let overlapRows = min(nodes[preceding].image.height, nodes[following].image.height)
+        let (pairPixels, pairOverflow) = expectedWidth.multipliedReportingOverflow(
+          by: overlapRows
+        )
+        let (nextPixels, totalOverflow) = orderingComparisonPixels.addingReportingOverflow(
+          pairPixels
+        )
+        guard !pairOverflow, !totalOverflow,
+          nextPixels <= settings.maximumOrderingComparisonPixels
+        else {
+          throw ReconstructionFailure.resourceLimitExceeded(
+            reason: "exact sequence ordering exceeds "
+              + "\(settings.maximumOrderingComparisonPixels) pixel comparisons"
+          )
+        }
+        orderingComparisonPixels = nextPixels
+        if try hasExactOverlap(
+          preceding: nodes[preceding].image,
+          following: nodes[following].image,
+          comparisonPixels: &orderingComparisonPixels
+        ) {
+          successors[preceding].append(following)
+        }
+      }
+    }
+
+    var paths: [[Int]] = []
+    for start in nodes.indices {
+      collectOrderingPaths(
+        current: start,
+        successors: successors,
+        path: [start],
+        visited: Set([start]),
+        limit: 2,
+        results: &paths
+      )
+      if paths.count == 2 { break }
+    }
+
+    guard let onlyPath = paths.first else {
+      throw ReconstructionFailure.sequenceOrderNotFound(
+        captureIDs: nodes.map(\.id)
+      )
+    }
+    guard paths.count == 1 else {
+      throw ReconstructionFailure.ambiguousSequenceOrder(
+        candidateOrders: paths.map { path in path.map { nodes[$0].id } }
+      )
+    }
+
+    return try reconstruct(
+      CaptureSequence(captures: onlyPath.map { nodes[$0] }),
+      axis: axis
+    )
+  }
+
   public func differenceImage(
     preceding: CaptureAsset,
     following: CaptureAsset,
@@ -117,6 +220,76 @@ private extension ReconstructionEngine {
     let rankingError: Double
     let normalizedMeanAbsoluteErrorLowerBound: Double
     let changedPixelFractionLowerBound: Double
+  }
+
+  func hasExactOverlap(
+    preceding: RasterImage,
+    following: RasterImage,
+    comparisonPixels: inout Int
+  ) throws -> Bool {
+    let maximumOverlap = min(preceding.height, following.height)
+    guard maximumOverlap >= settings.minimumOverlapRows,
+      maximumOverlap <= settings.maximumOverlapSearchRows
+    else {
+      return false
+    }
+    let candidates = exactOverlapCandidates(
+      preceding: preceding,
+      following: following,
+      maximumOverlap: maximumOverlap
+    )
+    for overlapRows in candidates.sorted() {
+      let (candidatePixels, candidateOverflow) = preceding.width.multipliedReportingOverflow(
+        by: overlapRows
+      )
+      let (nextPixels, totalOverflow) = comparisonPixels.addingReportingOverflow(candidatePixels)
+      guard !candidateOverflow, !totalOverflow,
+        nextPixels <= settings.maximumOrderingComparisonPixels
+      else {
+        throw ReconstructionFailure.resourceLimitExceeded(
+          reason: "exact sequence ordering exceeds "
+            + "\(settings.maximumOrderingComparisonPixels) pixel comparisons"
+        )
+      }
+      comparisonPixels = nextPixels
+      let candidate = score(
+        preceding: preceding,
+        following: following,
+        overlapRows: overlapRows
+      )
+      if candidate.normalizedMeanAbsoluteError == 0
+        && candidate.changedPixelFraction == 0
+      {
+        return true
+      }
+    }
+    return false
+  }
+
+  func collectOrderingPaths(
+    current: Int,
+    successors: [[Int]],
+    path: [Int],
+    visited: Set<Int>,
+    limit: Int,
+    results: inout [[Int]]
+  ) {
+    guard results.count < limit else { return }
+    if path.count == successors.count {
+      results.append(path)
+      return
+    }
+    for successor in successors[current] where !visited.contains(successor) {
+      collectOrderingPaths(
+        current: successor,
+        successors: successors,
+        path: path + [successor],
+        visited: visited.union([successor]),
+        limit: limit,
+        results: &results
+      )
+      if results.count == limit { return }
+    }
   }
 
   func register(

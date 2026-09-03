@@ -17,6 +17,9 @@ public struct ReconstructionSettings: Equatable, Sendable {
   public let maximumOverlapSearchRows: Int
   public let maximumSampleComparisonsPerJoint: Int
   public let maximumFullComparisonPixelsPerJoint: Int
+  /// Conservative total overlap area examined while building an exact
+  /// directed ordering graph. The graph is discarded if this bound is hit.
+  public let maximumOrderingComparisonPixels: Int
 
   public init(
     minimumOverlapRows: Int = 8,
@@ -38,7 +41,8 @@ public struct ReconstructionSettings: Equatable, Sendable {
     // scale. 128M leaves headroom. Full verification of a saturated
     // candidate set (candidateLimit x 2532 rows x 1170 px) needs ~36M.
     maximumSampleComparisonsPerJoint: Int = 134_217_728,
-    maximumFullComparisonPixelsPerJoint: Int = 67_108_864
+    maximumFullComparisonPixelsPerJoint: Int = 67_108_864,
+    maximumOrderingComparisonPixels: Int = 268_435_456
   ) {
     self.minimumOverlapRows = max(1, minimumOverlapRows)
     self.maximumNormalizedMeanAbsoluteError = max(
@@ -63,5 +67,6 @@ public struct ReconstructionSettings: Equatable, Sendable {
       1,
       maximumFullComparisonPixelsPerJoint
     )
+    self.maximumOrderingComparisonPixels = max(1, maximumOrderingComparisonPixels)
   }
 }
