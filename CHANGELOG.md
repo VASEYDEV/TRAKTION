@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Near-exact order recovery** (task 0009, ADR-015): the opt-in
+  `reconstructNearExactUnordered` core API recovers the documentary order of
+  2–10 captures from uniquely registered near-exact overlaps — an edge exists
+  only where the unchanged Milestone 1 registration pipeline accepts one
+  overlap — under the same one-complete-path rule and the same typed failures
+  as exact ordering (`sequenceOrderNotFound`, `ambiguousSequenceOrder`,
+  `resourceLimitExceeded`); pair-level ambiguity never becomes an edge, any
+  budget exhaustion discards the graph, and the recovered order is replayed
+  through supplied-order `reconstruct`. Registration is refactored into an
+  outcome-returning `probePair` with a byte-identical throwing `register`.
+  Tooling: `traktion-lab reconstruct --order near-exact`; smoke generates the
+  degraded control and proves `exact` refuses it while `near-exact` matches
+  the supplied-order composite; the evaluation corpus grows to 23 cases with
+  three near-exact ordering cases (correct-sequence 4/4, duplicates 1/1,
+  missing-captures 2/2). Goldens: shuffled degraded captures reconstruct
+  verbatim; symmetric content is ambiguous; periodic content refuses;
+  starved budgets fail closed. This ports the engine half of the superseded
+  PR #8 onto the merged contract.
+
 - **Exact-ordering tooling** (task 0008): `traktion-lab reconstruct
   --order supplied|exact` exposes the task-0007 exact sequence ordering;
   manifests are `schemaVersion` 3 with `orderPolicy` and, under `exact`,

@@ -222,6 +222,71 @@ fi
 test ! -e "$smoke_dir/bad-order-composite.png"
 test ! -e "$smoke_dir/bad-order-composite.reconstruction.json"
 
+# Near-exact ordering (docs/tasks/0009, ADR-015): the degraded control set
+# carries no byte-exact edge, so --order exact refuses it with a typed
+# manifest while --order near-exact recovers the order and reproduces the
+# supplied-order composite byte for byte.
+degraded_dir="$smoke_dir/degraded"
+"$bin_dir/fixture-forge" generate --scenario degraded --output-dir "$degraded_dir"
+"$bin_dir/traktion-lab" reconstruct \
+  --axis vertical \
+  --output "$smoke_dir/degraded-supplied.png" \
+  --manifest "$smoke_dir/degraded-supplied.reconstruction.json" \
+  --diagnostics-dir "$smoke_dir/degraded-supplied-diagnostics" \
+  "$degraded_dir/capture-001.png" \
+  "$degraded_dir/capture-002.png" \
+  "$degraded_dir/capture-003.png"
+
+degraded_exact_manifest="$smoke_dir/degraded-exact.reconstruction.json"
+if "$bin_dir/traktion-lab" reconstruct \
+  --axis vertical \
+  --order exact \
+  --output "$smoke_dir/degraded-exact.png" \
+  --manifest "$degraded_exact_manifest" \
+  --diagnostics-dir "$smoke_dir/degraded-exact-diagnostics" \
+  "$degraded_dir/capture-003.png" \
+  "$degraded_dir/capture-001.png" \
+  "$degraded_dir/capture-002.png"
+then
+  echo "Expected exact ordering to refuse near-exact captures."
+  exit 1
+fi
+test ! -e "$smoke_dir/degraded-exact.png"
+python3 - "$degraded_exact_manifest" <<'PYEOF'
+import json, sys
+manifest = json.load(open(sys.argv[1]))
+assert manifest["status"] == "failed", manifest
+assert manifest["orderPolicy"] == "exact", manifest
+assert manifest["failureCode"] == "sequenceOrderNotFound", manifest
+PYEOF
+
+degraded_near_exact_manifest="$smoke_dir/degraded-near-exact.reconstruction.json"
+"$bin_dir/traktion-lab" reconstruct \
+  --axis vertical \
+  --order near-exact \
+  --output "$smoke_dir/degraded-near-exact.png" \
+  --manifest "$degraded_near_exact_manifest" \
+  --diagnostics-dir "$smoke_dir/degraded-near-exact-diagnostics" \
+  "$degraded_dir/capture-003.png" \
+  "$degraded_dir/capture-001.png" \
+  "$degraded_dir/capture-002.png"
+cmp "$smoke_dir/degraded-supplied.png" "$smoke_dir/degraded-near-exact.png"
+python3 - "$degraded_near_exact_manifest" "$smoke_dir/degraded-supplied.reconstruction.json" <<'PYEOF'
+import json, sys
+near_exact, supplied = (json.load(open(path)) for path in sys.argv[1:3])
+assert near_exact["status"] == "reconstructed", near_exact
+assert near_exact["orderPolicy"] == "near-exact", near_exact
+# IDs are positional (argument order 003, 001, 002); documentary order is files 001..003.
+assert near_exact["recoveredOrder"] == ["capture-002", "capture-003", "capture-001"], near_exact
+assert [c["fileName"] for c in near_exact["captures"]] == [
+    "capture-001.png", "capture-002.png", "capture-003.png"
+], near_exact
+assert [j["confidence"] for j in near_exact["plan"]["joints"]] == ["strong", "strong"], near_exact
+assert [j["overlapRows"] for j in near_exact["plan"]["joints"]] == [
+    j["overlapRows"] for j in supplied["plan"]["joints"]
+], (near_exact, supplied)
+PYEOF
+
 failure_output="$smoke_dir/failure-composite.png"
 failure_parent_blocker="$smoke_dir/manifest-parent-blocker"
 failure_manifest="$failure_parent_blocker/manifest.json"

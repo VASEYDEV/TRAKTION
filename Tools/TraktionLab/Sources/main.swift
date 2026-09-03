@@ -176,8 +176,10 @@ private enum TraktionLab {
           CaptureSequence(captures: captures),
           axis: arguments.axis
         )
-      case .exact:
-        result = try engine.reconstructExactUnordered(captures, axis: arguments.axis)
+      case .exact, .nearExact:
+        result = arguments.orderPolicy == .exact
+          ? try engine.reconstructExactUnordered(captures, axis: arguments.axis)
+          : try engine.reconstructNearExactUnordered(captures, axis: arguments.axis)
         // The plan's placements are the recovered documentary order. Reorder
         // for the manifest and per-joint diagnostics, which pair adjacent
         // captures; IDs are unique by construction (capture-NNN).
@@ -502,11 +504,14 @@ private enum TraktionLab {
         --manifest <path>                Reconstruction JSON sidecar.
         --diagnostics-dir <path>         Per-joint JSON and difference PNGs.
         --minimum-overlap-rows <count>   Default: 8.
-        --order supplied|exact           supplied (default): reconstruct in
+        --order supplied|exact|near-exact
+                                         supplied (default): reconstruct in
                                          argument order. exact: recover the
                                          order from byte-exact suffix/prefix
-                                         evidence only; gaps and ambiguity
-                                         fail closed (ADR-014).
+                                         evidence only (ADR-014). near-exact:
+                                         recover it from uniquely registered
+                                         near-exact overlaps (ADR-015). Both
+                                         fail closed on gaps and ambiguity.
       """
     )
   }

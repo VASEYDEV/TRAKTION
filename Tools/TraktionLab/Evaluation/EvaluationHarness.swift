@@ -9,11 +9,14 @@ import TraktionDomain
 
 /// How the Lab and the harness hand captures to the engine. `supplied` is the
 /// Milestone 1 contract; `exact` recovers the order from byte-exact
-/// suffix/prefix evidence only (task 0007, ADR-014) and fails closed on gaps
-/// or ambiguity.
+/// suffix/prefix evidence only (task 0007, ADR-014); `nearExact` recovers it
+/// from uniquely registered near-exact overlaps under the same global
+/// uniqueness rule (task 0009, ADR-015). Both fail closed on gaps or
+/// ambiguity.
 public enum OrderPolicy: String, Codable, Equatable, Sendable, CaseIterable {
   case supplied
   case exact
+  case nearExact = "near-exact"
 }
 
 public struct EvaluationCase: Sendable {
@@ -21,7 +24,7 @@ public struct EvaluationCase: Sendable {
   public let configuration: FixtureControlConfiguration
   public let engineAxis: ReconstructionAxis
   /// Non-nil turns this into an ordering case (docs/tasks/0008): the generated
-  /// captures are permuted, the engine runs under the `exact` order policy,
+  /// captures are permuted, the engine runs under the case's order policy,
   /// and the ordering expectation replaces the supplied-order ground-truth pin.
   public let ordering: OrderingCase?
 
@@ -38,7 +41,7 @@ public struct EvaluationCase: Sendable {
   }
 
   public var orderPolicy: OrderPolicy {
-    ordering == nil ? .supplied : .exact
+    ordering?.policy ?? .supplied
   }
 }
 
@@ -47,10 +50,17 @@ public struct OrderingCase: Sendable {
   /// order) before the run. Must be a permutation of `0..<captureCount`.
   public let permutation: [Int]
   public let expected: ExpectedOrderingOutcome
+  /// The ordering policy the engine runs under; never `supplied`.
+  public let policy: OrderPolicy
 
-  public init(permutation: [Int], expected: ExpectedOrderingOutcome) {
+  public init(
+    permutation: [Int],
+    expected: ExpectedOrderingOutcome,
+    policy: OrderPolicy = .exact
+  ) {
     self.permutation = permutation
     self.expected = expected
+    self.policy = policy == .supplied ? .exact : policy
   }
 }
 
@@ -283,13 +293,13 @@ public enum EvaluationHarness {
         )
       )
     )
-    // The exact-only boundary, recorded rather than hidden: near-exact
-    // overlaps carry no byte-exact edge, so the order cannot be proven today.
-    // This case counts against the correct-sequence rate; task 0009 flips the
-    // expectation to `.reconstruct` when near-exact evidence lands.
+    // Near-exact ordering cases (docs/tasks/0009, ADR-015): uniquely
+    // registered near-exact overlaps order captures the exact policy cannot
+    // (the degraded control), exact input still orders, and a coverage gap
+    // still refuses.
     cases.append(
       EvaluationCase(
-        name: "order-degraded-exact-only",
+        name: "order-near-exact-degraded",
         configuration: FixtureControlConfiguration(
           sourceID: "order-degraded",
           seed: 4004,
@@ -297,7 +307,39 @@ public enum EvaluationHarness {
         ),
         ordering: OrderingCase(
           permutation: [1, 2, 0],
-          expected: .fail(code: "sequenceOrderNotFound")
+          expected: .reconstruct,
+          policy: .nearExact
+        )
+      )
+    )
+    cases.append(
+      EvaluationCase(
+        name: "order-near-exact-shuffled-baseline",
+        configuration: FixtureControlConfiguration(
+          sourceID: "order-near-exact-shuffled",
+          captureCount: 5,
+          seed: 4005,
+          variant: .baseline
+        ),
+        ordering: OrderingCase(
+          permutation: [3, 0, 4, 1, 2],
+          expected: .reconstruct,
+          policy: .nearExact
+        )
+      )
+    )
+    cases.append(
+      EvaluationCase(
+        name: "order-near-exact-missing-middle",
+        configuration: FixtureControlConfiguration(
+          sourceID: "order-near-exact-missing",
+          seed: 4006,
+          variant: .missingMiddle
+        ),
+        ordering: OrderingCase(
+          permutation: [1, 0],
+          expected: .fail(code: "sequenceOrderNotFound"),
+          policy: .nearExact
         )
       )
     )
@@ -441,6 +483,9 @@ public enum EvaluationHarness {
       case .exact:
         let result = try engine.reconstructExactUnordered(captures, axis: axis)
         return (.reconstructed(result), result.plan.placements.map(\.captureID))
+      case .nearExact:
+        let result = try engine.reconstructNearExactUnordered(captures, axis: axis)
+        return (.reconstructed(result), result.plan.placements.map(\.captureID))
       }
     } catch let failure as ReconstructionFailure {
       return (.failed(failure), nil)
@@ -476,7 +521,7 @@ public enum EvaluationHarness {
     milliseconds: Int
   ) -> EvaluationCaseResult {
     let truth = bundle.groundTruth
-    let policy: OrderPolicy = ordering == nil ? .supplied : .exact
+    let policy = ordering?.policy ?? OrderPolicy.supplied
     let expectedFailureCode: String?
     switch ordering?.expected {
     case .none:

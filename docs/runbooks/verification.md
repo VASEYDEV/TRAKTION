@@ -39,7 +39,9 @@ manifest-publication failure to prove that partial artifacts are removed before 
 Since task 0008 it additionally runs the same captures shuffled under `--order exact`
 (composite byte-identical to the supplied-order run, twice), a two-capture coverage gap
 (typed `sequenceOrderNotFound` failure manifest, no composite), and an unknown `--order`
-value (usage error, nothing written).
+value (usage error, nothing written). Since task 0009 it also generates the degraded
+control set and proves that `--order exact` refuses it (typed manifest) while
+`--order near-exact` reproduces the supplied-order composite byte for byte.
 
 ## Evaluation gate
 
@@ -47,11 +49,10 @@ value (usage error, nothing written).
 swift run traktion-lab evaluate --output /tmp/evaluation-report.json
 ```
 
-Runs the standard 21-case corpus twice per case and exits non-zero on any false-safe,
+Runs the standard 23-case corpus twice per case and exits non-zero on any false-safe,
 false-warning, wrong-failure, or nondeterminism. The summary line reports the
 EVALUATION.md ordering metrics (correct-sequence, duplicate-identification, and
-missing-capture-detection counts); the pinned exact-only refusal on near-exact captures
-keeps `correct-sequence` below its denominator until task 0009 lands.
+missing-capture-detection counts) across the exact and near-exact ordering cases.
 
 Successful completion ends with `GATE: PASS (repository · Swift build/tests · Apple PNG smoke)`.
 
