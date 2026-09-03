@@ -47,20 +47,20 @@ There is no ordering API and no `ambiguousOrder`/`missingCoverage` failure.
 5. Determinism: identical inputs yield identical recovered orders, evidence,
    and failure payloads (fixed pair iteration order, deterministic path
    enumeration and tie-breaks).
-6. ADR-014 records the unique-acceptable-order rule and the solver design.
+6. ADR-015 records the unique-acceptable-order rule and the solver design.
 
 ## Non-goals
 - OCR-continuation or geometry-prior edge scoring (later evidence sources).
 - Tolerant duplicate handling (byte-identical captures remain the typed
   `duplicateCapture` failure; near-duplicate policy is a later task).
 - Horizontal-axis ordering; subpixel or affine registration.
-- CLI/fixture/evaluation surface (task 0007).
+- CLI/fixture/evaluation surface (task 0009).
 
 ## Allowed scope
 - `Packages/TraktionDomain/Sources/TraktionDomain/ReconstructionModels.swift`
 - `Packages/TraktionCore/Sources/TraktionCore/`
 - `Tests/Golden/`, `Tests/Unit/`
-- `docs/adr/ADR-014-*.md`, `CHANGELOG.md`, `docs/notes/`
+- `docs/adr/ADR-015-*.md`, `CHANGELOG.md`, `docs/notes/`
 
 ## Forbidden changes
 - `Packages/TraktionVision/`, `Packages/TraktionAI/`, `Packages/TraktionUI/`,
@@ -85,7 +85,7 @@ rasters; nothing committed.
 - [x] Supplied-order suite passes unchanged (register refactor is
       behavior-identical); two-run determinism holds for recovery results
       and failure payloads.
-- [x] ADR-014 committed.
+- [x] ADR-015 committed.
 
 ## Build / test commands
 ```sh

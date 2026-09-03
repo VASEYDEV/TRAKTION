@@ -1,4 +1,4 @@
-# ADR-014: Unique Acceptable Order for Automatic Order Recovery
+# ADR-015: Unique Acceptable Order for Automatic Order Recovery
 
 Status: Accepted
 
@@ -11,6 +11,17 @@ pairwise overlap graph and reserves the typed states `ambiguousOrder` and
 only when it is the *unique* acceptable one; ordering multiplies the same
 risk across the whole set — a plausible-but-wrong order duplicates or drops
 documentary rows wholesale.
+
+ADR-014 landed the first, deliberately exact-only ordering entry point
+(`reconstructExactUnordered`: byte-exact suffix/prefix edges) and stated
+that near-exact ordering "requires a later task with a global uniqueness
+proof". This ADR is that task: `recoverOrder` generalizes the edge test to
+the full registration pipeline, carrying the uniqueness proof described
+below. The exact-only entry point remains unchanged and independently
+useful (cheaper, byte-exact evidence only); convergence of the two APIs'
+failure vocabularies (`sequenceOrderNotFound`/`ambiguousSequenceOrder` vs
+the spec-reserved `missingCoverage`/`ambiguousOrder`) is deferred to an
+owner decision, since both are persisted wire codes.
 
 ## Decision
 

@@ -115,7 +115,7 @@ assert len(manifest["captures"]) == 1, manifest
 assert manifest["inputFileNames"] == ["capture-001.png", "corrupt.png"], manifest
 PYEOF
 
-# Order recovery (docs/tasks/0007, ADR-014): shuffled inputs must produce a
+# Order recovery (docs/tasks/0009, ADR-015): shuffled inputs must produce a
 # composite byte-identical to the supplied-order one, deterministically, and
 # a coverage gap must refuse with the typed missingCoverage manifest.
 recovered="$smoke_dir/recovered.png"

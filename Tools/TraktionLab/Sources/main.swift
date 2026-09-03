@@ -59,7 +59,7 @@ private struct LabManifest: Encodable {
   let schemaVersion: Int
   let algorithmVersion: String
   let status: String
-  /// True when `--recover-order` chose the capture order (docs/tasks/0007).
+  /// True when `--recover-order` chose the capture order (docs/tasks/0009).
   let orderRecovered: Bool
   /// Capture IDs in recovered documentary order; absent for supplied-order runs.
   let recoveredOrder: [CaptureID]?
@@ -478,7 +478,7 @@ private enum TraktionLab {
         --minimum-overlap-rows <count>   Default: 8.
         --recover-order                  Recover the documentary order before
                                          reconstructing (unique acceptable
-                                         order required; ADR-014).
+                                         order required; ADR-015).
       """
     )
   }

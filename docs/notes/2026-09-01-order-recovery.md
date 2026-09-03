@@ -1,18 +1,18 @@
-# 2026-09-01 — Automatic order recovery (tasks 0006, 0007)
+# 2026-09-01 — Automatic order recovery (tasks 0008, 0009)
 
 Milestone 2 opener on `claude/traktion-dev-setup-f24qtq`, after the PR #7
 merge. The prompt-07 Milestone 1 audit runs concurrently in an independent
 session against a pristine clone of merged main (`aaf5e69`); its findings, if
 any, land before this branch merges.
 
-## Task 0006 — order recovery engine
+## Task 0008 — order recovery engine
 
 `register` refactored into `probePair` (an outcome: accepted / insufficient /
 ambiguous; duplicates and budgets still throw) plus a byte-identical throwing
 wrapper — one registration implementation for both supplied-order and graph
 probing. `recoverOrder` probes all directed pairs (≤ 90, each individually
 budgeted), then requires a **unique** directed path covering every capture
-(ADR-014, mirroring ADR-012 at order scale): >1 → `ambiguousOrder` with a
+(ADR-015, mirroring ADR-012 at order scale): >1 → `ambiguousOrder` with a
 deterministic sample + exact count (subset-DP, bounded by 10!); 0 →
 `missingCoverage` with the deterministic longest chain; pair ambiguity is
 never an edge. `reconstructRecoveringOrder` replays the recovered order
@@ -23,7 +23,7 @@ refuses with both orders listed; the periodic-ambiguity content refuses as
 `missingCoverage`; a starved sample budget fails closed during graph
 construction; byte-identical duplicates stay `duplicateCapture`.
 
-## Task 0007 — tooling
+## Task 0009 — tooling
 
 `traktion-lab reconstruct --recover-order`; manifest schemaVersion 3
 (`orderRecovered`, `recoveredOrder`, captures in reconstruction order —

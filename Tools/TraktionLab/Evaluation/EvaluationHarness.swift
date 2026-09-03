@@ -11,7 +11,7 @@ public struct EvaluationCase: Sendable {
   public let name: String
   public let configuration: FixtureControlConfiguration
   public let engineAxis: ReconstructionAxis
-  /// Non-nil turns this into an order-recovery case (docs/tasks/0007): the
+  /// Non-nil turns this into an order-recovery case (docs/tasks/0009): the
   /// generated captures are permuted, the engine runs with recovery, and the
   /// expectation below replaces the supplied-order ground-truth pin.
   public let ordering: OrderingCase?
@@ -161,7 +161,7 @@ public enum EvaluationHarness {
         engineAxis: .horizontal
       )
     )
-    // Order-recovery cases (docs/tasks/0007, ADR-014). The permutations are
+    // Order-recovery cases (docs/tasks/0009, ADR-015). The permutations are
     // fixed so the report is comparable run to run; recovery must reproduce
     // the ground-truth documentary order or refuse with the pinned code.
     cases.append(

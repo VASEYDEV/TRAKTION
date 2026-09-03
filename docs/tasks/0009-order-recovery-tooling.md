@@ -1,7 +1,7 @@
 # Task: Order-recovery tooling — lab CLI, smoke, evaluation corpus
 
 ## Goal
-The task-0006 order-recovery capability is reachable from `traktion-lab`,
+The task-0008 order-recovery capability is reachable from `traktion-lab`,
 covered by the end-to-end smoke gate, and measured by the evaluation
 harness, so the Milestone 2 audit has reproducible artifacts.
 
@@ -48,7 +48,7 @@ ordering.
 - `CHANGELOG.md`, `docs/notes/`, `README.md` (status only)
 
 ## Forbidden changes
-- `Packages/*` (task 0006 owns the engine surface), `Tools/FixtureForge/`,
+- `Packages/*` (task 0008 owns the engine surface), `Tools/FixtureForge/`,
   CI lanes, `scripts/gate.sh`, `scripts/verify-core.sh`,
   `scripts/check-repository.sh`.
 

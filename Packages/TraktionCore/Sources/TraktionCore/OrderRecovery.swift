@@ -1,6 +1,6 @@
 import TraktionDomain
 
-/// Automatic order recovery (Milestone 2, docs/adr/ADR-014).
+/// Automatic order recovery (Milestone 2, docs/adr/ADR-015).
 ///
 /// The documentary order of an unordered capture set is recovered from the
 /// pairwise overlap graph: a directed edge i → j exists exactly when the

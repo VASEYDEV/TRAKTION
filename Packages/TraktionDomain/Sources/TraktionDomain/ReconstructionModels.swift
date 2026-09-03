@@ -161,6 +161,8 @@ public enum ReconstructionFailure: Error, Equatable, Codable, Sendable {
     following: CaptureID,
     candidateRows: [Int]
   )
+  case sequenceOrderNotFound(captureIDs: [CaptureID])
+  case ambiguousSequenceOrder(candidateOrders: [[CaptureID]])
   case resourceLimitExceeded(reason: String)
   case outputDimensionsOverflow
   case invalidPlan(reason: String)
@@ -183,6 +185,8 @@ extension ReconstructionFailure {
     case .duplicateCapture: return "duplicateCapture"
     case .insufficientOverlap: return "insufficientOverlap"
     case .ambiguousOverlap: return "ambiguousOverlap"
+    case .sequenceOrderNotFound: return "sequenceOrderNotFound"
+    case .ambiguousSequenceOrder: return "ambiguousSequenceOrder"
     case .resourceLimitExceeded: return "resourceLimitExceeded"
     case .outputDimensionsOverflow: return "outputDimensionsOverflow"
     case .invalidPlan: return "invalidPlan"
@@ -207,6 +211,10 @@ extension ReconstructionFailure: CustomStringConvertible {
       return "No valid overlap of at least \(minimumRows) rows exists between \(preceding) and \(following)."
     case .ambiguousOverlap(let preceding, let following, let candidateRows):
       return "Overlap between \(preceding) and \(following) is ambiguous at rows \(candidateRows)."
+    case .sequenceOrderNotFound(let captureIDs):
+      return "No complete exact-overlap order exists for captures \(captureIDs)."
+    case .ambiguousSequenceOrder(let candidateOrders):
+      return "Capture order is ambiguous; valid orders: \(candidateOrders)."
     case .resourceLimitExceeded(let reason):
       return "The reconstruction exceeds a configured resource limit: \(reason)."
     case .outputDimensionsOverflow:

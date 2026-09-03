@@ -62,7 +62,7 @@ locally reproduced.
 5. Spec failure vocabulary incomplete at `aaf5e69`
    (`missingCoverage`/`ambiguousOrder`/`dynamicConflict`/
    `unsupportedTransform` unimplemented). *Status: `missingCoverage` and
-   `ambiguousOrder` land with tasks 0006/0007 (ADR-014); the remaining two
+   `ambiguousOrder` land with tasks 0008/0009 (ADR-015); the remaining two
    belong to later milestones.*
 6. **Process finding:** the one-writer-per-branch rule was violated —
    Milestone 2 work began in the shared checkout while this audit was in
@@ -74,10 +74,10 @@ locally reproduced.
 Also noted for Milestone 2 planning: `JointConfidence.review/.gap/.conflict`
 are declared but unreachable; duplicates are byte-equality only; per-joint
 budgets have no sequence-level counterpart; the harness has no ordering
-metrics at `aaf5e69` (first ordering cases land with task 0007);
+metrics at `aaf5e69` (first ordering cases land with task 0009);
 FixtureForgeKit is not an exported product, so out-of-package tooling
 cannot consume the generator.
 
 Follow-ups 1–4 are queued as the next engine/tooling increment after the
-task-0006/0007 review completes; they will be tracked task packets with
+task-0008/0009 review completes; they will be tracked task packets with
 acceptance criteria before any code changes.

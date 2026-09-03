@@ -3,7 +3,7 @@ import TraktionCore
 import TraktionDomain
 import XCTest
 
-/// Golden coverage for automatic order recovery (docs/tasks/0006, ADR-014).
+/// Golden coverage for automatic order recovery (docs/tasks/0008, ADR-015).
 /// Recovery must reproduce the documentary order only when it is uniquely
 /// provable from pixel evidence; every other outcome is a typed refusal and
 /// never a composite.

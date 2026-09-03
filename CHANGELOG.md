@@ -16,20 +16,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   one process finding recorded in
   `docs/notes/2026-09-01-milestone-1-audit.md`.
 
-- **Automatic order recovery** (task 0006, ADR-014, Milestone 2): the engine
+- **Automatic order recovery** (task 0008, ADR-015, Milestone 2): the engine
   recovers the documentary order of an unordered 2–10 capture set from the
   pairwise overlap graph — `recoverOrder` returns the order plus per-junction
   evidence, `reconstructRecoveringOrder` re-verifies it through the reviewed
-  supplied-order pipeline. The order must be uniquely provable: several
-  acceptable orders refuse with the new typed `ambiguousOrder` (deterministic
-  candidate sample + exact count), an unconnectable set refuses with
-  `missingCoverage` (longest chain + unconnected captures), pair-level
-  ambiguity contributes no edge, and any probe budget exhaustion fails the
-  whole recovery. Supplied-order behavior is byte-identical (the registration
-  path was refactored, not changed). Goldens: shuffled and fully reversed
-  sets reconstruct pixel-identically; symmetric content refuses with both
-  orders listed; periodic content still refuses; tiny budgets fail closed.
-- **Order-recovery tooling** (task 0007): `traktion-lab reconstruct
+  supplied-order pipeline. This is the general (exact and near-exact)
+  recovery that ADR-014's exact-only entry point anticipated; the order must
+  be uniquely provable: several acceptable orders refuse with the new typed
+  `ambiguousOrder` (deterministic candidate sample + exact count), an
+  unconnectable set refuses with `missingCoverage` (longest chain +
+  unconnected captures), pair-level ambiguity contributes no edge, and any
+  probe budget exhaustion fails the whole recovery. Supplied-order behavior
+  is byte-identical (the registration path was refactored, not changed).
+  Goldens: shuffled and fully reversed sets reconstruct pixel-identically;
+  symmetric content refuses with both orders listed; periodic content still
+  refuses; tiny budgets fail closed.
+- **Order-recovery tooling** (task 0009): `traktion-lab reconstruct
   --recover-order` (manifest schemaVersion 3 with `orderRecovered` /
   `recoveredOrder`, captures listed in reconstruction order), smoke coverage
   (shuffled run byte-identical to supplied-order, deterministic across runs;
@@ -37,6 +39,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   three ordering cases in the evaluation corpus (19 total) with a
   recovered-order-mismatch false-safe rule; report schemaVersion 2 adds
   `recoveredOrder` per case.
+
+- **Fail-closed exact sequence ordering** (task 0007, ADR-014): the opt-in
+  `reconstructExactUnordered` core API recovers shuffled captures only when
+  exact suffix/prefix evidence forms one unique complete path. Missing and
+  ambiguous orders have stable typed failures, graph work has an explicit
+  pixel-comparison budget, and supplied-order reconstruction remains unchanged.
+
+- **Milestone 1 evidence audit** (task 0006): verified the merged foundation,
+  67-test suite, PNG smoke, and 16-case evaluation gate; recorded a pass with
+  explicit corpus, CI-artifact, real-device, and peak-memory follow-ups plus
+  fail-closed entry criteria for Milestone 2 sequence intelligence. README
+  status now links the audit and documents the evaluation command.
 
 - **Evaluation harness** (task 0004): `traktion-lab evaluate --output <report.json>`
   runs the standard corpus (all control-set variants, the 10–80% overlap sweep, a

@@ -29,7 +29,7 @@ final class EvaluationHarnessTests: XCTestCase {
       XCTAssertLessThan(energy, 0.01, "degraded seams must stay near-exact")
     }
 
-    // Order-recovery cases (docs/tasks/0007): shuffled input must recover the
+    // Order-recovery cases (docs/tasks/0009): shuffled input must recover the
     // documentary order and reproduce the source exactly; a coverage gap must
     // end in the pinned typed refusal.
     let shuffled = try XCTUnwrap(
