@@ -10,7 +10,7 @@ import TraktionVision
   import Glibc
 #endif
 
-private let labSchemaVersion = 2
+private let labSchemaVersion = 3
 private let algorithmVersion = "vertical-suffix-prefix-v1"
 
 private enum LabError: Error, CustomStringConvertible {
@@ -59,6 +59,13 @@ private struct LabManifest: Encodable {
   let schemaVersion: Int
   let algorithmVersion: String
   let status: String
+  /// How the capture order was established (docs/tasks/0008): `supplied`
+  /// (argument order) or `exact` (recovered from byte-exact evidence).
+  let orderPolicy: OrderPolicy
+  /// Capture IDs in recovered order; absent for supplied-order runs.
+  let recoveredOrder: [CaptureID]?
+  /// Captures in reconstruction order (the recovered order under `exact`,
+  /// otherwise the supplied order), so joints pair true neighbors.
   let captures: [CaptureManifest]
   let outputFileName: String
   let plan: ReconstructionPlan
@@ -72,6 +79,7 @@ private struct FailureManifest: Encodable {
   let schemaVersion: Int
   let algorithmVersion: String
   let status: String
+  let orderPolicy: OrderPolicy
   /// "decode" (an input could not be loaded) or "reconstruct" (typed engine failure).
   let stage: String
   let failureCode: String
@@ -96,6 +104,7 @@ private struct ReconstructArguments {
   let manifestURL: URL
   let diagnosticsURL: URL
   let minimumOverlapRows: Int
+  let orderPolicy: OrderPolicy
   let inputURLs: [URL]
 }
 
@@ -159,11 +168,34 @@ private enum TraktionLab {
       )
     )
     let result: ReconstructionResult
+    var recoveredOrder: [CaptureID]?
     do {
-      result = try engine.reconstruct(
-        CaptureSequence(captures: captures),
-        axis: arguments.axis
-      )
+      switch arguments.orderPolicy {
+      case .supplied:
+        result = try engine.reconstruct(
+          CaptureSequence(captures: captures),
+          axis: arguments.axis
+        )
+      case .exact:
+        result = try engine.reconstructExactUnordered(captures, axis: arguments.axis)
+        // The plan's placements are the recovered documentary order. Reorder
+        // for the manifest and per-joint diagnostics, which pair adjacent
+        // captures; IDs are unique by construction (capture-NNN).
+        let order = result.plan.placements.map(\.captureID)
+        let byID = Dictionary(uniqueKeysWithValues: captures.map { ($0.id, $0) })
+        var ordered: [CaptureAsset] = []
+        ordered.reserveCapacity(order.count)
+        for id in order {
+          guard let capture = byID[id] else {
+            throw ReconstructionFailure.invalidPlan(
+              reason: "recovered order names unknown capture \(id)"
+            )
+          }
+          ordered.append(capture)
+        }
+        captures = ordered
+        recoveredOrder = order
+      }
     } catch let failure as ReconstructionFailure {
       try publishFailure(
         arguments,
@@ -179,6 +211,8 @@ private enum TraktionLab {
       schemaVersion: labSchemaVersion,
       algorithmVersion: algorithmVersion,
       status: "reconstructed",
+      orderPolicy: arguments.orderPolicy,
+      recoveredOrder: recoveredOrder,
       captures: captures.map {
         CaptureManifest(
           id: $0.id,
@@ -261,6 +295,7 @@ private enum TraktionLab {
       schemaVersion: labSchemaVersion,
       algorithmVersion: algorithmVersion,
       status: "failed",
+      orderPolicy: arguments.orderPolicy,
       stage: stage,
       failureCode: failureCode,
       failureDescription: failureDescription,
@@ -339,6 +374,13 @@ private enum TraktionLab {
         + "false-warning: \(summary.falseWarning)  wrong-failure: \(summary.wrongFailure)  "
         + "nondeterministic: \(summary.nondeterministic)"
     )
+    let ordering = summary.ordering
+    print(
+      "ordering: cases \(ordering.cases)  "
+        + "correct-sequence \(ordering.sequencesCorrect)/\(ordering.sequencesExpected)  "
+        + "duplicates \(ordering.duplicatesIdentified)/\(ordering.duplicatesExpected)  "
+        + "missing-captures \(ordering.missingCapturesDetected)/\(ordering.missingCapturesExpected)"
+    )
     guard summary.isAcceptable else {
       throw LabError.evaluationGateFailed(reportPath: reportURL.path)
     }
@@ -350,6 +392,7 @@ private enum TraktionLab {
     var manifestURL: URL?
     var diagnosticsURL: URL?
     var minimumOverlapRows = 8
+    var orderPolicy = OrderPolicy.supplied
     var inputURLs: [URL] = []
     var index = 0
 
@@ -380,6 +423,15 @@ private enum TraktionLab {
           throw LabError.usage("Minimum overlap rows must be a positive integer.")
         }
         minimumOverlapRows = parsed
+      case "--order":
+        let value = try optionValue(arguments, index: &index, option: argument)
+        guard let parsed = OrderPolicy(rawValue: value) else {
+          throw LabError.usage(
+            "Order policy must be one of: "
+              + OrderPolicy.allCases.map(\.rawValue).joined(separator: ", ") + "."
+          )
+        }
+        orderPolicy = parsed
       default:
         if argument.hasPrefix("-") {
           throw LabError.unknownOption(argument)
@@ -404,6 +456,7 @@ private enum TraktionLab {
       diagnosticsURL: diagnosticsURL
         ?? defaultStem.appendingPathExtension("diagnostics"),
       minimumOverlapRows: minimumOverlapRows,
+      orderPolicy: orderPolicy,
       inputURLs: inputURLs
     )
   }
@@ -449,6 +502,11 @@ private enum TraktionLab {
         --manifest <path>                Reconstruction JSON sidecar.
         --diagnostics-dir <path>         Per-joint JSON and difference PNGs.
         --minimum-overlap-rows <count>   Default: 8.
+        --order supplied|exact           supplied (default): reconstruct in
+                                         argument order. exact: recover the
+                                         order from byte-exact suffix/prefix
+                                         evidence only; gaps and ambiguity
+                                         fail closed (ADR-014).
       """
     )
   }

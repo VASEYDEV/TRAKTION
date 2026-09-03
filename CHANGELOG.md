@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Exact-ordering tooling** (task 0008): `traktion-lab reconstruct
+  --order supplied|exact` exposes the task-0007 exact sequence ordering;
+  manifests are `schemaVersion` 3 with `orderPolicy` and, under `exact`,
+  `recoveredOrder` (captures listed in reconstruction order so joints pair
+  true neighbors). Smoke proves a shuffled `--order exact` run byte-identical
+  to the supplied-order composite twice over, a coverage gap leaves a typed
+  `sequenceOrderNotFound` failure manifest, and an unknown policy is a usage
+  error. The evaluation corpus grows to 21 cases with five exact-ordering
+  cases (shuffled, reversed, missing-middle, duplicate, and the pinned
+  exact-only boundary on near-exact captures); report `schemaVersion` 2 adds
+  per-case `orderPolicy`/`recoveredOrder` and the EVALUATION.md ordering
+  metrics in the summary (correct-sequence 2/3, duplicate identification 1/1,
+  missing-capture detection 1/1). A recovered order that differs from the
+  documentary order is a false-safe.
 - **Fail-closed exact sequence ordering** (task 0007, ADR-014): the opt-in
   `reconstructExactUnordered` core API recovers shuffled captures only when
   exact suffix/prefix evidence forms one unique complete path. Missing and

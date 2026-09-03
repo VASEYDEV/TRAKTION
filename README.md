@@ -21,17 +21,17 @@ Full-page capture often fails: content scrolls inside nested frames, headers sta
 
 ## Status
 
-**Milestone 1 passed with evidence follow-ups.** The deterministic reconstruction core, synthetic fixture generator, diagnostic CLI, golden tests, cross-platform PNG adapters, evaluation harness, and deliberately minimal SwiftUI preview shell are implemented. The [2026-09-03 milestone audit](docs/audits/2026-09-03-milestone-1.md) records the verified boundary and the evaluation/peak-memory evidence still required while Milestone 2 begins.
+**Milestone 1 passed with evidence follow-ups; Milestone 2 in progress.** The deterministic reconstruction core, synthetic fixture generator, diagnostic CLI, golden tests, cross-platform PNG adapters, evaluation harness, and deliberately minimal SwiftUI preview shell are implemented. The [2026-09-03 milestone audit](docs/audits/2026-09-03-milestone-1.md) records the verified boundary and the evaluation/peak-memory evidence still required. Milestone 2 has landed fail-closed exact sequence ordering in the core and the Lab; every tracked task and its status is in the [task index](docs/tasks/README.md).
 
 | Current capability | State |
 | --- | --- |
 | Supplied-order vertical reconstruction | Implemented for 2–10 opaque, equal-width PNG captures |
-| Exact automatic sequence ordering | Core API implemented; fails closed on gaps or ambiguity |
+| Exact automatic sequence ordering | Core API and `traktion-lab --order exact`; fails closed on gaps or ambiguity; near-exact ordering is task 0009 |
 | Exact suffix/prefix overlap and seam plan | Implemented with ambiguity rejection |
 | Decoded-pixel golden comparison | Implemented for deterministic synthetic fixtures |
-| Machine-readable evaluation gate | Implemented for the standard 16-case corpus |
+| Machine-readable evaluation gate | Implemented for the standard 21-case corpus, including ordering metrics |
 | Composite, manifest, and joint diagnostics | Implemented in `traktion-lab` |
-| Horizontal, ordering, sticky UI, video, web capture | Later milestones; fail or remain disabled |
+| Horizontal, sticky UI, video, web capture | Later milestones; fail or remain disabled. Known false-safe on identical top-and-bottom chrome bands is tracked as task 0010 |
 | Native application | macOS SwiftUI preview shell only; installable iOS target is not yet present |
 
 ## Design invariants
@@ -80,6 +80,16 @@ swift run traktion-lab compare \
 
 The Lab writes a reconstruction JSON sidecar plus per-joint JSON and absolute-difference PNGs. It refuses to overwrite outputs or turn unsupported/ambiguous evidence into a successful composite.
 
+Captures whose order is unknown can be ordered from byte-exact evidence only; a coverage gap or an ambiguous order is a typed failure, never a guess:
+
+```bash
+swift run traktion-lab reconstruct --order exact \
+  --output /tmp/traktion-recovered.png \
+  /tmp/traktion-fixture/capture-002.png \
+  /tmp/traktion-fixture/capture-003.png \
+  /tmp/traktion-fixture/capture-001.png
+```
+
 ## Tech stack & environment
 
 - **Stack:** Swift 6 and SwiftPM, native SwiftUI preview shell, Apple ImageIO PNG boundary, dependency-free platform-neutral reconstruction core ([ADR-001](docs/adr/ADR-001-native-swift.md)).
@@ -91,6 +101,7 @@ The Lab writes a reconstruction JSON sidecar plus per-joint JSON and absolute-di
 - [`CHANGELOG.md`](CHANGELOG.md) — every meaningful change (Keep a Changelog + SemVer).
 - [`docs/notes/`](docs/notes/) — dated working notes (`YYYY-MM-DD-topic.md`).
 - [`docs/adr/`](docs/adr/) — product/architecture ADRs · [`docs/decisions/`](docs/decisions/) — repo-governance ADRs.
+- [`docs/tasks/`](docs/tasks/README.md) — tracked task packets with status; [`docs/ROADMAP.md`](docs/ROADMAP.md) — milestone status.
 
 ## Contributing
 

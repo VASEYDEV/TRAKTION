@@ -72,8 +72,9 @@ test ! -e "$smoke_dir/duplicate-diagnostics"
 python3 - "$duplicate_manifest" <<'PYEOF'
 import json, sys
 manifest = json.load(open(sys.argv[1]))
-assert manifest["schemaVersion"] == 2, manifest
+assert manifest["schemaVersion"] == 3, manifest
 assert manifest["status"] == "failed", manifest
+assert manifest["orderPolicy"] == "supplied", manifest
 assert manifest["stage"] == "reconstruct", manifest
 assert manifest["failureCode"] == "duplicateCapture", manifest
 assert "duplicateCapture" in manifest["reconstructionFailure"], manifest
@@ -114,6 +115,112 @@ assert manifest.get("reconstructionFailure") is None, manifest
 assert len(manifest["captures"]) == 1, manifest
 assert manifest["inputFileNames"] == ["capture-001.png", "corrupt.png"], manifest
 PYEOF
+
+# Exact sequence ordering (docs/tasks/0007 + 0008, ADR-014): shuffled inputs
+# under --order exact must produce a composite byte-identical to the
+# supplied-order one, deterministically; a coverage gap must refuse with the
+# typed sequenceOrderNotFound manifest and no composite.
+recovered="$smoke_dir/recovered.png"
+recovered_manifest="$smoke_dir/recovered.reconstruction.json"
+"$bin_dir/traktion-lab" reconstruct \
+  --axis vertical \
+  --order exact \
+  --output "$recovered" \
+  --manifest "$recovered_manifest" \
+  --diagnostics-dir "$smoke_dir/recovered-diagnostics" \
+  "$fixture_dir/capture-002.png" \
+  "$fixture_dir/capture-003.png" \
+  "$fixture_dir/capture-001.png"
+"$bin_dir/traktion-lab" compare "$fixture_dir/source.png" "$recovered"
+cmp "$composite" "$recovered"
+test -s "$smoke_dir/recovered-diagnostics/joint-001.json"
+test -s "$smoke_dir/recovered-diagnostics/joint-002-difference.png"
+python3 - "$recovered_manifest" <<'PYEOF'
+import json, sys
+manifest = json.load(open(sys.argv[1]))
+assert manifest["schemaVersion"] == 3, manifest
+assert manifest["status"] == "reconstructed", manifest
+assert manifest["orderPolicy"] == "exact", manifest
+# IDs are positional (argument order); the documentary order is files 001..003.
+assert manifest["recoveredOrder"] == ["capture-003", "capture-001", "capture-002"], manifest
+assert [c["fileName"] for c in manifest["captures"]] == [
+    "capture-001.png", "capture-002.png", "capture-003.png"
+], manifest
+assert [p["captureID"] for p in manifest["plan"]["placements"]] == manifest["recoveredOrder"], manifest
+PYEOF
+
+recovered_repeat="$smoke_dir/recovered-repeat.png"
+"$bin_dir/traktion-lab" reconstruct \
+  --axis vertical \
+  --order exact \
+  --output "$recovered_repeat" \
+  --manifest "$smoke_dir/recovered-repeat.reconstruction.json" \
+  --diagnostics-dir "$smoke_dir/recovered-repeat-diagnostics" \
+  "$fixture_dir/capture-002.png" \
+  "$fixture_dir/capture-003.png" \
+  "$fixture_dir/capture-001.png"
+cmp "$recovered" "$recovered_repeat"
+python3 - "$recovered_manifest" "$smoke_dir/recovered-repeat.reconstruction.json" <<'PYEOF'
+import json, sys
+first, second = (json.load(open(path)) for path in sys.argv[1:3])
+# Only the output file name may differ between the two recovered runs.
+assert first["outputFileName"] == "recovered.png", first["outputFileName"]
+assert second["outputFileName"] == "recovered-repeat.png", second["outputFileName"]
+del first["outputFileName"], second["outputFileName"]
+assert first == second, "recovered manifests differ beyond outputFileName"
+PYEOF
+
+gap_manifest="$smoke_dir/gap.reconstruction.json"
+if "$bin_dir/traktion-lab" reconstruct \
+  --axis vertical \
+  --order exact \
+  --output "$smoke_dir/gap-composite.png" \
+  --manifest "$gap_manifest" \
+  --diagnostics-dir "$smoke_dir/gap-diagnostics" \
+  "$fixture_dir/capture-003.png" \
+  "$fixture_dir/capture-001.png"
+then
+  echo "Expected sequence-order-not-found failure."
+  exit 1
+fi
+test ! -e "$smoke_dir/gap-composite.png"
+test ! -e "$smoke_dir/gap-diagnostics"
+python3 - "$gap_manifest" <<'PYEOF'
+import json, sys
+manifest = json.load(open(sys.argv[1]))
+assert manifest["schemaVersion"] == 3, manifest
+assert manifest["status"] == "failed", manifest
+assert manifest["orderPolicy"] == "exact", manifest
+assert manifest["stage"] == "reconstruct", manifest
+assert manifest["failureCode"] == "sequenceOrderNotFound", manifest
+assert "sequenceOrderNotFound" in manifest["reconstructionFailure"], manifest
+assert [c["fileName"] for c in manifest["captures"]] == [
+    "capture-003.png", "capture-001.png"
+], manifest
+PYEOF
+
+# The plain run's manifest gains nothing but the version bump and the policy.
+python3 - "$manifest" <<'PYEOF'
+import json, sys
+manifest = json.load(open(sys.argv[1]))
+assert manifest["schemaVersion"] == 3, manifest
+assert manifest["orderPolicy"] == "supplied", manifest
+assert "recoveredOrder" not in manifest, manifest
+PYEOF
+
+# An unknown order policy is a usage error that writes nothing.
+if "$bin_dir/traktion-lab" reconstruct \
+  --axis vertical \
+  --order guess \
+  --output "$smoke_dir/bad-order-composite.png" \
+  "$fixture_dir/capture-001.png" \
+  "$fixture_dir/capture-002.png"
+then
+  echo "Expected usage failure for an unknown order policy."
+  exit 1
+fi
+test ! -e "$smoke_dir/bad-order-composite.png"
+test ! -e "$smoke_dir/bad-order-composite.reconstruction.json"
 
 failure_output="$smoke_dir/failure-composite.png"
 failure_parent_blocker="$smoke_dir/manifest-parent-blocker"

@@ -2,32 +2,71 @@ import FixtureForgeKit
 import TraktionCore
 import TraktionDomain
 
-// Evaluation harness (docs/tasks/0004): runs the standard fixture corpus
-// through the shipping engine and computes the EVALUATION.md metrics. The
-// report is the objective record the Milestone 1 audit consumes; false-safe
-// findings outrank everything else.
+// Evaluation harness (docs/tasks/0004, extended by docs/tasks/0008): runs the
+// standard fixture corpus through the shipping engine and computes the
+// EVALUATION.md metrics. The report is the objective record the milestone
+// audits consume; false-safe findings outrank everything else.
+
+/// How the Lab and the harness hand captures to the engine. `supplied` is the
+/// Milestone 1 contract; `exact` recovers the order from byte-exact
+/// suffix/prefix evidence only (task 0007, ADR-014) and fails closed on gaps
+/// or ambiguity.
+public enum OrderPolicy: String, Codable, Equatable, Sendable, CaseIterable {
+  case supplied
+  case exact
+}
 
 public struct EvaluationCase: Sendable {
   public let name: String
   public let configuration: FixtureControlConfiguration
   public let engineAxis: ReconstructionAxis
+  /// Non-nil turns this into an ordering case (docs/tasks/0008): the generated
+  /// captures are permuted, the engine runs under the `exact` order policy,
+  /// and the ordering expectation replaces the supplied-order ground-truth pin.
+  public let ordering: OrderingCase?
 
   public init(
     name: String,
     configuration: FixtureControlConfiguration,
-    engineAxis: ReconstructionAxis = .vertical
+    engineAxis: ReconstructionAxis = .vertical,
+    ordering: OrderingCase? = nil
   ) {
     self.name = name
     self.configuration = configuration
     self.engineAxis = engineAxis
+    self.ordering = ordering
   }
+
+  public var orderPolicy: OrderPolicy {
+    ordering == nil ? .supplied : .exact
+  }
+}
+
+public struct OrderingCase: Sendable {
+  /// Applied to the generated captures (indices into the generator's supplied
+  /// order) before the run. Must be a permutation of `0..<captureCount`.
+  public let permutation: [Int]
+  public let expected: ExpectedOrderingOutcome
+
+  public init(permutation: [Int], expected: ExpectedOrderingOutcome) {
+    self.permutation = permutation
+    self.expected = expected
+  }
+}
+
+public enum ExpectedOrderingOutcome: Sendable {
+  /// The engine must reconstruct, and the recovered order must equal the
+  /// ground-truth documentary order.
+  case reconstruct
+  case fail(code: String)
 }
 
 public enum EvaluationVerdict: String, Codable, Equatable, Sendable {
   /// Behavior matched ground truth (including correct registration).
   case pass
   /// The engine produced output where ground truth demands a failure, or
-  /// produced a misregistered/mismatching composite. The severest class.
+  /// produced a misregistered/mismatching composite, or recovered an order
+  /// that differs from the documentary order. The severest class.
   case falseSafe = "false-safe"
   /// The engine failed where ground truth says reconstruction is possible.
   case falseWarning = "false-warning"
@@ -37,6 +76,7 @@ public enum EvaluationVerdict: String, Codable, Equatable, Sendable {
 
 public struct EvaluationCaseResult: Codable, Equatable, Sendable {
   public let name: String
+  public let orderPolicy: OrderPolicy
   public let expectedStatus: String
   public let expectedFailureCode: String?
   /// "reconstructed" or "failed".
@@ -53,9 +93,60 @@ public struct EvaluationCaseResult: Codable, Equatable, Sendable {
   /// Per joint, mean absolute channel difference between the two captures at
   /// the chosen seam row, normalized to 0...1.
   public let seamEnergies: [Double]?
-  /// Two runs produced identical plans and pixels (or identical failures).
+  /// Ordering cases that reconstructed: capture IDs in recovered order.
+  public let recoveredOrder: [String]?
+  /// Two runs produced identical plans, pixels, and recovered orders (or
+  /// identical failures).
   public let deterministic: Bool
   public var milliseconds: Int
+}
+
+/// EVALUATION.md "Ordering" metrics over the ordering cases of a report.
+/// Sequence cases are those whose fixture has a documentary order (everything
+/// except duplicate and missing-coverage controls); a pinned exact-only
+/// refusal on such a case counts against the correct-sequence rate even
+/// though its verdict is `pass` — the report records capability as well as
+/// contract conformance.
+public struct OrderingSummary: Codable, Equatable, Sendable {
+  public let cases: Int
+  public let sequencesExpected: Int
+  public let sequencesCorrect: Int
+  public let duplicatesExpected: Int
+  public let duplicatesIdentified: Int
+  public let missingCapturesExpected: Int
+  public let missingCapturesDetected: Int
+  /// Nil when the corresponding denominator is zero.
+  public let correctSequenceRate: Double?
+  public let duplicateIdentificationRate: Double?
+  public let missingCaptureDetectionRate: Double?
+
+  public init(
+    cases: Int,
+    sequencesExpected: Int,
+    sequencesCorrect: Int,
+    duplicatesExpected: Int,
+    duplicatesIdentified: Int,
+    missingCapturesExpected: Int,
+    missingCapturesDetected: Int
+  ) {
+    self.cases = cases
+    self.sequencesExpected = sequencesExpected
+    self.sequencesCorrect = sequencesCorrect
+    self.duplicatesExpected = duplicatesExpected
+    self.duplicatesIdentified = duplicatesIdentified
+    self.missingCapturesExpected = missingCapturesExpected
+    self.missingCapturesDetected = missingCapturesDetected
+    self.correctSequenceRate = Self.rate(sequencesCorrect, of: sequencesExpected)
+    self.duplicateIdentificationRate = Self.rate(duplicatesIdentified, of: duplicatesExpected)
+    self.missingCaptureDetectionRate = Self.rate(
+      missingCapturesDetected,
+      of: missingCapturesExpected
+    )
+  }
+
+  private static func rate(_ numerator: Int, of denominator: Int) -> Double? {
+    denominator == 0 ? nil : Double(numerator) / Double(denominator)
+  }
 }
 
 public struct EvaluationSummary: Codable, Equatable, Sendable {
@@ -65,6 +156,7 @@ public struct EvaluationSummary: Codable, Equatable, Sendable {
   public let falseWarning: Int
   public let wrongFailure: Int
   public let nondeterministic: Int
+  public let ordering: OrderingSummary
 
   public var isAcceptable: Bool {
     falseSafe == 0 && falseWarning == 0 && wrongFailure == 0 && nondeterministic == 0
@@ -79,11 +171,12 @@ public struct EvaluationReport: Codable, Equatable, Sendable {
 }
 
 public enum EvaluationHarness {
-  public static let generatorName = "traktion-lab evaluate v1"
+  public static let generatorName = "traktion-lab evaluate v2"
 
-  /// The corpus the Milestone 1 audit runs: every control-set variant, the
-  /// 10–80% overlap sweep, and a horizontal-axis case. Seeds are fixed so the
-  /// report is comparable run to run.
+  /// The corpus the milestone audits run: every control-set variant, the
+  /// 10–80% overlap sweep, a horizontal-axis case, and the exact-ordering
+  /// cases. Seeds and permutations are fixed so the report is comparable run
+  /// to run.
   public static func standardCorpus() -> [EvaluationCase] {
     var cases: [EvaluationCase] = []
     let variants: [(String, FixtureVariant)] = [
@@ -135,6 +228,79 @@ public enum EvaluationHarness {
         engineAxis: .horizontal
       )
     )
+
+    // Exact-ordering cases (docs/tasks/0008, ADR-014). Recovery must reproduce
+    // the ground-truth documentary order or refuse with the pinned code; a
+    // recovered order that differs from the documentary order is a false-safe.
+    cases.append(
+      EvaluationCase(
+        name: "order-shuffled-baseline",
+        configuration: FixtureControlConfiguration(
+          sourceID: "order-shuffled",
+          captureCount: 5,
+          seed: 4000,
+          variant: .baseline
+        ),
+        ordering: OrderingCase(permutation: [2, 4, 0, 3, 1], expected: .reconstruct)
+      )
+    )
+    cases.append(
+      EvaluationCase(
+        name: "order-reversed",
+        configuration: FixtureControlConfiguration(
+          sourceID: "order-reversed",
+          seed: 4001,
+          variant: .reversedOrder
+        ),
+        ordering: OrderingCase(permutation: [0, 1, 2], expected: .reconstruct)
+      )
+    )
+    cases.append(
+      EvaluationCase(
+        name: "order-missing-middle",
+        configuration: FixtureControlConfiguration(
+          sourceID: "order-missing-middle",
+          seed: 4002,
+          variant: .missingMiddle
+        ),
+        ordering: OrderingCase(
+          permutation: [1, 0],
+          expected: .fail(code: "sequenceOrderNotFound")
+        )
+      )
+    )
+    cases.append(
+      EvaluationCase(
+        name: "order-duplicate-capture",
+        configuration: FixtureControlConfiguration(
+          sourceID: "order-duplicate",
+          seed: 4003,
+          variant: .duplicateCapture
+        ),
+        ordering: OrderingCase(
+          permutation: [3, 1, 0, 2],
+          expected: .fail(code: "duplicateCapture")
+        )
+      )
+    )
+    // The exact-only boundary, recorded rather than hidden: near-exact
+    // overlaps carry no byte-exact edge, so the order cannot be proven today.
+    // This case counts against the correct-sequence rate; task 0009 flips the
+    // expectation to `.reconstruct` when near-exact evidence lands.
+    cases.append(
+      EvaluationCase(
+        name: "order-degraded-exact-only",
+        configuration: FixtureControlConfiguration(
+          sourceID: "order-degraded",
+          seed: 4004,
+          variant: .degraded(maxChannelDelta: 2)
+        ),
+        ordering: OrderingCase(
+          permutation: [1, 2, 0],
+          expected: .fail(code: "sequenceOrderNotFound")
+        )
+      )
+    )
     return cases
   }
 
@@ -148,20 +314,33 @@ public enum EvaluationHarness {
 
     for evaluationCase in cases {
       let bundle = try FixtureControlGenerator.generate(evaluationCase.configuration)
-      let sequence = CaptureSequence(captures: bundle.captures)
+      let captures = try inputCaptures(for: evaluationCase, bundle: bundle)
 
       let clock = ContinuousClock()
       let start = clock.now
-      let first = run(engine, sequence, axis: evaluationCase.engineAxis)
+      let first = run(
+        engine,
+        captures,
+        axis: evaluationCase.engineAxis,
+        policy: evaluationCase.orderPolicy
+      )
       let elapsed = clock.now - start
-      let second = run(engine, sequence, axis: evaluationCase.engineAxis)
-      let deterministic = outcomesMatch(first, second)
+      let second = run(
+        engine,
+        captures,
+        axis: evaluationCase.engineAxis,
+        policy: evaluationCase.orderPolicy
+      )
+      let deterministic = outcomesMatch(first.outcome, second.outcome)
+        && first.recoveredOrder == second.recoveredOrder
 
       results.append(
         assess(
           name: evaluationCase.name,
           bundle: bundle,
-          outcome: first,
+          outcome: first.outcome,
+          ordering: evaluationCase.ordering,
+          recoveredOrder: first.recoveredOrder,
           deterministic: deterministic,
           milliseconds: Int(elapsed.components.seconds) * 1000
             + Int(elapsed.components.attoseconds / 1_000_000_000_000_000)
@@ -169,19 +348,48 @@ public enum EvaluationHarness {
       )
     }
 
-    let summary = EvaluationSummary(
+    return EvaluationReport(
+      schemaVersion: 2,
+      generator: generatorName,
+      summary: summarize(results),
+      cases: results
+    )
+  }
+
+  static func summarize(_ results: [EvaluationCaseResult]) -> EvaluationSummary {
+    EvaluationSummary(
       cases: results.count,
       pass: results.filter { $0.verdict == .pass }.count,
       falseSafe: results.filter { $0.verdict == .falseSafe }.count,
       falseWarning: results.filter { $0.verdict == .falseWarning }.count,
       wrongFailure: results.filter { $0.verdict == .wrongFailure }.count,
-      nondeterministic: results.filter { !$0.deterministic }.count
+      nondeterministic: results.filter { !$0.deterministic }.count,
+      ordering: orderingSummary(results)
     )
-    return EvaluationReport(
-      schemaVersion: 1,
-      generator: generatorName,
-      summary: summary,
-      cases: results
+  }
+
+  /// Ordering classes come from the fixture's semantic status: duplicate and
+  /// missing-coverage controls test detection; every other ordering case has
+  /// a documentary order the engine is expected to recover.
+  static func orderingSummary(_ results: [EvaluationCaseResult]) -> OrderingSummary {
+    let ordering = results.filter { $0.orderPolicy != .supplied }
+    let duplicates = ordering.filter { $0.expectedStatus == "duplicate-capture" }
+    let missing = ordering.filter { $0.expectedStatus == "missing-coverage" }
+    let sequences = ordering.filter {
+      $0.expectedStatus != "duplicate-capture" && $0.expectedStatus != "missing-coverage"
+    }
+    return OrderingSummary(
+      cases: ordering.count,
+      sequencesExpected: sequences.count,
+      sequencesCorrect: sequences.filter {
+        $0.verdict == .pass && $0.outcome == "reconstructed" && $0.recoveredOrder != nil
+      }.count,
+      duplicatesExpected: duplicates.count,
+      duplicatesIdentified: duplicates.filter { $0.failureCode == "duplicateCapture" }.count,
+      missingCapturesExpected: missing.count,
+      missingCapturesDetected: missing.filter {
+        $0.failureCode == "sequenceOrderNotFound"
+      }.count
     )
   }
 
@@ -193,17 +401,51 @@ public enum EvaluationHarness {
     case unexpectedError(String)
   }
 
+  public enum EvaluationCaseError: Error, Equatable, Sendable {
+    /// The ordering permutation does not enumerate every generated capture
+    /// exactly once.
+    case invalidPermutation(caseName: String, permutation: [Int], captureCount: Int)
+  }
+
+  private static func inputCaptures(
+    for evaluationCase: EvaluationCase,
+    bundle: FixtureControlBundle
+  ) throws -> [CaptureAsset] {
+    guard let ordering = evaluationCase.ordering else {
+      return bundle.captures
+    }
+    let count = bundle.captures.count
+    guard ordering.permutation.count == count,
+      Set(ordering.permutation) == Set(0..<count)
+    else {
+      throw EvaluationCaseError.invalidPermutation(
+        caseName: evaluationCase.name,
+        permutation: ordering.permutation,
+        captureCount: count
+      )
+    }
+    return ordering.permutation.map { bundle.captures[$0] }
+  }
+
   private static func run(
     _ engine: ReconstructionEngine,
-    _ sequence: CaptureSequence,
-    axis: ReconstructionAxis
-  ) -> RunOutcome {
+    _ captures: [CaptureAsset],
+    axis: ReconstructionAxis,
+    policy: OrderPolicy
+  ) -> (outcome: RunOutcome, recoveredOrder: [CaptureID]?) {
     do {
-      return .reconstructed(try engine.reconstruct(sequence, axis: axis))
+      switch policy {
+      case .supplied:
+        let result = try engine.reconstruct(CaptureSequence(captures: captures), axis: axis)
+        return (.reconstructed(result), nil)
+      case .exact:
+        let result = try engine.reconstructExactUnordered(captures, axis: axis)
+        return (.reconstructed(result), result.plan.placements.map(\.captureID))
+      }
     } catch let failure as ReconstructionFailure {
-      return .failed(failure)
+      return (.failed(failure), nil)
     } catch {
-      return .unexpectedError(String(describing: error))
+      return (.unexpectedError(String(describing: error)), nil)
     }
   }
 
@@ -220,16 +462,30 @@ public enum EvaluationHarness {
 
   /// Verdict rules: ground truth is authoritative. A composite where a typed
   /// failure is required — or a composite with wrong registration or wrong
-  /// pixels for an exact fixture — is a false-safe. A failure where
-  /// reconstruction is required is a false-warning.
+  /// pixels for an exact fixture, or a recovered order that differs from the
+  /// documentary order — is a false-safe. A failure where reconstruction is
+  /// required is a false-warning. For ordering cases the ordering expectation
+  /// replaces the supplied-order ground-truth pin.
   static func assess(
     name: String,
     bundle: FixtureControlBundle,
     outcome: RunOutcome,
+    ordering: OrderingCase? = nil,
+    recoveredOrder: [CaptureID]? = nil,
     deterministic: Bool,
     milliseconds: Int
   ) -> EvaluationCaseResult {
     let truth = bundle.groundTruth
+    let policy: OrderPolicy = ordering == nil ? .supplied : .exact
+    let expectedFailureCode: String?
+    switch ordering?.expected {
+    case .none:
+      expectedFailureCode = truth.expectedFailureCode
+    case .reconstruct:
+      expectedFailureCode = nil
+    case .fail(let code):
+      expectedFailureCode = code
+    }
     var pixelEqual: Bool?
     var missingRows: Int?
     var duplicatedRows: Int?
@@ -242,20 +498,30 @@ public enum EvaluationHarness {
     switch outcome {
     case .reconstructed(let result):
       outcomeLabel = "reconstructed"
-      if truth.expectedFailureCode != nil {
+      if expectedFailureCode != nil {
+        verdict = .falseSafe
+      } else if ordering != nil, recoveredOrder?.map(\.rawValue) != truth.expectedOrder {
         verdict = .falseSafe
       } else {
-        let errors = zip(result.plan.joints.map(\.overlapRows), truth.expectedOverlaps)
+        // Captures in the order the plan placed them; supplied order for the
+        // Milestone 1 path, the recovered order for ordering cases.
+        let placed = capturesInPlanOrder(bundle: bundle, plan: result.plan)
+        let expectedOverlaps = ordering == nil
+          ? truth.expectedOverlaps
+          : documentOrderOverlaps(truth)
+        let errors = zip(result.plan.joints.map(\.overlapRows), expectedOverlaps)
           .map { abs($0 - $1) }
         registrationErrors = errors
-        seamEnergies = result.plan.joints.enumerated().map { index, joint in
-          seamEnergy(
-            preceding: bundle.captures[index].image,
-            following: bundle.captures[index + 1].image,
-            joint: joint
-          )
+        seamEnergies = placed.map { placedCaptures in
+          result.plan.joints.enumerated().map { index, joint in
+            seamEnergy(
+              preceding: placedCaptures[index].image,
+              following: placedCaptures[index + 1].image,
+              joint: joint
+            )
+          }
         }
-        let isExact = truth.expectedStatus == "reconstructable"
+        let isExact = ["reconstructable", "reversed-order"].contains(truth.expectedStatus)
         if isExact {
           pixelEqual = result.image == bundle.source
           let rows = rowAccounting(source: bundle.source, composite: result.image)
@@ -263,7 +529,8 @@ public enum EvaluationHarness {
           duplicatedRows = rows.duplicated
         }
         let misregistered = errors.contains { $0 != 0 }
-          || result.plan.joints.count != truth.expectedOverlaps.count
+          || result.plan.joints.count != expectedOverlaps.count
+          || placed == nil
         if misregistered || (isExact && pixelEqual != true) {
           verdict = .falseSafe
         } else {
@@ -273,7 +540,7 @@ public enum EvaluationHarness {
     case .failed(let failure):
       outcomeLabel = "failed"
       failureCode = failure.code
-      if let expected = truth.expectedFailureCode {
+      if let expected = expectedFailureCode {
         verdict = failure.code == expected ? .pass : .wrongFailure
       } else {
         verdict = .falseWarning
@@ -281,13 +548,14 @@ public enum EvaluationHarness {
     case .unexpectedError(let description):
       outcomeLabel = "failed"
       failureCode = "untyped:\(description)"
-      verdict = truth.expectedFailureCode == nil ? .falseWarning : .wrongFailure
+      verdict = expectedFailureCode == nil ? .falseWarning : .wrongFailure
     }
 
     return EvaluationCaseResult(
       name: name,
+      orderPolicy: policy,
       expectedStatus: truth.expectedStatus,
-      expectedFailureCode: truth.expectedFailureCode,
+      expectedFailureCode: expectedFailureCode,
       outcome: outcomeLabel,
       failureCode: failureCode,
       verdict: verdict,
@@ -296,12 +564,52 @@ public enum EvaluationHarness {
       duplicatedRows: duplicatedRows,
       registrationErrors: registrationErrors,
       seamEnergies: seamEnergies,
+      recoveredOrder: recoveredOrder?.map(\.rawValue),
       deterministic: deterministic,
       milliseconds: milliseconds
     )
   }
 
   // MARK: - Metrics
+
+  /// The bundle's captures in the order the plan placed them, or nil when the
+  /// plan names a capture the bundle does not have (a defect, never silently
+  /// tolerated).
+  static func capturesInPlanOrder(
+    bundle: FixtureControlBundle,
+    plan: ReconstructionPlan
+  ) -> [CaptureAsset]? {
+    var byID: [CaptureID: CaptureAsset] = [:]
+    for capture in bundle.captures {
+      byID[capture.id] = capture
+    }
+    var placed: [CaptureAsset] = []
+    placed.reserveCapacity(plan.placements.count)
+    for placement in plan.placements {
+      guard let capture = byID[placement.captureID] else {
+        return nil
+      }
+      placed.append(capture)
+    }
+    return placed
+  }
+
+  /// Overlaps between neighbors in documentary order, from the ground-truth
+  /// capture origins; the expectation for ordering cases, whose supplied-order
+  /// `expectedOverlaps` are deliberately empty.
+  static func documentOrderOverlaps(_ truth: FixtureGroundTruth) -> [Int] {
+    var byID: [String: FixtureGroundTruth.Capture] = [:]
+    for capture in truth.captures {
+      byID[capture.id] = capture
+    }
+    let ordered = truth.expectedOrder.compactMap { byID[$0] }
+    guard ordered.count == truth.expectedOrder.count else {
+      return []
+    }
+    return zip(ordered, ordered.dropFirst()).map { preceding, following in
+      preceding.sourceOrigin + preceding.height - following.sourceOrigin
+    }
+  }
 
   /// Missing = source rows absent from the composite (multiset deficit);
   /// duplicated = composite rows exceeding their source count. Zero/zero for
