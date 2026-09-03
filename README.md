@@ -26,6 +26,7 @@ Full-page capture often fails: content scrolls inside nested frames, headers sta
 | Current capability | State |
 | --- | --- |
 | Supplied-order vertical reconstruction | Implemented for 2–10 opaque, equal-width PNG captures |
+| Exact automatic sequence ordering | Core API implemented; fails closed on gaps or ambiguity |
 | Exact suffix/prefix overlap and seam plan | Implemented with ambiguity rejection |
 | Decoded-pixel golden comparison | Implemented for deterministic synthetic fixtures |
 | Machine-readable evaluation gate | Implemented for the standard 16-case corpus |

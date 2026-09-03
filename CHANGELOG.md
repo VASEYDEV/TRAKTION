@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Fail-closed exact sequence ordering** (task 0007, ADR-014): the opt-in
+  `reconstructExactUnordered` core API recovers shuffled captures only when
+  exact suffix/prefix evidence forms one unique complete path. Missing and
+  ambiguous orders have stable typed failures, graph work has an explicit
+  pixel-comparison budget, and supplied-order reconstruction remains unchanged.
+
 - **Milestone 1 evidence audit** (task 0006): verified the merged foundation,
   67-test suite, PNG smoke, and 16-case evaluation gate; recorded a pass with
   explicit corpus, CI-artifact, real-device, and peak-memory follow-ups plus
