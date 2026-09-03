@@ -31,7 +31,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   duplicating rows; reproduction recorded in the packet), 0011 (corpus visual
   categories), 0012 (golden-failure CI artifacts), 0013 (peak-memory
   instrumentation). Roadmap gains a milestone status table; `CLAUDE.md`
-  repository facts gain task-tracking and toolchain notes.
+  repository facts gain task-tracking and toolchain notes. PR #8 was closed
+  as superseded on 2026-09-03 and the merged-branch policy is recorded in
+  the index.
 
 - **Fail-closed exact sequence ordering** (task 0007, ADR-014): the opt-in
   `reconstructExactUnordered` core API recovers shuffled captures only when
