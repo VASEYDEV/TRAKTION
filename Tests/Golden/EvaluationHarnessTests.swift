@@ -33,10 +33,10 @@ final class EvaluationHarnessTests: XCTestCase {
     }
   }
 
-  /// Exact-ordering cases (docs/tasks/0008): shuffled and reversed exact
+  /// Ordering cases (docs/tasks/0008, 0009): shuffled and reversed exact
   /// input must recover the documentary order and reproduce the source
   /// exactly; a coverage gap and a duplicate must end in their pinned typed
-  /// refusals; the exact-only boundary on near-exact captures is recorded.
+  /// refusals; near-exact recovery must order the degraded control.
   func testStandardCorpusOrderingCases() throws {
     let report = try EvaluationHarness.evaluate()
 
@@ -70,19 +70,49 @@ final class EvaluationHarnessTests: XCTestCase {
     XCTAssertEqual(duplicate.verdict, .pass)
     XCTAssertEqual(duplicate.failureCode, "duplicateCapture")
 
-    let degraded = try XCTUnwrap(report.cases.first { $0.name == "order-degraded-exact-only" })
-    XCTAssertEqual(degraded.verdict, .pass, "the exact-only boundary is a pinned contract")
-    XCTAssertEqual(degraded.failureCode, "sequenceOrderNotFound")
+    // Near-exact ordering cases (docs/tasks/0009): the degraded control has
+    // no byte-exact edge but every pair registers uniquely, so near-exact
+    // recovery orders it; exact input still orders; a gap still refuses.
+    let nearExactDegraded = try XCTUnwrap(
+      report.cases.first { $0.name == "order-near-exact-degraded" }
+    )
+    XCTAssertEqual(nearExactDegraded.orderPolicy, .nearExact)
+    XCTAssertEqual(nearExactDegraded.verdict, .pass)
+    XCTAssertEqual(nearExactDegraded.outcome, "reconstructed")
+    XCTAssertNil(nearExactDegraded.pixelEqualToSource, "near-exact fixtures skip source equality")
+    XCTAssertEqual(nearExactDegraded.registrationErrors, [0, 0])
+    XCTAssertEqual(nearExactDegraded.recoveredOrder, ["capture-001", "capture-002", "capture-003"])
+    for energy in try XCTUnwrap(nearExactDegraded.seamEnergies) {
+      XCTAssertGreaterThan(energy, 0)
+      XCTAssertLessThan(energy, 0.01)
+    }
+
+    let nearExactShuffled = try XCTUnwrap(
+      report.cases.first { $0.name == "order-near-exact-shuffled-baseline" }
+    )
+    XCTAssertEqual(nearExactShuffled.verdict, .pass)
+    XCTAssertEqual(nearExactShuffled.pixelEqualToSource, true)
+    XCTAssertEqual(
+      nearExactShuffled.recoveredOrder,
+      ["capture-001", "capture-002", "capture-003", "capture-004", "capture-005"]
+    )
+
+    let nearExactGap = try XCTUnwrap(
+      report.cases.first { $0.name == "order-near-exact-missing-middle" }
+    )
+    XCTAssertEqual(nearExactGap.verdict, .pass)
+    XCTAssertEqual(nearExactGap.outcome, "failed")
+    XCTAssertEqual(nearExactGap.failureCode, "sequenceOrderNotFound")
 
     let ordering = report.summary.ordering
-    XCTAssertEqual(ordering.cases, 5)
-    XCTAssertEqual(ordering.sequencesExpected, 3)
-    XCTAssertEqual(ordering.sequencesCorrect, 2, "exact-only cannot order near-exact captures")
+    XCTAssertEqual(ordering.cases, 7)
+    XCTAssertEqual(ordering.sequencesExpected, 4)
+    XCTAssertEqual(ordering.sequencesCorrect, 4)
     XCTAssertEqual(ordering.duplicatesExpected, 1)
     XCTAssertEqual(ordering.duplicatesIdentified, 1)
-    XCTAssertEqual(ordering.missingCapturesExpected, 1)
-    XCTAssertEqual(ordering.missingCapturesDetected, 1)
-    XCTAssertEqual(ordering.correctSequenceRate, 2.0 / 3.0)
+    XCTAssertEqual(ordering.missingCapturesExpected, 2)
+    XCTAssertEqual(ordering.missingCapturesDetected, 2)
+    XCTAssertEqual(ordering.correctSequenceRate, 1)
     XCTAssertEqual(ordering.duplicateIdentificationRate, 1)
     XCTAssertEqual(ordering.missingCaptureDetectionRate, 1)
   }
@@ -104,6 +134,11 @@ final class EvaluationHarnessTests: XCTestCase {
         name: "solo-ordered",
         configuration: FixtureControlConfiguration(seed: 9),
         ordering: OrderingCase(permutation: [1, 0, 2], expected: .reconstruct)
+      ),
+      EvaluationCase(
+        name: "solo-near-exact",
+        configuration: FixtureControlConfiguration(seed: 9, variant: .degraded(maxChannelDelta: 1)),
+        ordering: OrderingCase(permutation: [2, 1, 0], expected: .reconstruct, policy: .nearExact)
       ),
     ])
     let decoded = try JSONDecoder().decode(

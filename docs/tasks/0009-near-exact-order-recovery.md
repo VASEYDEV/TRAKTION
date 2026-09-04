@@ -1,10 +1,11 @@
 # Task: Near-exact order recovery on the exact-ordering contract
 
-Status: planned (next engine task). Prior art: PR #8
-(`claude/traktion-dev-setup-f24qtq`, commits `4248c00`/`ce43247`) implemented
-this design against the pre-audit `main`; it is superseded by the merged
-task-0007 contract and must be **ported, not merged** (see
-`docs/notes/2026-09-03-handoff-review-and-ordering-tooling.md`).
+Status: implemented (this packet's acceptance boxes are ticked from command
+evidence). Prior art: PR #8 (`claude/traktion-dev-setup-f24qtq`, commits
+`4248c00`/`ce43247`) implemented this design against the pre-audit `main`;
+it was closed as superseded and its engine half is ported here onto the
+merged task-0007 contract (see
+`docs/notes/2026-09-03-handoff-review-and-ordering-tooling.md`, §7).
 
 ## Goal
 Recover the documentary order of an unordered 2–10 capture set from
@@ -32,19 +33,20 @@ used as a graph probe without catching typed failures.
    identical decision points. Duplicate captures and every budget
    exhaustion still throw. Supplied-order behavior must be byte-identical
    (the whole existing suite passes unchanged).
-2. A near-exact ordering entry point (`reconstructUnordered` with an
-   evidence policy, or a sibling of `reconstructExactUnordered` — writer's
-   choice, recorded in the ADR) that probes every directed pair with the
-   unchanged registration pipeline (ADR-012 uniqueness, ADR-013 early exit,
-   per-joint budgets), creates an edge only for `accepted`, and requires
-   exactly one directed path covering every capture.
-3. Global uniqueness: count complete paths exactly (subset dynamic
-   programming, bounded by 10!); more than one path returns
-   `ambiguousSequenceOrder` with the first two orders in the stable
-   capture-identity traversal order; none returns `sequenceOrderNotFound`.
-   Existing failure codes and payload shapes are reused unchanged — do not
-   add `ambiguousOrder`/`missingCoverage` twins. Longest-chain diagnostics,
-   if wanted, go in a result/manifest field, not in the failure payload.
+2. A near-exact ordering entry point, `reconstructNearExactUnordered`
+   (a sibling of `reconstructExactUnordered`, which stays byte-identical),
+   that probes every directed pair with the unchanged registration pipeline
+   (ADR-012 uniqueness, ADR-013 early exit, per-joint budgets), creates an
+   edge only for `accepted`, and requires exactly one directed path
+   covering every capture.
+3. Global uniqueness: enumerate complete paths in stable capture-identity
+   order with a two-path early stop (an exact zero/one/many decision for at
+   most ten captures, reusing the exact path's traversal); more than one
+   path returns `ambiguousSequenceOrder` with the first two orders; none
+   returns `sequenceOrderNotFound`. Existing failure codes and payload
+   shapes are reused unchanged — no `ambiguousOrder`/`missingCoverage`
+   twins. Longest-chain diagnostics, if wanted later, go in a
+   result/manifest field, not in the failure payload.
 4. Bound total probe work: per-pair budgets as today plus a whole-recovery
    accounting (n ≤ 10 → at most 90 probes) that fails the entire recovery
    with `resourceLimitExceeded` before selecting from a partial graph.
@@ -53,9 +55,12 @@ used as a graph probe without catching typed failures.
 6. Determinism: identical inputs yield identical orders and failure
    payloads for any input permutation.
 7. Tooling: `traktion-lab reconstruct --order near-exact`; the evaluation
-   corpus flips `order-degraded-exact-only` to a reconstruct expectation
-   (rename it) and adds the symmetric-content ambiguity case once task 0010
-   provides the fixture.
+   corpus replaces `order-degraded-exact-only` with near-exact cases
+   (degraded shuffled → reconstruct, exact shuffled → reconstruct,
+   missing-middle → `sequenceOrderNotFound`); smoke generates the degraded
+   control and proves `exact` refuses it while `near-exact` reproduces the
+   supplied-order composite byte for byte. The symmetric-content ambiguity
+   corpus case waits for the task 0010 fixture (the golden covers it).
 8. ADR-015 records the rule and the solver design (ADR-014 stays accepted
    for the exact-only path).
 
@@ -85,16 +90,18 @@ used as a graph probe without catching typed failures.
 - Starved sample budget during graph construction.
 
 ## Acceptance criteria
-- [ ] Shuffled degraded captures reconstruct in documentary order; output
-      rows come verbatim from contributing captures.
-- [ ] Symmetric content returns `ambiguousSequenceOrder` with two orders.
-- [ ] Periodic content returns `sequenceOrderNotFound`, never a composite.
-- [ ] Starved budgets return `resourceLimitExceeded` with no partial choice.
-- [ ] `reconstructExactUnordered` and `reconstruct` outputs are unchanged on
-      every existing golden (byte equality against the pre-change suite).
-- [ ] Evaluation `ordering.correctSequenceRate` reaches 1.0 on the standard
+- [x] Shuffled degraded captures reconstruct in documentary order; output
+      rows come verbatim from contributing captures; plan and pixels equal
+      the supplied-order reconstruction of the same order.
+- [x] Symmetric content returns `ambiguousSequenceOrder` with two orders.
+- [x] Periodic content returns `sequenceOrderNotFound`, never a composite.
+- [x] Starved per-joint and whole-recovery budgets return
+      `resourceLimitExceeded` with no partial choice.
+- [x] `reconstructExactUnordered` and `reconstruct` outputs are unchanged on
+      every existing golden (the whole pre-change suite passes unchanged).
+- [x] Evaluation `ordering.correctSequenceRate` reaches 1.0 on the standard
       corpus with 0 false-safe.
-- [ ] Complete repository gates pass deterministically; no unrelated diff.
+- [x] Complete repository gates pass deterministically; no unrelated diff.
 
 ## Build / test commands
 ```sh
@@ -110,7 +117,8 @@ swift run traktion-lab evaluate --output /tmp/evaluation-report.json
 - evaluation report before/after (`ordering` summary)
 
 ## Writer
-Unassigned (next engine writer; one writer per branch).
+Claude (branch `claude/repo-status-handoff-hfsjyv`), porting the PR #8
+design by the archived "TRAKTION development setup" session.
 
 ## Reviewer
 Independent engine reviewer required before merge (false-safe review per

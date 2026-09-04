@@ -100,3 +100,32 @@ unchanged.
 21/21, 0 false-safe, 0 false-warning, 0 wrong-failure, 0 nondeterministic,
 ordering 2/3 · 1/1 · 1/1, exit 0 · `git diff --check` clean. Apple lane in
 CI.
+
+## 7. Task 0009 — near-exact order recovery (same session, after PR #11)
+
+The owner archived the "TRAKTION development setup" session, which had left
+one unverified reconciliation commit (`2a62b19`, renumbering its packets to
+0008/0009 and its ADR to ADR-015 on the pre-#10 `main`) on the PR #8 branch,
+and asked for the fix here. The engine half of PR #8 is ported onto the
+merged contract as task 0009:
+
+- `register` → outcome-returning `probePair` + byte-identical throwing
+  wrapper (the pre-change suite passes unchanged).
+- `reconstructNearExactUnordered`: stable node order, conservative
+  whole-recovery pixel bound charged before any probe (same accounting as
+  the exact path), edges only for `accepted` probes, two-path early-stop
+  enumeration, existing failure codes only, replay through supplied-order
+  `reconstruct`. ADR-015 records it; `reconstructExactUnordered` is
+  untouched.
+- Lab `--order near-exact`; smoke generates the degraded control and proves
+  `exact` refuses it while `near-exact` reproduces the supplied-order
+  composite byte for byte; evaluation corpus 23 cases, ordering summary
+  4/4 · 1/1 · 2/2.
+- Not ported from PR #8: `ambiguousOrder`/`missingCoverage` twins, the
+  subset-DP exact count and longest-chain diagnostics (payload additions
+  deferred), `RecoveredOrder`/`RecoveredEdge` types (the plan's placements
+  and joints already carry the order and per-junction evidence), and the
+  `--recover-order` flag (#10's `--order` covers it).
+
+Verification is in the PR handoff. With this, `claude/traktion-dev-setup-f24qtq`
+is fully superseded and can be deleted.
