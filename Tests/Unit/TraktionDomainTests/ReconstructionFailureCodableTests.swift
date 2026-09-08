@@ -11,6 +11,7 @@ final class ReconstructionFailureCodableTests: XCTestCase {
     .duplicateCapture(preceding: "capture-001", following: "capture-003"),
     .insufficientOverlap(preceding: "capture-001", following: "capture-002", minimumRows: 8),
     .ambiguousOverlap(preceding: "capture-001", following: "capture-002", candidateRows: [8, 20]),
+    .repeatedInterfaceArtifact(preceding: "capture-001", following: "capture-002", rows: 12),
     .sequenceOrderNotFound(captureIDs: ["capture-001", "capture-002"]),
     .ambiguousSequenceOrder(candidateOrders: [
       ["capture-001", "capture-002"], ["capture-002", "capture-001"],
@@ -42,6 +43,7 @@ final class ReconstructionFailureCodableTests: XCTestCase {
       [
         "unsupportedAxis", "captureCountOutOfRange", "incompatibleDimensions",
         "duplicateCapture", "insufficientOverlap", "ambiguousOverlap",
+        "repeatedInterfaceArtifact",
         "sequenceOrderNotFound", "ambiguousSequenceOrder",
         "resourceLimitExceeded", "outputDimensionsOverflow", "invalidPlan",
       ]

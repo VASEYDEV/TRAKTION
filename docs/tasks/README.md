@@ -24,7 +24,7 @@ unmerged packet is renumbered on port (see task 0009 for the PR #8 example).
 | [0007](0007-exact-sequence-ordering.md) | Fail-closed exact sequence ordering (core API) | 2 | done | Codex | PR #9 |
 | [0008](0008-exact-ordering-tooling.md) | Exact-ordering tooling: Lab, smoke, evaluation ordering metrics | 2 | done | Claude | this branch |
 | [0009](0009-near-exact-order-recovery.md) | Near-exact order recovery on the exact-ordering contract | 2 | done | Claude | this branch |
-| [0010](0010-repeated-chrome-guard.md) | Repeated-chrome fixture and identical-band guard | 2 / 4 | planned | — | — |
+| [0010](0010-repeated-chrome-guard.md) | Repeated-chrome fixture and identical-band guard | 2 / 4 | done | Codex | this branch |
 | [0011](0011-evaluation-corpus-categories.md) | Evaluation corpus visual categories | 1 follow-up | planned | — | — |
 | [0012](0012-golden-failure-artifacts.md) | Golden-failure CI artifact bundle | 1 follow-up | planned | — | — |
 | [0013](0013-peak-memory-instrumentation.md) | Peak-memory and throughput instrumentation | 1 follow-up | planned | — | — |

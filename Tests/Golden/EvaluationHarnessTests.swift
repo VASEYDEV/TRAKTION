@@ -31,6 +31,10 @@ final class EvaluationHarnessTests: XCTestCase {
       XCTAssertGreaterThan(energy, 0)
       XCTAssertLessThan(energy, 0.01, "degraded seams must stay near-exact")
     }
+
+    let repeatedChrome = try XCTUnwrap(report.cases.first { $0.name == "repeated-chrome" })
+    XCTAssertEqual(repeatedChrome.verdict, .pass)
+    XCTAssertEqual(repeatedChrome.failureCode, "repeatedInterfaceArtifact")
   }
 
   /// Ordering cases (docs/tasks/0008, 0009): shuffled and reversed exact
@@ -105,14 +109,20 @@ final class EvaluationHarnessTests: XCTestCase {
     XCTAssertEqual(nearExactGap.failureCode, "sequenceOrderNotFound")
 
     let ordering = report.summary.ordering
-    XCTAssertEqual(ordering.cases, 7)
-    XCTAssertEqual(ordering.sequencesExpected, 4)
+    let repeatedChrome = try XCTUnwrap(
+      report.cases.first { $0.name == "order-repeated-chrome" }
+    )
+    XCTAssertEqual(repeatedChrome.verdict, .pass)
+    XCTAssertEqual(repeatedChrome.failureCode, "ambiguousSequenceOrder")
+
+    XCTAssertEqual(ordering.cases, 8)
+    XCTAssertEqual(ordering.sequencesExpected, 5)
     XCTAssertEqual(ordering.sequencesCorrect, 4)
     XCTAssertEqual(ordering.duplicatesExpected, 1)
     XCTAssertEqual(ordering.duplicatesIdentified, 1)
     XCTAssertEqual(ordering.missingCapturesExpected, 2)
     XCTAssertEqual(ordering.missingCapturesDetected, 2)
-    XCTAssertEqual(ordering.correctSequenceRate, 1)
+    XCTAssertEqual(ordering.correctSequenceRate, 0.8)
     XCTAssertEqual(ordering.duplicateIdentificationRate, 1)
     XCTAssertEqual(ordering.missingCaptureDetectionRate, 1)
   }

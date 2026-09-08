@@ -198,6 +198,7 @@ public enum EvaluationHarness {
       ("missing-middle", .missingMiddle),
       ("sticky-header", .stickyHeader(rows: 12)),
       ("sticky-footer", .stickyFooter(rows: 12)),
+      ("repeated-chrome", .repeatedChrome(rows: 12)),
       ("floating-control", .floatingControl(width: 14, height: 14)),
       ("scrollbar", .scrollbar(width: 4)),
     ]
@@ -297,6 +298,20 @@ public enum EvaluationHarness {
     // registered near-exact overlaps order captures the exact policy cannot
     // (the degraded control), exact input still orders, and a coverage gap
     // still refuses.
+    cases.append(
+      EvaluationCase(
+        name: "order-repeated-chrome",
+        configuration: FixtureControlConfiguration(
+          sourceID: "order-repeated-chrome",
+          seed: 4007,
+          variant: .repeatedChrome(rows: 12)
+        ),
+        ordering: OrderingCase(
+          permutation: [2, 0, 1],
+          expected: .fail(code: "ambiguousSequenceOrder")
+        )
+      )
+    )
     cases.append(
       EvaluationCase(
         name: "order-near-exact-degraded",

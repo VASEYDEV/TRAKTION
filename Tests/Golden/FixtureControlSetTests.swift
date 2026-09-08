@@ -56,7 +56,10 @@ final class FixtureControlSetTests: XCTestCase {
   // MARK: - Determinism and ground truth
 
   func testGenerationIsDeterministic() throws {
-    for variant: FixtureVariant in [.baseline, .degraded(maxChannelDelta: 2), .scrollbar(width: 4)] {
+    for variant: FixtureVariant in [
+      .baseline, .degraded(maxChannelDelta: 2), .scrollbar(width: 4),
+      .repeatedChrome(rows: 12),
+    ] {
       let first = try bundle(variant)
       let second = try bundle(variant)
       XCTAssertEqual(first.captures, second.captures, variant.name)
@@ -187,6 +190,28 @@ final class FixtureControlSetTests: XCTestCase {
 
   func testStickyFooterFailsTyped() throws {
     try assertFailsAsPinned(.stickyFooter(rows: 12))
+  }
+
+  func testRepeatedChromeFailsTypedWithoutProducingAComposite() throws {
+    let bundle = try bundle(.repeatedChrome(rows: 12), seed: 99)
+    XCTAssertEqual(bundle.groundTruth.expectedStatus, "repeated-chrome")
+    XCTAssertThrowsError(try engine.reconstruct(CaptureSequence(captures: bundle.captures))) {
+      XCTAssertEqual(
+        $0 as? ReconstructionFailure,
+        .repeatedInterfaceArtifact(
+          preceding: bundle.captures[0].id,
+          following: bundle.captures[1].id,
+          rows: 12
+        )
+      )
+    }
+  }
+
+  func testRepeatedChromeMakesExactOrderingAmbiguous() throws {
+    let bundle = try bundle(.repeatedChrome(rows: 12), seed: 99)
+    XCTAssertThrowsError(try engine.reconstructExactUnordered(bundle.captures)) {
+      XCTAssertEqual(($0 as? ReconstructionFailure)?.code, "ambiguousSequenceOrder")
+    }
   }
 
   func testFloatingControlFailsTyped() throws {

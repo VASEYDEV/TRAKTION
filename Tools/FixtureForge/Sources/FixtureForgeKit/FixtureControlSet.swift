@@ -17,6 +17,8 @@ public enum FixtureVariant: Equatable, Sendable {
   case stickyHeader(rows: Int)
   /// The bottom `rows` of every capture carry an identical fixed footer.
   case stickyFooter(rows: Int)
+  /// The same fixed band appears at both viewport edges in every capture.
+  case repeatedChrome(rows: Int)
   /// A fixed-position control occludes content near the bottom-right of
   /// every capture.
   case floatingControl(width: Int, height: Int)
@@ -36,6 +38,7 @@ public enum FixtureVariant: Equatable, Sendable {
     case .missingMiddle: return "missing-middle"
     case .stickyHeader: return "sticky-header"
     case .stickyFooter: return "sticky-footer"
+    case .repeatedChrome: return "repeated-chrome"
     case .floatingControl: return "floating-control"
     case .scrollbar: return "scrollbar"
     case .onePixelOffset: return "one-pixel-offset"
@@ -52,6 +55,7 @@ public enum FixtureVariant: Equatable, Sendable {
     case "missing-middle": return .missingMiddle
     case "sticky-header": return .stickyHeader(rows: 12)
     case "sticky-footer": return .stickyFooter(rows: 12)
+    case "repeated-chrome": return .repeatedChrome(rows: 12)
     case "floating-control": return .floatingControl(width: 14, height: 14)
     case "scrollbar": return .scrollbar(width: 4)
     case "one-pixel-offset": return .onePixelOffset
@@ -62,7 +66,7 @@ public enum FixtureVariant: Equatable, Sendable {
 
   public static let allNames = [
     "baseline", "duplicate-capture", "reversed-order", "missing-middle",
-    "sticky-header", "sticky-footer", "floating-control", "scrollbar",
+    "sticky-header", "sticky-footer", "repeated-chrome", "floating-control", "scrollbar",
     "one-pixel-offset", "degraded",
   ]
 }
@@ -330,6 +334,8 @@ public enum FixtureControlGenerator {
       return ("sticky-header-occlusion", "insufficientOverlap")
     case .stickyFooter:
       return ("sticky-footer-occlusion", "insufficientOverlap")
+    case .repeatedChrome:
+      return ("repeated-chrome", "repeatedInterfaceArtifact")
     case .floatingControl:
       return ("floating-control-occlusion", "insufficientOverlap")
     case .scrollbar:
@@ -374,6 +380,21 @@ public enum FixtureControlGenerator {
     case .stickyFooter(let rows):
       return try slices.map {
         try paintFixedBand($0, rowRange: ($0.height - rows)..<$0.height, seed: config.seed)
+      }
+    case .repeatedChrome(let rows):
+      let band = try SyntheticFixtureFactory.document(
+        width: config.crossAxisSize,
+        height: rows,
+        seed: config.seed &+ 0xC0FFEE
+      )
+      return try slices.map { slice in
+        var pixels = slice.pixels
+        pixels.replaceSubrange(0..<band.pixels.count, with: band.pixels)
+        pixels.replaceSubrange(
+          (pixels.count - band.pixels.count)..<pixels.count,
+          with: band.pixels
+        )
+        return try RasterImage(width: slice.width, height: slice.height, pixels: pixels)
       }
     case .floatingControl(let width, let height):
       return try slices.map { slice in
@@ -518,7 +539,7 @@ public enum FixtureControlGenerator {
       try reject("one-pixel-offset needs overlapLength >= 10 to stay above the engine minimum")
     case .onePixelOffset where config.captureCount < 3:
       try reject("one-pixel-offset needs at least 3 captures (only interior origins jitter)")
-    case .stickyHeader(let rows), .stickyFooter(let rows):
+    case .stickyHeader(let rows), .stickyFooter(let rows), .repeatedChrome(let rows):
       if rows < 2 || rows >= config.viewportLength / 3 {
         try reject("sticky band rows must be in 2..<viewportLength/3")
       }

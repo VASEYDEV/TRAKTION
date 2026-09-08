@@ -229,7 +229,7 @@ private enum FixtureForgeCommand {
 
       Scenarios:
         baseline, duplicate-capture, reversed-order, missing-middle,
-        sticky-header, sticky-footer, floating-control, scrollbar,
+        sticky-header, sticky-footer, repeated-chrome, floating-control, scrollbar,
         one-pixel-offset, degraded
 
       Generate options (defaults in parentheses):
