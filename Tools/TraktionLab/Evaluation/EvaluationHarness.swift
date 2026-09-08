@@ -27,17 +27,20 @@ public struct EvaluationCase: Sendable {
   /// captures are permuted, the engine runs under the case's order policy,
   /// and the ordering expectation replaces the supplied-order ground-truth pin.
   public let ordering: OrderingCase?
+  public let measuresPerformance: Bool
 
   public init(
     name: String,
     configuration: FixtureControlConfiguration,
     engineAxis: ReconstructionAxis = .vertical,
-    ordering: OrderingCase? = nil
+    ordering: OrderingCase? = nil,
+    measuresPerformance: Bool = false
   ) {
     self.name = name
     self.configuration = configuration
     self.engineAxis = engineAxis
     self.ordering = ordering
+    self.measuresPerformance = measuresPerformance
   }
 
   public var orderPolicy: OrderPolicy {
@@ -110,6 +113,9 @@ public struct EvaluationCaseResult: Codable, Equatable, Sendable {
   /// identical failures).
   public let deterministic: Bool
   public var milliseconds: Int
+  /// First-run diagnostics. Exclude this and milliseconds when comparing
+  /// reports for deterministic reconstruction behavior.
+  public var performance: EvaluationPerformanceMetrics? = nil
 }
 
 /// EVALUATION.md "Ordering" metrics over the ordering cases of a report.
@@ -182,7 +188,7 @@ public struct EvaluationReport: Codable, Equatable, Sendable {
 }
 
 public enum EvaluationHarness {
-  public static let generatorName = "traktion-lab evaluate v3"
+  public static let generatorName = "traktion-lab evaluate v4"
 
   /// The corpus the milestone audits run: every control-set variant, the
   /// content styles with their adversarial controls, the 10–80% overlap
@@ -376,7 +382,23 @@ public enum EvaluationHarness {
         )
       )
     )
-    return cases
+    return cases + performanceCorpus()
+  }
+
+  /// Fixed order also documents the process high-water sampling history.
+  /// Use CLI --case in a fresh process for a case-specific Lab baseline.
+  public static func performanceCorpus() -> [EvaluationCase] {
+    [3, 10].map { count in
+      let name = count == 3 ? "performance-phone-3" : "performance-long-10"
+      return EvaluationCase(
+        name: name,
+        configuration: FixtureControlConfiguration(
+          sourceID: name, crossAxisSize: 1170, viewportLength: 2532,
+          captureCount: count, overlapLength: 700, seed: 51
+        ),
+        measuresPerformance: true
+      )
+    }
   }
 
   public static func evaluate(
@@ -405,13 +427,15 @@ public enum EvaluationHarness {
         engine,
         captures,
         axis: evaluationCase.engineAxis,
-        policy: evaluationCase.orderPolicy
+        policy: evaluationCase.orderPolicy,
+        measuresPerformance: evaluationCase.measuresPerformance
       )
       let second = run(
         engine,
         captures,
         axis: evaluationCase.engineAxis,
-        policy: evaluationCase.orderPolicy
+        policy: evaluationCase.orderPolicy,
+        measuresPerformance: evaluationCase.measuresPerformance
       )
       results.append(
         try assessRuns(
@@ -422,7 +446,7 @@ public enum EvaluationHarness {
     }
 
     return EvaluationReport(
-      schemaVersion: 3,
+      schemaVersion: 4,
       generator: generatorName,
       summary: summarize(results),
       cases: results
@@ -442,11 +466,12 @@ public enum EvaluationHarness {
   ) throws -> EvaluationCaseResult {
     let deterministic = outcomesMatch(first.outcome, second.outcome)
       && first.recoveredOrder == second.recoveredOrder
-    let assessment = assess(
+    var assessment = assess(
       name: name, bundle: bundle, outcome: first.outcome, ordering: ordering,
       recoveredOrder: first.recoveredOrder, deterministic: deterministic,
       milliseconds: first.milliseconds
     )
+    assessment.performance = first.performance
     guard let artifacts,
       artifacts.includePassingCases || assessment.verdict != .pass || !deterministic
     else { return assessment }
@@ -457,11 +482,12 @@ public enum EvaluationHarness {
         outcome: first.outcome, assessment: assessment, directory: artifacts.directory
       )
     } else {
-      let secondAssessment = assess(
+      var secondAssessment = assess(
         name: name, bundle: bundle, outcome: second.outcome, ordering: ordering,
         recoveredOrder: second.recoveredOrder, deterministic: false,
         milliseconds: second.milliseconds
       )
+      secondAssessment.performance = second.performance
       try SyntheticArtifactWriter.writeRuns(
         caseName: name, expected: bundle.source, captures: captures,
         first: .init(outcome: first.outcome, assessment: assessment),
@@ -517,6 +543,7 @@ public enum EvaluationHarness {
     let outcome: RunOutcome
     let recoveredOrder: [CaptureID]?
     let milliseconds: Int
+    var performance: EvaluationPerformanceMetrics? = nil
   }
 
   public enum EvaluationCaseError: Error, Equatable, Sendable {
@@ -550,8 +577,11 @@ public enum EvaluationHarness {
     _ engine: ReconstructionEngine,
     _ captures: [CaptureAsset],
     axis: ReconstructionAxis,
-    policy: OrderPolicy
+    policy: OrderPolicy,
+    measuresPerformance: Bool
   ) -> ObservedRun {
+    let inputBytes = measuresPerformance
+      ? captures.reduce(UInt64(0)) { $0 + UInt64($1.image.pixels.count) } : 0
     let clock = ContinuousClock()
     let start = clock.now
     let outcome: RunOutcome
@@ -579,11 +609,20 @@ public enum EvaluationHarness {
       recoveredOrder = nil
     }
     let elapsed = clock.now - start
-    return ObservedRun(
+    var observation = ObservedRun(
       outcome: outcome, recoveredOrder: recoveredOrder,
       milliseconds: Int(elapsed.components.seconds) * 1000
         + Int(elapsed.components.attoseconds / 1_000_000_000_000_000)
     )
+    // Sample before the second reconstruction or any assessment/artifact
+    // allocations. ru_maxrss still includes fixture generation and earlier
+    // process history; it is never reported as an allocation delta.
+    if measuresPerformance {
+      observation.performance = EvaluationPerformanceMetrics.record(
+        inputBytes: inputBytes, elapsed: elapsed
+      )
+    }
+    return observation
   }
 
   private static func outcomesMatch(_ lhs: RunOutcome, _ rhs: RunOutcome) -> Bool {

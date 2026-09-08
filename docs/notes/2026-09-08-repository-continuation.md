@@ -1,5 +1,8 @@
 # Repository continuation — 2026-09-08
 
+This note records PR #15. See the [subsequent continuation](2026-09-08-performance-and-ios-continuation.md)
+for completed performance/native work and the current execution queue.
+
 ## Starting state
 
 Reviewed `main` at `6cb004c5944ef5d8c039574762270ec4b2166170`.
@@ -26,12 +29,16 @@ main implementation and preserved the original false-safe evidence separately.
 | `claude/traktion-dev-setup-f24qtq` | `2a62b19c2b695ee3762e27b6326ec8c0d3cd12ab` | PR #8 and later reconciliation fully superseded by #10/#12; eligible for deletion |
 | `codex/check-development-state-and-resume` | `b5d090899cb7773524db3e948a293062a3c04a2c` | PR #14 closed as superseded; eligible for deletion |
 
-Deletion remains pending: the connected GitHub toolset provides no delete-ref
-action, direct Git push has no credentials in this workspace, and GitHub
-rejected secure browser sign-in because this account does not support
-password sign-in. The branch names and exact reviewed heads above make the
-remaining cleanup concrete; do not delete a branch if its head has advanced.
-No protection rules, account permissions, or credentials were changed.
+At the end of PR #15, deletion was blocked: the connected toolset had no
+delete-ref action, direct Git push had no credentials, and GitHub rejected
+password sign-in. No protection rules, account permissions, or credentials
+were changed.
+
+**Resolved during PR #16:** a read-only Git fetch/prune and GitHub branch
+inventory on 2026-09-08 verified that all three branches above had been
+removed. Only `main` and the current `codex/performance-and-native-ios` branch
+remained. The deletion actor was not established; this records the observed
+repository state. No branch-deletion follow-up remains for those old heads.
 
 ## Correctness findings
 

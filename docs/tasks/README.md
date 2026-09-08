@@ -16,12 +16,10 @@ unmerged packet is renumbered on port (see task 0009 for the PR #8 example).
 Completed packets below are historical evidence, not queued work. Continue from
 current `main`; never restart a superseded branch.
 
-1. **0013:** measure peak memory and throughput before setting mobile performance gates.
-2. **Native iOS target:** scaffold the Xcode application, simulator scheme/CI,
-   and explicit signing setup, then implement import/editor/persistence/export.
-3. **Repository operations:** delete the completed/superseded remote branches
-   listed in the [continuation note](../notes/2026-09-08-repository-continuation.md)
-   when authenticated branch-deletion access is available.
+1. **[0017](0017-native-png-reconstruction.md):** PNG import, explicit supplied
+   order, reconstruction, and result/failure presentation. Editor, persistence,
+   and export follow in separate packets. Physical-device signing requires
+   the developer's actual team and device.
 
 ## Index
 
@@ -38,10 +36,12 @@ current `main`; never restart a superseded branch.
 | [0009](0009-near-exact-order-recovery.md) | Near-exact order recovery on the exact-ordering contract | 2 | done | Claude | PR #12 |
 | [0010](0010-repeated-chrome-guard.md) | Repeated-chrome fixture and identical-band guard | 2 / 4 | done | Codex | PR #13 |
 | [0011](0011-evaluation-corpus-categories.md) | Evaluation corpus visual categories | 1 follow-up | done | Codex | PR #13 |
-| [0012](0012-golden-failure-artifacts.md) | Golden-failure CI artifact bundle | 1 follow-up | done | Codex | continuation, 2026-09-08 |
-| [0013](0013-peak-memory-instrumentation.md) | Peak-memory and throughput instrumentation | 1 follow-up | planned | — | — |
-| [0014](0014-monospaced-missing-coverage-false-safe.md) | Monospaced missing-coverage false-safe and directional proof | 1 follow-up | done with documented limits | Codex | continuation, 2026-09-08 |
-| [0015](0015-repository-reconciliation.md) | Repository reconciliation and development handoff | cross-milestone | done; access follow-up recorded | Codex | continuation, 2026-09-08 |
+| [0012](0012-golden-failure-artifacts.md) | Golden-failure CI artifact bundle | 1 follow-up | done | Codex | PR #15 |
+| [0013](0013-peak-memory-instrumentation.md) | Peak-memory and throughput instrumentation | 1 follow-up | done | Codex | PR #16 |
+| [0014](0014-monospaced-missing-coverage-false-safe.md) | Monospaced missing-coverage false-safe and directional proof | 1 follow-up | done with documented limits | Codex | PR #15 |
+| [0015](0015-repository-reconciliation.md) | Repository reconciliation and development handoff | cross-milestone | done | Codex | PR #15 |
+| [0016](0016-native-ios-scaffold.md) | Native iOS target and required simulator gate | native foundation | done | Codex | PR #16 |
+| [0017](0017-native-png-reconstruction.md) | Native PNG import and supplied-order reconstruction | first native workflow | queued | assign at start | — |
 
 ## Superseded packets and pull requests
 
@@ -65,13 +65,14 @@ current `main`; never restart a superseded branch.
   (task 0001); its branch is gone.
 
 Policy: delete branches after their work is merged or verified as superseded;
-`main` is the only long-lived branch. Access-blocked cleanup is recorded in
-the continuation note above.
+`main` is the only long-lived branch. The earlier access-blocked cleanup was
+verified resolved during PR #16; the continuation note preserves its history.
 
 ## Native app handoff
 
-The SwiftPM `TRAKTION` executable remains a macOS preview shell. There is no
-Xcode iOS application target, app signing configuration, simulator install
-gate, or device build. Those are the next app milestone after the immediate
-correctness/evidence work; editor, Photos import, project persistence, and
-export flows must not be marked delivered from core/CLI tests.
+The SwiftPM `TRAKTION` executable remains a macOS preview path. Task 0016 verified
+the Xcode iOS target, shared scheme, simulator installation/UI tests, and
+developer-owned signing configuration. Its CI evidence is distinct from
+core/CLI tests. The shell is read-only: import, reconstruction UI, editor,
+project persistence, and export still require implementation. A simulator
+pass does not establish physical-device signing or App Store readiness.

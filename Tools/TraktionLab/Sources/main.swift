@@ -364,6 +364,8 @@ private enum TraktionLab {
     var reportURL: URL?
     var artifactsURL: URL?
     var allArtifacts = false
+    var caseName: String?
+    var memoryAdvisory: EvaluationMemoryAdvisory?
     var seen = Set<String>()
     var index = 0
     while index < arguments.count {
@@ -384,6 +386,16 @@ private enum TraktionLab {
         }
       case "--all-artifacts":
         allArtifacts = true
+      case "--case", "--max-memory-ratio":
+        let value = try optionValue(arguments, index: &index, option: argument)
+        guard !value.isEmpty, !value.hasPrefix("--") else {
+          throw LabError.missingOptionValue(argument)
+        }
+        if argument == "--case" {
+          caseName = value
+        } else {
+          memoryAdvisory = try EvaluationMemoryAdvisory(value)
+        }
       default:
         throw LabError.unknownOption(argument)
       }
@@ -391,7 +403,7 @@ private enum TraktionLab {
     }
     guard let reportURL, !allArtifacts || artifactsURL != nil else {
       throw LabError.usage(
-        "Usage: traktion-lab evaluate --output <report.json> [--artifacts-dir <dir> [--all-artifacts]]"
+        "Usage: traktion-lab evaluate --output <report.json> [--case <name>] [--max-memory-ratio <positive-number>] [--artifacts-dir <dir> [--all-artifacts]]"
       )
     }
     guard (try? FileManager.default.attributesOfItem(atPath: reportURL.path)) == nil else {
@@ -408,8 +420,18 @@ private enum TraktionLab {
     let artifacts = artifactsURL.map {
       EvaluationArtifactOptions(directory: $0, includePassingCases: allArtifacts)
     }
-    let report = try EvaluationHarness.evaluate(artifacts: artifacts)
+    var cases = EvaluationHarness.standardCorpus()
+    if let caseName {
+      cases = cases.filter { $0.name == caseName }
+      guard !cases.isEmpty else {
+        throw LabError.usage("Unknown evaluation case: \(caseName)")
+      }
+    }
+    let report = try EvaluationHarness.evaluate(cases, artifacts: artifacts)
     try writeJSON(report, to: reportURL)
+    for warning in memoryAdvisory?.warnings(in: report) ?? [] {
+      FileHandle.standardError.write(Data((warning + "\n").utf8))
+    }
 
     let summary = report.summary
     print("Evaluation report → \(reportURL.path)")
@@ -425,6 +447,18 @@ private enum TraktionLab {
         + "duplicates \(ordering.duplicatesIdentified)/\(ordering.duplicatesExpected)  "
         + "missing-captures \(ordering.missingCapturesDetected)/\(ordering.missingCapturesExpected)"
     )
+    for result in report.cases {
+      guard let performance = result.performance else { continue }
+      if let peak = performance.peakResidentBytes, let ratio = performance.inputAmplification {
+        print("performance: \(result.name)  process-peak-bytes: \(peak)  input-amplification: \(ratio)")
+      } else {
+        let reason = performance.memorySamplingError ?? "unavailable"
+        print("performance: \(result.name)  process-peak-bytes: unavailable (\(reason))")
+      }
+      if let throughput = performance.inputPixelsPerSecond {
+        print("performance: \(result.name)  input-pixels-per-second: \(throughput)")
+      }
+    }
     guard summary.isAcceptable else {
       throw LabError.evaluationGateFailed(reportPath: reportURL.path)
     }
@@ -539,9 +573,11 @@ private enum TraktionLab {
       Usage:
         traktion-lab reconstruct --output <composite.png> [options] <capture-001.png> <capture-002.png> [...]
         traktion-lab compare <expected.png> <actual.png>
-        traktion-lab evaluate --output <report.json> [--artifacts-dir <dir> [--all-artifacts]]
+        traktion-lab evaluate --output <report.json> [evaluation options]
 
       Evaluation options:
+        --case <name>                   Run one standard case in this fresh process.
+        --max-memory-ratio <number>      Positive advisory only; never changes the gate.
         --artifacts-dir <path>           Synthetic failure bundles; includes nondeterminism.
         --all-artifacts                  Also retain passing cases (requires --artifacts-dir).
 

@@ -38,15 +38,28 @@ final class NondeterminismArtifactTests: XCTestCase {
     let changedImage = try RasterImage(
       width: result.image.width, height: result.image.height, pixels: pixels)
     let changedResult = ReconstructionResult(plan: result.plan, image: changedImage)
+    let firstPerformance = EvaluationPerformanceMetrics.record(
+      inputBytes: 400, elapsed: .milliseconds(11), sample: { 1000 }
+    )
+    let secondPerformance = EvaluationPerformanceMetrics.record(
+      inputBytes: 400, elapsed: .milliseconds(22), sample: { 2000 }
+    )
 
     let assessment = try EvaluationHarness.assessRuns(
       name: "pixel-disagreement", bundle: bundle, captures: bundle.captures,
-      first: .init(outcome: .reconstructed(result), recoveredOrder: nil, milliseconds: 11),
-      second: .init(outcome: .reconstructed(changedResult), recoveredOrder: nil, milliseconds: 22),
+      first: .init(
+        outcome: .reconstructed(result), recoveredOrder: nil, milliseconds: 11,
+        performance: firstPerformance
+      ),
+      second: .init(
+        outcome: .reconstructed(changedResult), recoveredOrder: nil, milliseconds: 22,
+        performance: secondPerformance
+      ),
       artifacts: EvaluationArtifactOptions(directory: directory)
     )
     XCTAssertEqual(assessment.verdict, .pass, "The report retains the first run's verdict.")
     XCTAssertFalse(assessment.deterministic)
+    XCTAssertEqual(assessment.performance, firstPerformance)
     XCTAssertFalse(EvaluationHarness.summarize([assessment]).isAcceptable)
     let caseDirectory = directory.appendingPathComponent("pixel-disagreement")
     let caseManifest = try manifest(caseDirectory)
@@ -69,6 +82,8 @@ final class NondeterminismArtifactTests: XCTestCase {
       XCTAssertEqual(runAssessment["name"] as? String, "pixel-disagreement")
       XCTAssertEqual(runAssessment["verdict"] as? String, index == 0 ? "pass" : "false-safe")
       XCTAssertEqual(runAssessment["milliseconds"] as? Int, index == 0 ? 11 : 22)
+      let performance = try XCTUnwrap(runAssessment["performance"] as? [String: Any])
+      XCTAssertEqual(performance["peakResidentBytes"] as? Int, index == 0 ? 1000 : 2000)
       XCTAssertEqual(runAssessment["deterministic"] as? Bool, false)
       XCTAssertTrue(
         FileManager.default.fileExists(

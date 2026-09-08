@@ -16,8 +16,13 @@ searches tracked files only, so generated SwiftPM/Xcode output cannot create fal
 bash scripts/verify-core.sh
 ```
 
-This requires Swift 6, parses the package manifest, builds every SwiftPM target, and runs
-the unit, golden, failure-path, determinism, performance-shape, and conditional PNG tests.
+This requires Swift 6, parses the package manifest, builds every SwiftPM target in
+debug mode, then runs the complete XCTest suite in release mode with testable imports:
+unit, golden, failure-path, determinism, performance-shape, and conditional PNG tests.
+All assertions and full-size cases remain. The full suite now verifies optimized
+runtime behavior; the portable debug configuration is compiled, not fully exercised
+at runtime. PNG smoke already uses release tools; the native UI lane runs a debug app.
+This keeps production-sized image work practical without filtering or skipping tests.
 Pure-Swift PNG tests run on Linux; Apple-only ImageIO parity tests compile and run on macOS.
 
 ## Complete Apple gate
@@ -46,13 +51,62 @@ control set and proves that `--order exact` refuses it (typed manifest) while
 ## Evaluation gate
 
 ```bash
-swift run traktion-lab evaluate --output /tmp/evaluation-report.json
+swift run --configuration release traktion-lab evaluate --output /tmp/evaluation-report.json
 ```
 
-Runs the standard 43-case corpus twice per case and exits non-zero on any false-safe,
+Runs the standard 45-case corpus twice per case and exits non-zero on any false-safe,
 false-warning, wrong-failure, or nondeterminism. The summary line reports the
 EVALUATION.md ordering metrics (correct-sequence, duplicate-identification, and
 missing-capture-detection counts) across the exact and near-exact ordering cases.
+
+### Memory and throughput baseline
+
+Schema 4 adds `performance` to `performance-phone-3` and `performance-long-10`.
+Both use 1170×2532 RGBA captures and 700-row overlaps: respectively three
+captures/6196 output rows and ten captures/19020 output rows. For comparable
+measurements, use an optimized executable and a fresh process per case:
+
+```bash
+swift build --configuration release --product traktion-lab
+TRAKTION_LAB_BIN="$(swift build --configuration release --show-bin-path)/traktion-lab"
+"$TRAKTION_LAB_BIN" evaluate --case performance-phone-3 --output /tmp/phone.json
+"$TRAKTION_LAB_BIN" evaluate --case performance-long-10 --output /tmp/long.json
+# A deliberately low advisory demonstrates warning-only behavior:
+"$TRAKTION_LAB_BIN" evaluate --case performance-phone-3 --max-memory-ratio 0.01 --output /tmp/phone-advisory.json
+```
+
+Always choose fresh output paths. `--case` accepts one exact standard-case
+name; an unknown name, repeated option, or missing value is a usage error.
+
+| Field under `performance` | Meaning |
+| --- | --- |
+| `peakResidentBytes` | `getrusage(RUSAGE_SELF).ru_maxrss`, normalized to bytes: Linux raw KiB × 1024; Darwin raw bytes |
+| `inputBytes` | Sum of actual input RGBA array lengths, including overlapping pixels |
+| `inputAmplification` | Process peak bytes divided by `inputBytes` |
+| `reconstructionSeconds` | Precise first engine-call wall time, excluding generation, assessment, and export |
+| `inputPixelsPerSecond` | Supplied input pixel count divided by that duration; absent at zero duration |
+| `memoryScope` / `platform` | Explicit lifetime-high-water scope and platform identifier |
+| `memorySamplingError` | Explicit failure if RSS cannot be read; absent measurements are never replaced by zero |
+
+The snapshot precedes the second reconstruction and assessment, but the OS
+value still includes the runtime, fixture/source rasters, and earlier process
+activity. It is not isolated engine heap usage or an iPhone memory budget.
+Do not subtract consecutive peaks to estimate allocations. Fresh-process CI
+reports reduce prior-case contamination; compare the same platform, workload,
+build mode, and scope. Throughput describes the supplied workload, not every
+pixel actually inspected; on refusal it is attempted-workload throughput.
+Both positive baseline cases must reconstruct before comparing performance.
+
+`--max-memory-ratio` must be finite and positive. Exceeding it warns on stderr
+without changing JSON verdicts or exit status. Memory/speed values remain
+diagnostic until at least two releases establish a baseline. Correctness and
+determinism failures still fail the gate. Memory and timing fields are excluded
+from behavioral report equality, while outcomes, pixels, plans, and orders are
+still compared. See [ADR-019](../adr/ADR-019-process-performance-diagnostics.md).
+
+Linux and Apple CI retain full-corpus JSON plus `performance-phone-3-*.json`
+and `performance-long-10-*.json`, each isolated report from a separate process.
+Download `traktion-evaluation-report` or `traktion-evaluation-report-apple`.
 
 Successful completion ends with `GATE: PASS (repository · Swift build/tests · Apple PNG smoke)`.
 
@@ -88,7 +142,12 @@ failure directories only on failure; the evaluation JSON is always retained.
 - `verify / repository` on Ubuntu;
 - `verify / core (Linux)` in the official Swift 6 Ubuntu image;
 - `verify / Apple package and PNG smoke` on `macos-15`;
-- `verification / required`, an `always()` aggregator that fails unless all three pass.
+- `verify / iOS simulator` on `macos-15`, building/installing/launching the
+  native app and running its XCTest UI checks;
+- `verification / required`, an `always()` aggregator that fails unless all four pass.
+
+The iOS lane uses `scripts/verify-ios.sh` and retains `.xcresult` and diagnostic
+logs. It creates and deletes its own simulator. See the [iOS runbook](ios-development.md).
 
 On Apple-smoke failure, CI retains only the generated synthetic fixture, composite,
 manifest, and diagnostics. Private/real captures must never enter Actions artifacts.

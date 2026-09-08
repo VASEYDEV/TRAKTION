@@ -1,0 +1,212 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {};
+	objectVersion = 60;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A10000000000000000000001 /* TRAKTIONApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000001 /* TRAKTIONApp.swift */; };
+		A10000000000000000000002 /* TraktionUI in Frameworks */ = {isa = PBXBuildFile; productRef = A90000000000000000000001 /* TraktionUI */; };
+		A10000000000000000000003 /* TraktionCore in Frameworks */ = {isa = PBXBuildFile; productRef = A90000000000000000000002 /* TraktionCore */; };
+		A10000000000000000000004 /* TRAKTIONLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000004 /* TRAKTIONLaunchTests.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		AA0000000000000000000001 /* App proxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A50000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A40000000000000000000001;
+			remoteInfo = TRAKTIONiOS;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		A20000000000000000000001 /* TRAKTIONApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TRAKTION/Sources/TRAKTIONApp.swift; sourceTree = "<group>"; };
+		A20000000000000000000002 /* TRAKTION.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TRAKTION.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A20000000000000000000003 /* Build.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = TRAKTION/Config/Build.xcconfig; sourceTree = "<group>"; };
+		A20000000000000000000004 /* TRAKTIONLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ../Tests/UITests/TRAKTIONLaunchTests.swift; sourceTree = "<group>"; };
+		A20000000000000000000005 /* TRAKTIONUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TRAKTIONUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A30000000000000000000002 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (A10000000000000000000002 /* TraktionUI in Frameworks */, A10000000000000000000003 /* TraktionCore in Frameworks */);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A30000000000000000000005 /* Test Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A60000000000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000001 /* TRAKTIONApp.swift */,
+				A20000000000000000000003 /* Build.xcconfig */,
+				A20000000000000000000004 /* TRAKTIONLaunchTests.swift */,
+				A60000000000000000000002 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A60000000000000000000002 /* Products */ = {
+			isa = PBXGroup;
+			children = (A20000000000000000000002 /* TRAKTION.app */, A20000000000000000000005 /* TRAKTIONUITests.xctest */);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A40000000000000000000001 /* TRAKTIONiOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A80000000000000000000002 /* App configurations */;
+			buildPhases = (A30000000000000000000001 /* Sources */, A30000000000000000000002 /* Frameworks */, A30000000000000000000003 /* Resources */);
+			buildRules = ();
+			dependencies = ();
+			name = TRAKTIONiOS;
+			packageProductDependencies = (A90000000000000000000001 /* TraktionUI */, A90000000000000000000002 /* TraktionCore */);
+			productName = TRAKTION;
+			productReference = A20000000000000000000002 /* TRAKTION.app */;
+			productType = "com.apple.product-type.application";
+		};
+		A40000000000000000000002 /* TRAKTIONUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A80000000000000000000003 /* Test configurations */;
+			buildPhases = (A30000000000000000000004 /* Test Sources */, A30000000000000000000005 /* Test Frameworks */, A30000000000000000000006 /* Test Resources */);
+			buildRules = ();
+			dependencies = (AB0000000000000000000001 /* App dependency */);
+			name = TRAKTIONUITests;
+			productName = TRAKTIONUITests;
+			productReference = A20000000000000000000005 /* TRAKTIONUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A50000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					A40000000000000000000001 = {CreatedOnToolsVersion = 16.0; };
+					A40000000000000000000002 = {CreatedOnToolsVersion = 16.0; TestTargetID = A40000000000000000000001; };
+				};
+			};
+			buildConfigurationList = A80000000000000000000001 /* Project configurations */;
+			compatibilityVersion = "Xcode 15.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (en, Base);
+			mainGroup = A60000000000000000000001;
+			packageReferences = (A90000000000000000000003 /* Local TRAKTION package */);
+			productRefGroup = A60000000000000000000002 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (A40000000000000000000001 /* TRAKTIONiOS */, A40000000000000000000002 /* TRAKTIONUITests */);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A30000000000000000000003 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		A30000000000000000000006 /* Test Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A30000000000000000000001 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000001 /* TRAKTIONApp.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
+		A30000000000000000000004 /* Test Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000004 /* TRAKTIONLaunchTests.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		AB0000000000000000000001 /* App dependency */ = {isa = PBXTargetDependency; target = A40000000000000000000001 /* TRAKTIONiOS */; targetProxy = AA0000000000000000000001 /* App proxy */; };
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		A70000000000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A20000000000000000000003 /* Build.xcconfig */;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		A70000000000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A20000000000000000000003 /* Build.xcconfig */;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		A70000000000000000000003 /* App Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = TRAKTION;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				PRODUCT_BUNDLE_IDENTIFIER = "$(TRAKTION_BUNDLE_IDENTIFIER)";
+				PRODUCT_NAME = TRAKTION;
+			};
+			name = Debug;
+		};
+		A70000000000000000000004 /* App Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				INFOPLIST_KEY_CFBundleDisplayName = TRAKTION;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				PRODUCT_BUNDLE_IDENTIFIER = "$(TRAKTION_BUNDLE_IDENTIFIER)";
+				PRODUCT_NAME = TRAKTION;
+			};
+			name = Release;
+		};
+		A70000000000000000000005 /* Test Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {PRODUCT_BUNDLE_IDENTIFIER = "$(TRAKTION_BUNDLE_IDENTIFIER).uitests"; PRODUCT_NAME = "$(TARGET_NAME)"; TEST_TARGET_NAME = TRAKTIONiOS; };
+			name = Debug;
+		};
+		A70000000000000000000006 /* Test Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {PRODUCT_BUNDLE_IDENTIFIER = "$(TRAKTION_BUNDLE_IDENTIFIER).uitests"; PRODUCT_NAME = "$(TARGET_NAME)"; TEST_TARGET_NAME = TRAKTIONiOS; };
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A80000000000000000000001 /* Project configurations */ = {isa = XCConfigurationList; buildConfigurations = (A70000000000000000000001 /* Debug */, A70000000000000000000002 /* Release */); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		A80000000000000000000002 /* App configurations */ = {isa = XCConfigurationList; buildConfigurations = (A70000000000000000000003 /* App Debug */, A70000000000000000000004 /* App Release */); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		A80000000000000000000003 /* Test configurations */ = {isa = XCConfigurationList; buildConfigurations = (A70000000000000000000005 /* Test Debug */, A70000000000000000000006 /* Test Release */); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		A90000000000000000000003 /* Local TRAKTION package */ = {isa = XCLocalSwiftPackageReference; relativePath = ..; };
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A90000000000000000000001 /* TraktionUI */ = {isa = XCSwiftPackageProductDependency; package = A90000000000000000000003 /* Local TRAKTION package */; productName = TraktionUI; };
+		A90000000000000000000002 /* TraktionCore */ = {isa = XCSwiftPackageProductDependency; package = A90000000000000000000003 /* Local TRAKTION package */; productName = TraktionCore; };
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = A50000000000000000000001 /* Project object */;
+}

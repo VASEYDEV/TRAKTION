@@ -10,6 +10,8 @@ fi
 swift --version
 swift package dump-package >/dev/null
 swift build --configuration debug
-swift test --parallel
+# Exercise every test and full-size image case with production optimization.
+# Keep the debug build above as a separate development-configuration check.
+swift test --configuration release --enable-testable-imports --parallel
 
 echo "CORE VERIFICATION: PASS"

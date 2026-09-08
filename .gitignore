@@ -39,6 +39,9 @@ coverage/
 
 # TRAKTION private/local additions (from Foundation Kit)
 *.xcuserstate
+xcuserdata/
+*.xcresult/
+App/TRAKTION/Config/Signing.local.xcconfig
 DerivedData/
 .traktion-local/
 Tests/RealWorldFixtures/Private/

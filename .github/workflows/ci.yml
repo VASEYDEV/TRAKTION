@@ -37,13 +37,17 @@ jobs:
         run: |
           swift build --configuration release --product traktion-lab
           "$(swift build --configuration release --show-bin-path)/traktion-lab" evaluate --output evaluation-report.json --artifacts-dir "${{ runner.temp }}/traktion-synthetic-artifacts/evaluation"
+          "$(swift build --configuration release --show-bin-path)/traktion-lab" evaluate --case performance-phone-3 --output performance-phone-3-linux.json
+          "$(swift build --configuration release --show-bin-path)/traktion-lab" evaluate --case performance-long-10 --output performance-long-10-linux.json
           python3 -m json.tool evaluation-report.json >/dev/null
       - name: Upload evaluation report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: traktion-evaluation-report
-          path: evaluation-report.json
+          path: |
+            evaluation-report.json
+            performance-*-linux.json
           if-no-files-found: ignore
 
       - name: Retain synthetic golden and evaluation diagnostics on failure
@@ -64,6 +68,21 @@ jobs:
           TRAKTION_SMOKE_DIR: ${{ runner.temp }}/traktion-smoke
           TRAKTION_GOLDEN_ARTIFACTS: ${{ runner.temp }}/traktion-synthetic-artifacts/tests
         run: bash scripts/gate.sh
+      - name: Evaluation and fresh-process performance reports
+        run: |
+          swift build --configuration release --product traktion-lab
+          "$(swift build --configuration release --show-bin-path)/traktion-lab" evaluate --output evaluation-report-apple.json --artifacts-dir "${{ runner.temp }}/traktion-synthetic-artifacts/evaluation"
+          "$(swift build --configuration release --show-bin-path)/traktion-lab" evaluate --case performance-phone-3 --output performance-phone-3-apple.json
+          "$(swift build --configuration release --show-bin-path)/traktion-lab" evaluate --case performance-long-10 --output performance-long-10-apple.json
+      - name: Upload Apple evaluation reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: traktion-evaluation-report-apple
+          path: |
+            evaluation-report-apple.json
+            performance-*-apple.json
+          if-no-files-found: ignore
       - name: Retain synthetic diagnostics on failure
         if: failure()
         uses: actions/upload-artifact@v4
@@ -80,10 +99,32 @@ jobs:
           path: ${{ runner.temp }}/traktion-synthetic-artifacts
           if-no-files-found: ignore
 
+  ios:
+    name: verify / iOS simulator
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build, install, launch, and test the native shell
+        env:
+          TRAKTION_IOS_ARTIFACTS: ${{ runner.temp }}/traktion-ios
+        run: bash scripts/verify-ios.sh
+      - name: Retain simulator test results and build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: traktion-ios-verification
+          path: |
+            ${{ runner.temp }}/traktion-ios/run.*/*.txt
+            ${{ runner.temp }}/traktion-ios/run.*/*.json
+            ${{ runner.temp }}/traktion-ios/run.*/*.log
+            ${{ runner.temp }}/traktion-ios/run.*/*.xcresult
+          if-no-files-found: warn
+
   required:
     name: verification / required
     if: always()
-    needs: [repository, core-linux, apple]
+    needs: [repository, core-linux, apple, ios]
     runs-on: ubuntu-latest
     steps:
       - name: Require every verification lane
@@ -91,7 +132,9 @@ jobs:
           REPOSITORY_RESULT: ${{ needs.repository.result }}
           CORE_LINUX_RESULT: ${{ needs.core-linux.result }}
           APPLE_RESULT: ${{ needs.apple.result }}
+          IOS_RESULT: ${{ needs.ios.result }}
         run: |
           test "$REPOSITORY_RESULT" = success
           test "$CORE_LINUX_RESULT" = success
           test "$APPLE_RESULT" = success
+          test "$IOS_RESULT" = success
