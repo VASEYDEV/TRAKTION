@@ -1,6 +1,6 @@
 # Task: Peak-memory and throughput instrumentation
 
-Status: implemented and independently reviewed; platform CI verification required before merge.
+Status: done — implementation independently reviewed and verified in PR #16.
 
 ## Goal
 Record actual process peak resident memory and input-pixel throughput for
@@ -39,14 +39,14 @@ The separate native scaffold task owns its UI/project/CI lane changes.
 ## Acceptance criteria
 - [x] Report schema carries measured peak bytes, input amplification, and
       throughput for both instrumented shapes on Linux.
-- [ ] macOS CI confirms Darwin sampling and retains the two measured cases.
+- [x] macOS CI confirms Darwin sampling and retains the two measured cases.
 - [x] Full-size cases reconstruct with original source pixels and no missing
       or duplicated rows in the complete corpus.
 - [x] Measurement variability is excluded from behavioral determinism while
       all original 43 correctness cases remain covered.
 - [x] Invalid/advisory CLI behavior is tested without changing gate semantics.
 - [x] Independent source, metric-scope, and CI review found no blockers.
-- [ ] Final Linux/macOS CI and required aggregator pass before merge.
+- [x] Linux/macOS CI and the required aggregator pass for the implementation.
 
 ## Verification evidence
 Linux, Swift 6.0.3, optimized build in this cloud workspace:
@@ -75,12 +75,21 @@ No original correctness assertion or engine limit was relaxed.
 
 See ADR-019 and the verification runbook for units, scope, and reproduction.
 CI remains the source of evidence for Darwin compilation/sampling and standard
-platform test launch mechanics. The first CI attempt spent over 15 minutes in
-the debug suites after adding full-size rasters. Independent review approved
+platform test launch mechanics. About 15 minutes after the first CI attempt began,
+its debug suites were still running after adding full-size rasters. Independent review approved
 keeping the debug build while running every XCTest in release mode with
 testable imports. This changes the full suite's runtime configuration; it
 does not remove cases, reduce image dimensions, or relax assertions. PNG smoke
 already runs release tools, and native UI tests still exercise the debug app. Physical iPhone memory is not measured here.
+
+## Platform CI evidence
+[Run 34290310084](https://github.com/VASEYDEV/TRAKTION/actions/runs/34290310084)
+passed all 129 XCTest tests on Linux (Swift 6.0.3) and macOS (Swift 6.1.2),
+both PNG smoke paths, the 45/45 full corpus, and each fresh-process baseline.
+The two platform report artifacts were retained, both native UI tests passed,
+and the required aggregator passed. This verifies implementation head
+`046430a1a6c1d375377375fd7b63430921905b18`. The final documentation revision
+must retain all required checks before PR #16 is merged.
 
 ## Ownership
 Codex implementation; independent review of sampler, harness, CLI, and CI

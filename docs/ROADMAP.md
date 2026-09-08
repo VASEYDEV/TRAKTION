@@ -5,9 +5,9 @@
 | Milestone | State | Evidence |
 | --- | --- | --- |
 | 0 — Foundation | complete | PR #4, PR #5 |
-| 1 — Exact static reconstruction | passed; measured evidence implemented | corpus categories (0011), failure artifacts (0012), and gap regression repair (0014) landed; memory/throughput instrumentation (0013) requires platform CI before merge |
+| 1 — Exact static reconstruction | passed with measured platform evidence | corpus categories (0011), failure artifacts (0012), and gap regression repair (0014) landed; memory/throughput instrumentation (0013) verified on Linux and macOS in PR #16 |
 | 2 — Sequence intelligence | in progress | exact ordering core (task 0007), tooling (task 0008), near-exact recovery (task 0009), repeated-chrome guard (0010), and bounded directional ambiguity guard (0014) landed; broader duplicates, missing-coverage evidence, and confidence workflows remain open |
-| Native iOS app target | scaffold implemented; simulator verification pending | task 0016: Xcode target, shared scheme, device-signing configuration, required simulator build/install/launch/UI tests |
+| Native iOS app target | scaffold verified | task 0016 / PR #16: Xcode target and simulator build/install/launch; both UI tests passed; physical-device signing remains separate |
 | 3–7 | not started | — |
 
 Task packets and their status live in `docs/tasks/README.md`.
@@ -38,11 +38,11 @@ Horizontal reconstruction, web capture, share extension, PDF, JPEG/HEIC, split e
 
 ## Next execution order
 
-1. Complete required CI for tasks 0013 and 0016 and record platform evidence.
-2. Implement the first native PNG-import and supplied-order reconstruction
-   workflow, with result/failure presentation and preserved original captures.
-   Keep reconstruction off the UI thread and retain typed ambiguity failures.
-3. Add inspection, correction, undo/redo, project persistence, and export
+1. Implement [task 0017](tasks/0017-native-png-reconstruction.md): native PNG
+   import, explicit supplied order, reconstruction, and result/failure display.
+   Preserve originals, bound resource admission, keep reconstruction off the
+   UI thread, and retain typed ambiguity failures.
+2. Add inspection, correction, undo/redo, project persistence, and export
    under Milestone 3 tracked packets. Verify device signing with the actual
    developer team/device when available. Simulator success is not evidence
    of device installation or App Store readiness.

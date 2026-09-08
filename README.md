@@ -32,7 +32,7 @@ Full-page capture often fails: content scrolls inside nested frames, headers sta
 | Machine-readable evaluation gate | Implemented for the standard 45-case corpus, including ordering metrics and diagnostic memory/throughput baselines |
 | Composite, manifest, and joint diagnostics | Implemented in `traktion-lab`; evaluation/golden failure bundles are retained in CI |
 | Horizontal, sticky UI, video, web capture | Later milestones; fail or remain disabled. Identical top-and-bottom chrome is rejected by task 0010; general fixed-element recovery remains unimplemented |
-| Native application | Xcode iOS target and shared simulator scheme implemented (task 0016); required simulator CI verifies the read-only shell. Device signing and import/editor/export flows remain |
+| Native application | Xcode iOS target and shared scheme verified (task 0016 / PR #16); simulator build/install/launch and both UI tests passed for the read-only shell. Device signing and import/editor/export flows remain |
 
 ## Design invariants
 

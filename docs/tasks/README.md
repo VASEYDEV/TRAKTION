@@ -16,12 +16,11 @@ unmerged packet is renumbered on port (see task 0009 for the PR #8 example).
 Completed packets below are historical evidence, not queued work. Continue from
 current `main`; never restart a superseded branch.
 
-1. **0013 and 0016:** complete required platform CI for the implemented
-   performance diagnostics and native iOS scaffold before merge.
-2. **First usable native workflow:** PNG import, supplied-order reconstruction,
-   result/failure presentation, followed by editor/persistence/export packets.
-   Physical-device signing requires the developer's actual team and device.
-3. **Repository operations:** delete the completed/superseded remote branches
+1. **[0017](0017-native-png-reconstruction.md):** PNG import, explicit supplied
+   order, reconstruction, and result/failure presentation. Editor, persistence,
+   and export follow in separate packets. Physical-device signing requires
+   the developer's actual team and device.
+2. **Repository operations:** delete the completed/superseded remote branches
    listed in the [continuation note](../notes/2026-09-08-repository-continuation.md)
    when authenticated branch-deletion access is available.
 
@@ -41,10 +40,11 @@ current `main`; never restart a superseded branch.
 | [0010](0010-repeated-chrome-guard.md) | Repeated-chrome fixture and identical-band guard | 2 / 4 | done | Codex | PR #13 |
 | [0011](0011-evaluation-corpus-categories.md) | Evaluation corpus visual categories | 1 follow-up | done | Codex | PR #13 |
 | [0012](0012-golden-failure-artifacts.md) | Golden-failure CI artifact bundle | 1 follow-up | done | Codex | PR #15 |
-| [0013](0013-peak-memory-instrumentation.md) | Peak-memory and throughput instrumentation | 1 follow-up | implemented; platform CI pending | Codex | — |
+| [0013](0013-peak-memory-instrumentation.md) | Peak-memory and throughput instrumentation | 1 follow-up | done | Codex | PR #16 |
 | [0014](0014-monospaced-missing-coverage-false-safe.md) | Monospaced missing-coverage false-safe and directional proof | 1 follow-up | done with documented limits | Codex | PR #15 |
 | [0015](0015-repository-reconciliation.md) | Repository reconciliation and development handoff | cross-milestone | done; access follow-up recorded | Codex | PR #15 |
-| [0016](0016-native-ios-scaffold.md) | Native iOS target and required simulator gate | native foundation | implemented; simulator CI pending | Codex | — |
+| [0016](0016-native-ios-scaffold.md) | Native iOS target and required simulator gate | native foundation | done | Codex | PR #16 |
+| [0017](0017-native-png-reconstruction.md) | Native PNG import and supplied-order reconstruction | first native workflow | queued | assign at start | — |
 
 ## Superseded packets and pull requests
 
@@ -73,7 +73,7 @@ the continuation note above.
 
 ## Native app handoff
 
-The SwiftPM `TRAKTION` executable remains a macOS preview path. Task 0016 adds
+The SwiftPM `TRAKTION` executable remains a macOS preview path. Task 0016 verified
 the Xcode iOS target, shared scheme, simulator installation/UI tests, and
 developer-owned signing configuration. Its CI evidence is distinct from
 core/CLI tests. The shell is read-only: import, reconstruction UI, editor,

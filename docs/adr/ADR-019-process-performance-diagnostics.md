@@ -62,8 +62,8 @@ with the same capture counts for the two new diagnostic cases; full-size cases
 remain in the complete-corpus test and CLI gates.
 
 The portable gate retains a debug build and runs the entire XCTest suite with
-release optimization and testable imports. Full phone-sized rasters made the
-first debug CI suites exceed 15 minutes. No test is filtered or conditionally
+release optimization and testable imports. With full phone-sized rasters, the
+first CI attempt was still in its debug suites about 15 minutes after starting. No test is filtered or conditionally
 skipped: optimized runtime correctness is the target, while the portable
 debug configuration receives compilation coverage. Native UI tests continue
 to run a debug app. The separate release CLI corpus remains required.
