@@ -88,6 +88,7 @@ public struct EvaluationCaseResult: Codable, Equatable, Sendable {
   public let name: String
   public let orderPolicy: OrderPolicy
   public let expectedStatus: String
+  public let contentStyle: FixtureContentStyle
   public let expectedFailureCode: String?
   /// "reconstructed" or "failed".
   public let outcome: String
@@ -181,7 +182,7 @@ public struct EvaluationReport: Codable, Equatable, Sendable {
 }
 
 public enum EvaluationHarness {
-  public static let generatorName = "traktion-lab evaluate v2"
+  public static let generatorName = "traktion-lab evaluate v3"
 
   /// The corpus the milestone audits run: every control-set variant, the
   /// 10–80% overlap sweep, a horizontal-axis case, and the exact-ordering
@@ -198,6 +199,7 @@ public enum EvaluationHarness {
       ("missing-middle", .missingMiddle),
       ("sticky-header", .stickyHeader(rows: 12)),
       ("sticky-footer", .stickyFooter(rows: 12)),
+      ("repeated-chrome", .repeatedChrome(rows: 12)),
       ("floating-control", .floatingControl(width: 14, height: 14)),
       ("scrollbar", .scrollbar(width: 4)),
     ]
@@ -212,6 +214,26 @@ public enum EvaluationHarness {
           )
         )
       )
+    }
+    let styleVariants: [(name: String, variant: FixtureVariant)] = [
+      ("baseline", .baseline),
+      ("missing-middle", .missingMiddle),
+      ("duplicate-capture", .duplicateCapture),
+    ]
+    for (styleIndex, style) in FixtureContentStyle.allCases.enumerated() {
+      for (variantIndex, entry) in styleVariants.enumerated() {
+        cases.append(
+          EvaluationCase(
+            name: "style-\(style.rawValue)-\(entry.name)",
+            configuration: FixtureControlConfiguration(
+              sourceID: "style-\(style.rawValue)-\(entry.name)",
+              seed: UInt64(5_000 + styleIndex * 10 + variantIndex),
+              contentStyle: style,
+              variant: entry.variant
+            )
+          )
+        )
+      }
     }
     for percent in [10, 25, 50, 66, 80] {
       cases.append(
@@ -297,6 +319,20 @@ public enum EvaluationHarness {
     // registered near-exact overlaps order captures the exact policy cannot
     // (the degraded control), exact input still orders, and a coverage gap
     // still refuses.
+    cases.append(
+      EvaluationCase(
+        name: "order-repeated-chrome",
+        configuration: FixtureControlConfiguration(
+          sourceID: "order-repeated-chrome",
+          seed: 4007,
+          variant: .repeatedChrome(rows: 12)
+        ),
+        ordering: OrderingCase(
+          permutation: [2, 0, 1],
+          expected: .fail(code: "ambiguousSequenceOrder")
+        )
+      )
+    )
     cases.append(
       EvaluationCase(
         name: "order-near-exact-degraded",
@@ -391,7 +427,7 @@ public enum EvaluationHarness {
     }
 
     return EvaluationReport(
-      schemaVersion: 2,
+      schemaVersion: 3,
       generator: generatorName,
       summary: summarize(results),
       cases: results
@@ -600,6 +636,7 @@ public enum EvaluationHarness {
       name: name,
       orderPolicy: policy,
       expectedStatus: truth.expectedStatus,
+      contentStyle: truth.contentStyle,
       expectedFailureCode: expectedFailureCode,
       outcome: outcomeLabel,
       failureCode: failureCode,

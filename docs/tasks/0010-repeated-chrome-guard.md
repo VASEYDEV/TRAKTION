@@ -1,6 +1,6 @@
 # Task: Repeated-chrome fixture and identical-band guard
 
-Status: planned — **false-safe finding, highest priority engine task**
+Status: done — **false-safe finding resolved**
 (found 2026-09-03 during the task-0008 handoff review; reproduction below).
 
 ## Goal
@@ -96,13 +96,13 @@ with the same band at both edges.
 - The full-height prefix golden.
 
 ## Acceptance criteria
-- [ ] Both reproduction inputs return the new typed failure with no
+- [x] Both reproduction inputs return the new typed failure with no
       composite; the failure round-trips through Codable with a stable code.
-- [ ] `repeated-chrome` is in the standard corpus under both policies with
+- [x] `repeated-chrome` is in the standard corpus under both policies with
       verdict `pass`; the corpus stays 0 false-safe.
-- [ ] Every existing golden passes byte-identically.
-- [ ] The legitimate-repeat false-warning golden is pinned and documented.
-- [ ] ADR committed; tests pass deterministically; no unrelated diff.
+- [x] Every existing golden passes byte-identically.
+- [x] The legitimate-repeat false-warning golden is pinned and documented.
+- [x] ADR committed; tests pass deterministically; no unrelated diff.
 
 ## Build / test commands
 ```sh
@@ -118,7 +118,7 @@ swift run traktion-lab evaluate --output /tmp/evaluation-report.json
 - the reproduction table above re-run on the fixed engine
 
 ## Writer
-Unassigned (engine writer; one writer per branch).
+Codex (engine writer; one writer per branch).
 
 ## Reviewer
 Independent engine reviewer required before merge (false-safe review per

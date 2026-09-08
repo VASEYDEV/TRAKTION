@@ -114,6 +114,12 @@ private enum FixtureForgeCommand {
           throw FixtureForgeError.invalidOptionValue(option: argument, value: raw)
         }
         configuration.seed = parsed
+      case "--style":
+        let raw = try value(for: argument)
+        guard let parsed = FixtureContentStyle(rawValue: raw) else {
+          throw FixtureForgeError.invalidOptionValue(option: argument, value: raw)
+        }
+        configuration.contentStyle = parsed
       case "--axis":
         let raw = try value(for: argument)
         guard let parsed = ReconstructionAxis(rawValue: raw) else {
@@ -229,13 +235,16 @@ private enum FixtureForgeCommand {
 
       Scenarios:
         baseline, duplicate-capture, reversed-order, missing-middle,
-        sticky-header, sticky-footer, floating-control, scrollbar,
+        sticky-header, sticky-footer, repeated-chrome, floating-control, scrollbar,
         one-pixel-offset, degraded
 
       Generate options (defaults in parentheses):
         --source-id <name> (control)     --width <px> (64)
         --viewport <px> (96)             --captures <count> (3)
         --overlap <px> (24)              --seed <uint64> (1414677067)
+        --style <name> (light-text)       styles: light-text, dark-ui,
+                                         mixed-photography, tables,
+                                         monospaced-code, compressed-source
         --axis vertical|horizontal (vertical; horizontal fixtures expect
                                          the engine's unsupportedAxis failure)
       """

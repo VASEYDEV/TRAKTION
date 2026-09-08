@@ -27,6 +27,15 @@ public struct SyntheticFixture: Equatable, Sendable {
   }
 }
 
+public enum FixtureContentStyle: String, Codable, CaseIterable, Equatable, Sendable {
+  case lightText = "light-text"
+  case darkUI = "dark-ui"
+  case mixedPhotography = "mixed-photography"
+  case tables = "tables"
+  case monospacedCode = "monospaced-code"
+  case compressedSource = "compressed-source"
+}
+
 public enum SyntheticFixtureFactory {
   public static func baseline() throws -> SyntheticFixture {
     try verticalSequence(
@@ -103,7 +112,8 @@ public enum SyntheticFixtureFactory {
     width: Int,
     height: Int,
     seed: UInt64,
-    repeatedRows: Bool = false
+    repeatedRows: Bool = false,
+    style: FixtureContentStyle = .lightText
   ) throws -> RasterImage {
     var pixels = [UInt8](
       repeating: 255,
@@ -118,7 +128,8 @@ public enum SyntheticFixtureFactory {
       for x in 0..<width {
         let offset = ((y * width) + x) * RasterImage.channelsPerPixel
         let margin = max(4, width / 12)
-        let inTextLine = x >= margin
+        let inTextLine =
+          x >= margin
           && x < width - margin
           && (visualRow % 12 == 4 || visualRow % 12 == 5)
         let inRule = visualRow % 29 == 0
@@ -129,9 +140,9 @@ public enum SyntheticFixtureFactory {
             &+ UInt64(y &* 17)
         )
 
-        let red: UInt8
-        let green: UInt8
-        let blue: UInt8
+        var red: UInt8
+        var green: UInt8
+        var blue: UInt8
         if inMarker {
           red = UInt8(truncatingIfNeeded: uniqueBand &* 37)
           green = UInt8(truncatingIfNeeded: uniqueBand &* 71)
@@ -148,6 +159,46 @@ public enum SyntheticFixtureFactory {
           red = 224 &+ (noise % 23)
           green = 226 &+ ((noise &* 3) % 21)
           blue = 229 &+ ((noise &* 5) % 18)
+        }
+
+        switch style {
+        case .lightText:
+          break
+        case .darkUI:
+          let foreground = inTextLine || inRule
+          red = foreground ? 224 : 18 &+ (noise % 18)
+          green = foreground ? 229 : 21 &+ ((noise &* 3) % 20)
+          blue = foreground ? 236 : 28 &+ ((noise &* 5) % 22)
+        case .mixedPhotography:
+          if (y / 36) % 3 == 1, x >= margin, x < width - margin {
+            let texture = UInt8(truncatingIfNeeded: UInt64(x &* 73 &+ y &* 151) &+ seed)
+            red = UInt8((Int(texture) + x * 255 / max(1, width - 1)) / 2)
+            green = UInt8((Int(texture) + y * 255 / max(1, height - 1)) / 2)
+            blue = UInt8((Int(texture) + (x + y) * 127 / max(1, width + height - 2)) / 2)
+          }
+        case .tables:
+          let isTableRule =
+            x == margin || x == width / 2 || x == width - margin - 1
+            || y % 19 == 0
+          if isTableRule {
+            red = 38
+            green = 54
+            blue = 68
+          }
+        case .monospacedCode:
+          let glyph =
+            x >= margin && x < width - margin
+            && y % 10 >= 3 && y % 10 <= 6
+            && (x - margin) % 6 < 4
+          if glyph {
+            red = 35
+            green = 47
+            blue = 62
+          }
+        case .compressedSource:
+          red = red / 16 * 16
+          green = green / 16 * 16
+          blue = blue / 16 * 16
         }
 
         pixels[offset] = red

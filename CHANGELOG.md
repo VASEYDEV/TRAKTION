@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Evaluation visual categories** (task 0011): FixtureForge now generates
+  six deterministic content styles (`light-text`, `dark-ui`,
+  `mixed-photography`, `tables`, `monospaced-code`, and
+  `compressed-source`) selected with `generate --style`. Fixture ground truth
+  schema version 2 records the style. The evaluation report schema advances
+  to version 3 with per-case style metadata, and the standard corpus grows to
+  43 cases by exercising every style as a baseline, missing-middle, and
+  duplicate-capture control; all cases remain fail-safe and deterministic.
+
+- **Repeated-interface artifact guard** (task 0010, ADR-016): supplied-order
+  registration now returns the stable typed `repeatedInterfaceArtifact`
+  failure when its uniquely accepted strict-suffix overlap is byte-identical
+  at the same top or bottom viewport edge in both captures. This closes the
+  repeated top-and-bottom chrome false-safe without masking or inventing
+  pixels and preserves full-height prefix extension. FixtureForge and the
+  25-case evaluation corpus include deterministic repeated chrome under
+  supplied and exact-ordering policies; goldens cover a varied 12-row band,
+  a solid 8-row band, and the deliberately pinned legitimate-repeat false
+  warning.
+
 - **Near-exact order recovery** (task 0009, ADR-015): the opt-in
   `reconstructNearExactUnordered` core API recovers the documentary order of
   2–10 captures from uniquely registered near-exact overlaps — an edge exists

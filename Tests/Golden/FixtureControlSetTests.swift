@@ -56,12 +56,43 @@ final class FixtureControlSetTests: XCTestCase {
   // MARK: - Determinism and ground truth
 
   func testGenerationIsDeterministic() throws {
-    for variant: FixtureVariant in [.baseline, .degraded(maxChannelDelta: 2), .scrollbar(width: 4)] {
+    for variant: FixtureVariant in [
+      .baseline, .degraded(maxChannelDelta: 2), .scrollbar(width: 4),
+      .repeatedChrome(rows: 12),
+    ] {
       let first = try bundle(variant)
       let second = try bundle(variant)
       XCTAssertEqual(first.captures, second.captures, variant.name)
       XCTAssertEqual(first.groundTruth, second.groundTruth, variant.name)
       XCTAssertEqual(first.source, second.source, variant.name)
+    }
+  }
+
+  func testEveryContentStyleIsDeterministicAndRecordedInGroundTruth() throws {
+    var fingerprints: Set<String> = []
+    for style in FixtureContentStyle.allCases {
+      let configuration = FixtureControlConfiguration(seed: 901, contentStyle: style)
+      let first = try FixtureControlGenerator.generate(configuration)
+      let second = try FixtureControlGenerator.generate(configuration)
+      XCTAssertEqual(first.source, second.source, style.rawValue)
+      XCTAssertEqual(first.captures, second.captures, style.rawValue)
+      XCTAssertEqual(first.groundTruth, second.groundTruth, style.rawValue)
+      XCTAssertEqual(first.groundTruth.contentStyle, style)
+      XCTAssertEqual(first.groundTruth.schemaVersion, 2)
+      fingerprints.insert(first.groundTruth.sourcePixelFingerprint)
+    }
+    XCTAssertEqual(fingerprints.count, FixtureContentStyle.allCases.count)
+  }
+
+  func testEveryContentStyleSupportsBaselineMissingAndDuplicateControls() throws {
+    for style in FixtureContentStyle.allCases {
+      for variant: FixtureVariant in [.baseline, .missingMiddle, .duplicateCapture] {
+        let bundle = try FixtureControlGenerator.generate(
+          FixtureControlConfiguration(seed: 902, contentStyle: style, variant: variant)
+        )
+        XCTAssertEqual(bundle.groundTruth.contentStyle, style)
+        XCTAssertEqual(bundle.configuration.variant, variant)
+      }
     }
   }
 
@@ -187,6 +218,28 @@ final class FixtureControlSetTests: XCTestCase {
 
   func testStickyFooterFailsTyped() throws {
     try assertFailsAsPinned(.stickyFooter(rows: 12))
+  }
+
+  func testRepeatedChromeFailsTypedWithoutProducingAComposite() throws {
+    let bundle = try bundle(.repeatedChrome(rows: 12), seed: 99)
+    XCTAssertEqual(bundle.groundTruth.expectedStatus, "repeated-chrome")
+    XCTAssertThrowsError(try engine.reconstruct(CaptureSequence(captures: bundle.captures))) {
+      XCTAssertEqual(
+        $0 as? ReconstructionFailure,
+        .repeatedInterfaceArtifact(
+          preceding: bundle.captures[0].id,
+          following: bundle.captures[1].id,
+          rows: 12
+        )
+      )
+    }
+  }
+
+  func testRepeatedChromeMakesExactOrderingAmbiguous() throws {
+    let bundle = try bundle(.repeatedChrome(rows: 12), seed: 99)
+    XCTAssertThrowsError(try engine.reconstructExactUnordered(bundle.captures)) {
+      XCTAssertEqual(($0 as? ReconstructionFailure)?.code, "ambiguousSequenceOrder")
+    }
   }
 
   func testFloatingControlFailsTyped() throws {

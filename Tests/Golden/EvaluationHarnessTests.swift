@@ -11,7 +11,7 @@ final class EvaluationHarnessTests: XCTestCase {
     XCTAssertTrue(report.summary.isAcceptable, "\(report.summary)")
     XCTAssertEqual(report.summary.cases, report.cases.count)
     XCTAssertEqual(report.summary.pass, report.cases.count)
-    XCTAssertEqual(report.schemaVersion, 2)
+    XCTAssertEqual(report.schemaVersion, 3)
 
     let baseline = try XCTUnwrap(report.cases.first { $0.name == "baseline" })
     XCTAssertEqual(baseline.verdict, .pass)
@@ -30,6 +30,17 @@ final class EvaluationHarnessTests: XCTestCase {
     for energy in try XCTUnwrap(degraded.seamEnergies) {
       XCTAssertGreaterThan(energy, 0)
       XCTAssertLessThan(energy, 0.01, "degraded seams must stay near-exact")
+    }
+
+    let repeatedChrome = try XCTUnwrap(report.cases.first { $0.name == "repeated-chrome" })
+    XCTAssertEqual(repeatedChrome.verdict, .pass)
+    XCTAssertEqual(repeatedChrome.failureCode, "repeatedInterfaceArtifact")
+
+    for style in FixtureContentStyle.allCases {
+      let styleCases = report.cases.filter { $0.name.hasPrefix("style-\(style.rawValue)-") }
+      XCTAssertEqual(styleCases.count, 3, style.rawValue)
+      XCTAssertTrue(styleCases.allSatisfy { $0.contentStyle == style }, style.rawValue)
+      XCTAssertTrue(styleCases.allSatisfy { $0.verdict == .pass }, style.rawValue)
     }
   }
 
@@ -105,14 +116,20 @@ final class EvaluationHarnessTests: XCTestCase {
     XCTAssertEqual(nearExactGap.failureCode, "sequenceOrderNotFound")
 
     let ordering = report.summary.ordering
-    XCTAssertEqual(ordering.cases, 7)
-    XCTAssertEqual(ordering.sequencesExpected, 4)
+    let repeatedChrome = try XCTUnwrap(
+      report.cases.first { $0.name == "order-repeated-chrome" }
+    )
+    XCTAssertEqual(repeatedChrome.verdict, .pass)
+    XCTAssertEqual(repeatedChrome.failureCode, "ambiguousSequenceOrder")
+
+    XCTAssertEqual(ordering.cases, 8)
+    XCTAssertEqual(ordering.sequencesExpected, 5)
     XCTAssertEqual(ordering.sequencesCorrect, 4)
     XCTAssertEqual(ordering.duplicatesExpected, 1)
     XCTAssertEqual(ordering.duplicatesIdentified, 1)
     XCTAssertEqual(ordering.missingCapturesExpected, 2)
     XCTAssertEqual(ordering.missingCapturesDetected, 2)
-    XCTAssertEqual(ordering.correctSequenceRate, 1)
+    XCTAssertEqual(ordering.correctSequenceRate, 0.8)
     XCTAssertEqual(ordering.duplicateIdentificationRate, 1)
     XCTAssertEqual(ordering.missingCaptureDetectionRate, 1)
   }
