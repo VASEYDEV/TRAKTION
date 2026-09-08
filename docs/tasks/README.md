@@ -42,6 +42,7 @@ current `main`; never restart a superseded branch.
 | [0015](0015-repository-reconciliation.md) | Repository reconciliation and development handoff | cross-milestone | done | Codex | PR #15 |
 | [0016](0016-native-ios-scaffold.md) | Native iOS target and required simulator gate | native foundation | done | Codex | PR #16 |
 | [0017](0017-native-png-reconstruction.md) | Native PNG import and supplied-order reconstruction | first native workflow | queued | assign at start | — |
+| [0018](0018-project-pr-template.md) | Project-specific pull request template | workflow | done | Codex | template documentation commit |
 
 ## Superseded packets and pull requests
 
