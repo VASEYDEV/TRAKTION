@@ -17,6 +17,13 @@ stays aligned with `Package.swift` at iOS 17. Swift 6 is required. No project
 generator, binary dependency, copied core implementation, or remote package
 is introduced.
 
+The native target is named `TRAKTIONiOS`, while its app product and shared
+scheme remain `TRAKTION`. The UI test target names `TRAKTIONiOS` explicitly.
+The first simulator run built and launched the app, then XCTest incorrectly
+looked for an extensionless `TRAKTION` product when the native target shared
+the SwiftPM preview executable's name. Distinct target names avoid that
+resolution collision without changing the user-facing application name.
+
 The existing shell stays read-only. Its content scrolls, the desktop minimum
 width applies only on macOS, and the iOS axis selector uses a menu so its
 disabled future option does not consume most of an iPhone's width. Stable

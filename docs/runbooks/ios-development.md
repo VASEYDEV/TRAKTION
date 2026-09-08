@@ -9,6 +9,8 @@ subsequent tasks. No production icon or physical-device release is claimed.
    Xcode Settings > Components manages runtimes. The repository requires
    Swift 6; the selected Xcode must provide that toolchain.
 2. Open `App/TRAKTION.xcodeproj` and choose the shared `TRAKTION` scheme.
+   Its native app target is named `TRAKTIONiOS` to distinguish it from the
+   SwiftPM preview executable; the installed application remains TRAKTION.
 3. Select an iPhone simulator and run. The project resolves `Package.swift`
    from the repository root by a relative local path; no package download or
    project-generation step is required.

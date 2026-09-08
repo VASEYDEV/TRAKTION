@@ -1,31 +1,36 @@
-# Initial Repository Layout Checklist
+# Repository layout
 
-Create these targets/packages before feature expansion:
+| Path | Role |
+| --- | --- |
+| `App/TRAKTION.xcodeproj` | Native iOS app and XCTest UI targets, shared `TRAKTION` scheme |
+| `App/TRAKTION/Sources` | SwiftUI entry point shared by Xcode and the SwiftPM macOS preview |
+| `App/TRAKTION/Config` | Common build settings; developer signing overrides are ignored by git |
+| `Package.swift` | Local Swift package products, tools, and portable test targets |
+| `Packages/TraktionDomain` | Raster/capture values and typed reconstruction contracts |
+| `Packages/TraktionCore` | Deterministic reconstruction, registration, ordering, and diagnostics |
+| `Packages/TraktionVision` | Apple ImageIO and portable PNG codec boundary |
+| `Packages/TraktionUI` | Shared read-only SwiftUI shell |
+| `Packages/TraktionAI` | Optional semantic-reviewer interface; no active model dependency |
+| `Tools/TraktionLab` | Diagnostic CLI, evaluation, failure artifacts, memory/throughput reports |
+| `Tools/FixtureForge` | Deterministic synthetic fixtures and genuine source truth |
+| `Tests/Unit`, `Tests/Golden`, `Tests/Performance`, `Tests/Integration` | Portable domain/engine/codec and evaluation contracts |
+| `Tests/UITests` | Native simulator launch, layout, rotation, and text-size checks |
+| `Tests/SyntheticFixtures`, `Tests/RealWorldFixtures` | Fixture metadata and private-capture boundary |
+| `scripts` | Repository, Swift, PNG smoke, and native simulator verification |
 
-```text
-App/TRAKTION
-Packages/TraktionDomain
-Packages/TraktionCore
-Packages/TraktionVision
-Packages/TraktionUI
-Packages/TraktionAI
-Tools/TraktionLab
-Tools/FixtureForge
-Tests/Golden
-Tests/SyntheticFixtures
-Tests/RealWorldFixtures
-Tests/Performance
-Tests/UITests
-```
+The native target links the repository's local package. There is no external
+package download or Xcode project generator. Import, reconstruction controls,
+editing, persistence, and export are still future native workflows.
 
-The first end-to-end executable target should be `TraktionLab`, not the polished iOS application.
+The Lab remains the executable reconstruction and diagnostic path:
 
-Example conceptual CLI:
-
-```text
+```sh
 traktion-lab reconstruct --axis vertical --output composite.png capture-001.png capture-002.png capture-003.png
 ```
 
-Expected sidecars: `composite.reconstruction.json` plus per-joint difference diagnostics.
-
-First supported constraints: PNG, vertical, equal width, known order, static content, translational overlap. Everything else should fail explicitly until implemented.
+It writes `composite.reconstruction.json` and per-joint difference diagnostics.
+Current reconstruction scope is vertical, 2–10 equal-width opaque PNG captures,
+static content, and translational overlap. Supplied order and optional exact
+or near-exact order recovery are supported; uncertainty is a typed failure.
+See the task index for capability limits and the verification/iOS runbooks
+for actual build and simulator commands.

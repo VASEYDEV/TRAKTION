@@ -75,7 +75,12 @@ No original correctness assertion or engine limit was relaxed.
 
 See ADR-019 and the verification runbook for units, scope, and reproduction.
 CI remains the source of evidence for Darwin compilation/sampling and standard
-platform test launch mechanics. Physical iPhone memory is not measured here.
+platform test launch mechanics. The first CI attempt spent over 15 minutes in
+the debug suites after adding full-size rasters. Independent review approved
+keeping the debug build while running every XCTest in release mode with
+testable imports. This changes the full suite's runtime configuration; it
+does not remove cases, reduce image dimensions, or relax assertions. PNG smoke
+already runs release tools, and native UI tests still exercise the debug app. Physical iPhone memory is not measured here.
 
 ## Ownership
 Codex implementation; independent review of sampler, harness, CLI, and CI

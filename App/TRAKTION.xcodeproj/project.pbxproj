@@ -18,7 +18,7 @@
 			containerPortal = A50000000000000000000001 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = A40000000000000000000001;
-			remoteInfo = TRAKTION;
+			remoteInfo = TRAKTIONiOS;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -60,13 +60,13 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		A40000000000000000000001 /* TRAKTION */ = {
+		A40000000000000000000001 /* TRAKTIONiOS */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = A80000000000000000000002 /* App configurations */;
 			buildPhases = (A30000000000000000000001 /* Sources */, A30000000000000000000002 /* Frameworks */, A30000000000000000000003 /* Resources */);
 			buildRules = ();
 			dependencies = ();
-			name = TRAKTION;
+			name = TRAKTIONiOS;
 			packageProductDependencies = (A90000000000000000000001 /* TraktionUI */, A90000000000000000000002 /* TraktionCore */);
 			productName = TRAKTION;
 			productReference = A20000000000000000000002 /* TRAKTION.app */;
@@ -107,7 +107,7 @@
 			productRefGroup = A60000000000000000000002 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
-			targets = (A40000000000000000000001 /* TRAKTION */, A40000000000000000000002 /* TRAKTIONUITests */);
+			targets = (A40000000000000000000001 /* TRAKTIONiOS */, A40000000000000000000002 /* TRAKTIONUITests */);
 		};
 /* End PBXProject section */
 
@@ -122,7 +122,7 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		AB0000000000000000000001 /* App dependency */ = {isa = PBXTargetDependency; target = A40000000000000000000001 /* TRAKTION */; targetProxy = AA0000000000000000000001 /* App proxy */; };
+		AB0000000000000000000001 /* App dependency */ = {isa = PBXTargetDependency; target = A40000000000000000000001 /* TRAKTIONiOS */; targetProxy = AA0000000000000000000001 /* App proxy */; };
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -163,7 +163,7 @@
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				PRODUCT_BUNDLE_IDENTIFIER = "$(TRAKTION_BUNDLE_IDENTIFIER)";
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = TRAKTION;
 			};
 			name = Debug;
 		};
@@ -177,18 +177,18 @@
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				PRODUCT_BUNDLE_IDENTIFIER = "$(TRAKTION_BUNDLE_IDENTIFIER)";
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = TRAKTION;
 			};
 			name = Release;
 		};
 		A70000000000000000000005 /* Test Debug */ = {
 			isa = XCBuildConfiguration;
-			buildSettings = {PRODUCT_BUNDLE_IDENTIFIER = "$(TRAKTION_BUNDLE_IDENTIFIER).uitests"; PRODUCT_NAME = "$(TARGET_NAME)"; TEST_TARGET_NAME = TRAKTION; };
+			buildSettings = {PRODUCT_BUNDLE_IDENTIFIER = "$(TRAKTION_BUNDLE_IDENTIFIER).uitests"; PRODUCT_NAME = "$(TARGET_NAME)"; TEST_TARGET_NAME = TRAKTIONiOS; };
 			name = Debug;
 		};
 		A70000000000000000000006 /* Test Release */ = {
 			isa = XCBuildConfiguration;
-			buildSettings = {PRODUCT_BUNDLE_IDENTIFIER = "$(TRAKTION_BUNDLE_IDENTIFIER).uitests"; PRODUCT_NAME = "$(TARGET_NAME)"; TEST_TARGET_NAME = TRAKTION; };
+			buildSettings = {PRODUCT_BUNDLE_IDENTIFIER = "$(TRAKTION_BUNDLE_IDENTIFIER).uitests"; PRODUCT_NAME = "$(TARGET_NAME)"; TEST_TARGET_NAME = TRAKTIONiOS; };
 			name = Release;
 		};
 /* End XCBuildConfiguration section */

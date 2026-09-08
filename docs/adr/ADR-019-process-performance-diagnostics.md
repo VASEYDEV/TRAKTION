@@ -61,6 +61,13 @@ report determinism test retains the original 43 cases and uses smaller rasters
 with the same capture counts for the two new diagnostic cases; full-size cases
 remain in the complete-corpus test and CLI gates.
 
+The portable gate retains a debug build and runs the entire XCTest suite with
+release optimization and testable imports. Full phone-sized rasters made the
+first debug CI suites exceed 15 minutes. No test is filtered or conditionally
+skipped: optimized runtime correctness is the target, while the portable
+debug configuration receives compilation coverage. Native UI tests continue
+to run a debug app. The separate release CLI corpus remains required.
+
 ## Sources
 
 - [Linux getrusage(2)](https://man7.org/linux/man-pages/man2/getrusage.2.html):
