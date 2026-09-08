@@ -11,7 +11,19 @@ final class EvaluationHarnessTests: GoldenArtifactTestCase {
     XCTAssertTrue(report.summary.isAcceptable, "\(report.summary)")
     XCTAssertEqual(report.summary.cases, report.cases.count)
     XCTAssertEqual(report.summary.pass, report.cases.count)
-    XCTAssertEqual(report.schemaVersion, 3)
+    XCTAssertEqual(report.schemaVersion, 4)
+    XCTAssertEqual(report.cases.count, 45)
+    for name in ["performance-phone-3", "performance-long-10"] {
+      let result = try XCTUnwrap(report.cases.first { $0.name == name })
+      let performance = try XCTUnwrap(result.performance)
+      XCTAssertGreaterThan(try XCTUnwrap(performance.peakResidentBytes), 0)
+      XCTAssertGreaterThan(try XCTUnwrap(performance.inputAmplification), 0)
+      XCTAssertGreaterThan(try XCTUnwrap(performance.inputPixelsPerSecond), 0)
+      XCTAssertNil(performance.memorySamplingError)
+      XCTAssertEqual(result.pixelEqualToSource, true)
+      XCTAssertEqual(result.missingRows, 0)
+      XCTAssertEqual(result.duplicatedRows, 0)
+    }
 
     let baseline = try XCTUnwrap(report.cases.first { $0.name == "baseline" })
     XCTAssertEqual(baseline.verdict, .pass)
@@ -53,7 +65,10 @@ final class EvaluationHarnessTests: GoldenArtifactTestCase {
   /// exactly; a coverage gap and a duplicate must end in their pinned typed
   /// refusals; near-exact recovery must order the degraded control.
   func testStandardCorpusOrderingCases() throws {
-    let report = try EvaluationHarness.evaluate(artifacts: evaluationArtifacts())
+    let report = try EvaluationHarness.evaluate(
+      EvaluationHarness.standardCorpus().filter { $0.ordering != nil },
+      artifacts: evaluationArtifacts()
+    )
 
     let shuffled = try XCTUnwrap(report.cases.first { $0.name == "order-shuffled-baseline" })
     XCTAssertEqual(shuffled.orderPolicy, .exact)
@@ -138,12 +153,27 @@ final class EvaluationHarnessTests: GoldenArtifactTestCase {
     XCTAssertEqual(ordering.missingCaptureDetectionRate, 1)
   }
 
-  func testReportIsDeterministicAsideFromTiming() throws {
-    var first = try EvaluationHarness.evaluate(artifacts: evaluationArtifacts())
-    var second = try EvaluationHarness.evaluate(artifacts: evaluationArtifacts())
+  func testReportIsDeterministicAsideFromDiagnostics() throws {
+    // Full-size performance geometry is exercised by the complete corpus
+    // test above. Keep this equality proof focused on diagnostic variability
+    // while retaining every original correctness case and capture count.
+    let cases = EvaluationHarness.standardCorpus().map { evaluationCase in
+      guard evaluationCase.measuresPerformance else { return evaluationCase }
+      var configuration = evaluationCase.configuration
+      configuration.crossAxisSize = 64
+      configuration.viewportLength = 96
+      configuration.overlapLength = 24
+      return EvaluationCase(
+        name: evaluationCase.name, configuration: configuration, measuresPerformance: true
+      )
+    }
+    var first = try EvaluationHarness.evaluate(cases, artifacts: evaluationArtifacts())
+    var second = try EvaluationHarness.evaluate(cases, artifacts: evaluationArtifacts())
     for index in first.cases.indices {
       first.cases[index].milliseconds = 0
       second.cases[index].milliseconds = 0
+      first.cases[index].performance = nil
+      second.cases[index].performance = nil
     }
     XCTAssertEqual(first, second)
   }

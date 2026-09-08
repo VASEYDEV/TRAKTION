@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Native iOS foundation** (task 0016, ADR-020): checked-in Xcode app and
+  XCTest UI targets, a shared simulator scheme, configurable device signing,
+  and required simulator build/install/launch verification. The existing
+  read-only shell now scrolls and fits iPhone portrait/landscape and larger
+  text. Import, reconstruction controls, editing, and export remain future work.
+
+- **Peak-memory and throughput diagnostics** (task 0013, ADR-019): evaluation
+  schema 4 adds measured process peak RSS, raw-input amplification, and precise
+  reconstruction throughput for three- and ten-capture phone-sized cases.
+  The standard corpus grows to 45 cases. `--case` supports fresh-process
+  baselines; `--max-memory-ratio` warns without changing the correctness gate.
+  Linux and Apple CI retain full and isolated evaluation reports.
+
 - **Synthetic failure artifacts** (task 0012, ADR-017): `traktion-lab
   evaluate --artifacts-dir` retains failing synthetic cases; `--all-artifacts`
   also retains passing cases. Bundles contain source truth, actual output,

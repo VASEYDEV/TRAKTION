@@ -5,9 +5,9 @@
 | Milestone | State | Evidence |
 | --- | --- | --- |
 | 0 — Foundation | complete | PR #4, PR #5 |
-| 1 — Exact static reconstruction | passed with follow-ups | `docs/audits/2026-09-03-milestone-1.md`; corpus categories (0011), failure artifacts (0012), and preserved gap regression repair (0014) landed; memory instrumentation (0013) remains |
+| 1 — Exact static reconstruction | passed; measured evidence implemented | corpus categories (0011), failure artifacts (0012), and gap regression repair (0014) landed; memory/throughput instrumentation (0013) requires platform CI before merge |
 | 2 — Sequence intelligence | in progress | exact ordering core (task 0007), tooling (task 0008), near-exact recovery (task 0009), repeated-chrome guard (0010), and bounded directional ambiguity guard (0014) landed; broader duplicates, missing-coverage evidence, and confidence workflows remain open |
-| Native iOS app target | not started | SwiftPM executable is a macOS preview; no Xcode app/signing/simulator gate yet |
+| Native iOS app target | scaffold implemented; simulator verification pending | task 0016: Xcode target, shared scheme, device-signing configuration, required simulator build/install/launch/UI tests |
 | 3–7 | not started | — |
 
 Task packets and their status live in `docs/tasks/README.md`.
@@ -38,16 +38,17 @@ Horizontal reconstruction, web capture, share extension, PDF, JPEG/HEIC, split e
 
 ## Next execution order
 
-1. Complete measured memory/throughput instrumentation (0013). The task-0014
-   original gap regression is preserved and repaired; broader one-direction
-   near-exact ambiguity remains an explicit limit (ADR-018).
-2. Scaffold the native Xcode iOS app target, with a shared simulator scheme,
-   unsigned simulator build in macOS CI, and explicit device-signing setup.
-   Reuse the existing modules; keep reconstruction off the UI thread and
-   preserve typed failure/source-integrity behavior.
-3. Add actual import, inspection, correction, undo/redo, project persistence,
-   and export under Milestone 3 tracked packets. Core/CLI success is not
-   evidence these app workflows exist.
+1. Complete required CI for tasks 0013 and 0016 and record platform evidence.
+2. Implement the first native PNG-import and supplied-order reconstruction
+   workflow, with result/failure presentation and preserved original captures.
+   Keep reconstruction off the UI thread and retain typed ambiguity failures.
+3. Add inspection, correction, undo/redo, project persistence, and export
+   under Milestone 3 tracked packets. Verify device signing with the actual
+   developer team/device when available. Simulator success is not evidence
+   of device installation or App Store readiness.
+
+The original task-0014 gap regression remains preserved and repaired; broader
+one-direction near-exact ambiguity is still an explicit limit (ADR-018).
 
 Milestones 4–7 remain the product backlog; superseded PRs and completed task
 packets are historical evidence, not parallel implementation plans.
