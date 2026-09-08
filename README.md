@@ -26,12 +26,12 @@ Full-page capture often fails: content scrolls inside nested frames, headers sta
 | Current capability | State |
 | --- | --- |
 | Supplied-order vertical reconstruction | Implemented for 2–10 opaque, equal-width PNG captures |
-| Automatic sequence ordering | Exact (`--order exact`, ADR-014) and near-exact (`--order near-exact`, ADR-015) recovery in the core and the Lab; both fail closed on gaps or ambiguity |
+| Automatic sequence ordering | Exact (`--order exact`, ADR-014) and near-exact (`--order near-exact`, ADR-015) recovery in the core and the Lab; both reject missing or ambiguous ordering evidence; near-exact pixel similarity alone does not prove documentary continuity |
 | Exact suffix/prefix overlap and seam plan | Implemented with ambiguity rejection |
 | Decoded-pixel golden comparison | Implemented for deterministic synthetic fixtures |
-| Machine-readable evaluation gate | Implemented for the standard 23-case corpus, including ordering metrics |
-| Composite, manifest, and joint diagnostics | Implemented in `traktion-lab` |
-| Horizontal, sticky UI, video, web capture | Later milestones; fail or remain disabled. Known false-safe on identical top-and-bottom chrome bands is tracked as task 0010 |
+| Machine-readable evaluation gate | Implemented for the standard 43-case corpus, including ordering metrics |
+| Composite, manifest, and joint diagnostics | Implemented in `traktion-lab`; evaluation/golden failure bundles are retained in CI |
+| Horizontal, sticky UI, video, web capture | Later milestones; fail or remain disabled. Identical top-and-bottom chrome is rejected by task 0010; general fixed-element recovery remains unimplemented |
 | Native application | macOS SwiftUI preview shell only; installable iOS target is not yet present |
 
 ## Design invariants
@@ -80,7 +80,7 @@ swift run traktion-lab compare \
 
 The Lab writes a reconstruction JSON sidecar plus per-joint JSON and absolute-difference PNGs. It refuses to overwrite outputs or turn unsupported/ambiguous evidence into a successful composite.
 
-Captures whose order is unknown can be ordered from byte-exact evidence (`--order exact`) or from uniquely registered near-exact overlaps (`--order near-exact`); a coverage gap or an ambiguous order is a typed failure, never a guess:
+Captures whose order is unknown can be ordered from byte-exact evidence (`--order exact`) or from uniquely registered near-exact overlaps (`--order near-exact`); missing or ambiguous ordering evidence is a typed failure:
 
 ```bash
 swift run traktion-lab reconstruct --order exact \
@@ -93,7 +93,7 @@ swift run traktion-lab reconstruct --order exact \
 ## Tech stack & environment
 
 - **Stack:** Swift 6 and SwiftPM, native SwiftUI preview shell, Apple ImageIO PNG boundary, dependency-free platform-neutral reconstruction core ([ADR-001](docs/adr/ADR-001-native-swift.md)).
-- **Environment variables:** none yet; a documented `.env.example` lands with the first code that needs one.
+- **Environment variables:** verification supports `TRAKTION_SMOKE_DIR` for synthetic smoke output and `TRAKTION_GOLDEN_ARTIFACTS` for opt-in test failure evidence; see the [verification runbook](docs/runbooks/verification.md). No runtime secrets or model API are needed.
 - **Architecture:** module boundaries and data flow in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md); layout in [`docs/REPO_LAYOUT.md`](docs/REPO_LAYOUT.md).
 
 ## Notes & updates

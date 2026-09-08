@@ -35,4 +35,23 @@ final class PhoneScaleReconstructionTests: XCTestCase {
     )
     print("TRAKTION_PERF phone-scale 1170x2532 pair: \(elapsed)")
   }
+
+  func testNearExactPhoneScalePairIncludesReverseVerificationWithinDefaultBudgets() throws {
+    let bundle = try FixtureControlGenerator.generate(
+      FixtureControlConfiguration(
+        sourceID: "phone-scale-near-exact",
+        crossAxisSize: 1170,
+        viewportLength: 2532,
+        captureCount: 2,
+        overlapLength: 700,
+        seed: 51,
+        variant: .degraded(maxChannelDelta: 2)
+      )
+    )
+    let result = try ReconstructionEngine().reconstruct(CaptureSequence(captures: bundle.captures))
+    XCTAssertEqual(result.plan.joints.map(\.overlapRows), bundle.groundTruth.expectedOverlaps)
+    XCTAssertEqual(result.plan.joints.map(\.confidence), [.strong])
+    XCTAssertEqual(result.image.width, bundle.source.width)
+    XCTAssertEqual(result.image.height, bundle.source.height)
+  }
 }

@@ -3,10 +3,12 @@ import TraktionCore
 import TraktionDomain
 import XCTest
 
-final class ReconstructionGoldenTests: XCTestCase {
+final class ReconstructionGoldenTests: GoldenArtifactTestCase {
   func testExactTwoCaptureReconstructionMatchesSourcePixels() throws {
     let fixture = try SyntheticFixtureFactory.exactTwoCapture()
-    let result = try ReconstructionEngine().reconstruct(fixture.sequence)
+    let result = try goldenReconstruct(
+      expected: fixture.source, captures: fixture.sequence.captures
+    ) { try ReconstructionEngine().reconstruct(fixture.sequence) }
 
     XCTAssertEqual(result.image, fixture.source)
     XCTAssertEqual(
@@ -20,8 +22,11 @@ final class ReconstructionGoldenTests: XCTestCase {
     let fixture = try SyntheticFixtureFactory.baseline()
     let engine = ReconstructionEngine()
 
-    let first = try engine.reconstruct(fixture.sequence)
-    let second = try engine.reconstruct(fixture.sequence)
+    let first = try goldenReconstruct(expected: fixture.source, captures: fixture.sequence.captures)
+    { try engine.reconstruct(fixture.sequence) }
+    let second = try goldenReconstruct(
+      expected: fixture.source, captures: fixture.sequence.captures
+    ) { try engine.reconstruct(fixture.sequence) }
 
     XCTAssertEqual(first.image, fixture.source)
     XCTAssertEqual(first.plan, second.plan)
@@ -71,8 +76,12 @@ final class ReconstructionGoldenTests: XCTestCase {
       )
     )
 
-    let first = try engine.reconstruct(sequence)
-    let second = try engine.reconstruct(sequence)
+    let first = try goldenReconstruct(expected: source, captures: sequence.captures) {
+      try engine.reconstruct(sequence)
+    }
+    let second = try goldenReconstruct(expected: source, captures: sequence.captures) {
+      try engine.reconstruct(sequence)
+    }
 
     XCTAssertEqual(first.plan.joints.map(\.overlapRows), [20])
     XCTAssertEqual(first.plan.joints.map(\.confidence), [.strong])
@@ -148,7 +157,9 @@ final class ReconstructionGoldenTests: XCTestCase {
 
   func testRepeatedLookingRowsRetainTheUniqueAnchoredSequence() throws {
     let fixture = try SyntheticFixtureFactory.repeatedRows()
-    let result = try ReconstructionEngine().reconstruct(fixture.sequence)
+    let result = try goldenReconstruct(
+      expected: fixture.source, captures: fixture.sequence.captures
+    ) { try ReconstructionEngine().reconstruct(fixture.sequence) }
 
     XCTAssertEqual(result.image, fixture.source)
     XCTAssertEqual(result.plan.joints.map(\.overlapRows), fixture.expectedOverlaps)
@@ -309,11 +320,31 @@ final class ReconstructionGoldenTests: XCTestCase {
       ),
     ])
 
-    let result = try ReconstructionEngine().reconstruct(sequence)
+    let result = try goldenReconstruct(expected: source, captures: sequence.captures) {
+      try ReconstructionEngine().reconstruct(sequence)
+    }
 
     XCTAssertEqual(result.image, source)
     XCTAssertEqual(result.plan.joints.map(\.overlapRows), [20])
     XCTAssertEqual(result.plan.placements.map(\.originY), [0, 0])
+  }
+
+  func testFullHeightFollowingSuffixPreservesTheContainingCapture() throws {
+    let source = try SyntheticFixtureFactory.document(width: 40, height: 40, seed: 0x5355_4646)
+    let suffix = try crop(source, startRow: 20, rowCount: 20)
+    let sequence = CaptureSequence(captures: [
+      CaptureAsset(id: "suffix-001", sourceName: "suffix-001.png", image: source),
+      CaptureAsset(id: "suffix-002", sourceName: "suffix-002.png", image: suffix),
+    ])
+
+    let result = try goldenReconstruct(expected: source, captures: sequence.captures) {
+      try ReconstructionEngine().reconstruct(sequence)
+    }
+
+    XCTAssertEqual(result.image, source)
+    XCTAssertEqual(result.plan.joints.map(\.overlapRows), [20])
+    XCTAssertEqual(result.plan.joints.map(\.confidence), [.exact])
+    XCTAssertEqual(result.plan.placements.map(\.originY), [0, 20])
   }
 
   func testHorizontalAxisIsExplicitlyUnsupported() throws {
@@ -381,7 +412,11 @@ final class ReconstructionGoldenTests: XCTestCase {
       settings: ReconstructionSettings(maximumCapturePixels: 1_000)
     )
 
-    XCTAssertThrowsError(try engine.reconstruct(fixture.sequence)) { error in
+    XCTAssertThrowsError(
+      try goldenReconstruct(expected: fixture.source, captures: fixture.sequence.captures) {
+        try engine.reconstruct(fixture.sequence)
+      }
+    ) { error in
       guard let failure = error as? ReconstructionFailure,
         case .resourceLimitExceeded = failure
       else {
@@ -398,7 +433,11 @@ final class ReconstructionGoldenTests: XCTestCase {
       )
     )
 
-    XCTAssertThrowsError(try engine.reconstruct(fixture.sequence)) { error in
+    XCTAssertThrowsError(
+      try goldenReconstruct(expected: fixture.source, captures: fixture.sequence.captures) {
+        try engine.reconstruct(fixture.sequence)
+      }
+    ) { error in
       guard let failure = error as? ReconstructionFailure,
         case .resourceLimitExceeded = failure
       else {
@@ -408,8 +447,8 @@ final class ReconstructionGoldenTests: XCTestCase {
   }
 }
 
-private extension ReconstructionGoldenTests {
-  func crop(
+extension ReconstructionGoldenTests {
+  fileprivate func crop(
     _ image: RasterImage,
     startRow: Int,
     rowCount: Int
@@ -423,7 +462,7 @@ private extension ReconstructionGoldenTests {
     )
   }
 
-  func periodicImage(uniqueTail: Bool) throws -> RasterImage {
+  fileprivate func periodicImage(uniqueTail: Bool) throws -> RasterImage {
     let width = 12
     let height = 20
     var pixels = [UInt8](repeating: 0, count: width * height * 4)

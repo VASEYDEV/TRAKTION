@@ -3,14 +3,16 @@ import TraktionCore
 import TraktionDomain
 import XCTest
 
-final class ExactSequenceOrderingTests: XCTestCase {
+final class ExactSequenceOrderingTests: GoldenArtifactTestCase {
   func testShuffledExactCapturesRecoverDocumentOrderAndPixels() throws {
     let bundle = try FixtureControlGenerator.generate(
       FixtureControlConfiguration(sourceID: "unordered", seed: 7001)
     )
     let shuffled = [bundle.captures[2], bundle.captures[0], bundle.captures[1]]
 
-    let result = try ReconstructionEngine().reconstructExactUnordered(shuffled)
+    let result = try goldenReconstruct(expected: bundle.source, captures: shuffled) {
+      try ReconstructionEngine().reconstructExactUnordered(shuffled)
+    }
 
     XCTAssertEqual(
       result.plan.placements.map(\.captureID.rawValue),
@@ -26,12 +28,26 @@ final class ExactSequenceOrderingTests: XCTestCase {
     )
     let engine = ReconstructionEngine()
 
-    let first = try engine.reconstructExactUnordered([
-      bundle.captures[1], bundle.captures[2], bundle.captures[0],
-    ])
-    let second = try engine.reconstructExactUnordered([
-      bundle.captures[2], bundle.captures[0], bundle.captures[1],
-    ])
+    let first = try goldenReconstruct(
+      expected: bundle.source,
+      captures: [
+        bundle.captures[1], bundle.captures[2], bundle.captures[0],
+      ]
+    ) {
+      try engine.reconstructExactUnordered([
+        bundle.captures[1], bundle.captures[2], bundle.captures[0],
+      ])
+    }
+    let second = try goldenReconstruct(
+      expected: bundle.source,
+      captures: [
+        bundle.captures[2], bundle.captures[0], bundle.captures[1],
+      ]
+    ) {
+      try engine.reconstructExactUnordered([
+        bundle.captures[2], bundle.captures[0], bundle.captures[1],
+      ])
+    }
 
     XCTAssertEqual(first.plan, second.plan)
     XCTAssertEqual(first.image, second.image)

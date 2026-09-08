@@ -11,6 +11,18 @@ numbers on unmerged branches: when two branches claim the same number, the
 unmerged packet is renumbered on port (see task 0009 for the PR #8 example).
 `docs/adr/ADR-NNN` numbers follow the same rule.
 
+## Active work
+
+Completed packets below are historical evidence, not queued work. Continue from
+current `main`; never restart a superseded branch.
+
+1. **0013:** measure peak memory and throughput before setting mobile performance gates.
+2. **Native iOS target:** scaffold the Xcode application, simulator scheme/CI,
+   and explicit signing setup, then implement import/editor/persistence/export.
+3. **Repository operations:** delete the completed/superseded remote branches
+   listed in the [continuation note](../notes/2026-09-08-repository-continuation.md)
+   when authenticated branch-deletion access is available.
+
 ## Index
 
 | Task | Title | Milestone | Status | Writer | Landed |
@@ -22,15 +34,22 @@ unmerged packet is renumbered on port (see task 0009 for the PR #8 example).
 | [0005](0005-adaptive-candidate-refinement.md) | Adaptive early-exit candidate verification | 1 | done | Claude | PR #7 |
 | [0006](0006-milestone-1-audit.md) | Milestone 1 evidence audit | 1 | done | Codex | PR #9 |
 | [0007](0007-exact-sequence-ordering.md) | Fail-closed exact sequence ordering (core API) | 2 | done | Codex | PR #9 |
-| [0008](0008-exact-ordering-tooling.md) | Exact-ordering tooling: Lab, smoke, evaluation ordering metrics | 2 | done | Claude | this branch |
-| [0009](0009-near-exact-order-recovery.md) | Near-exact order recovery on the exact-ordering contract | 2 | done | Claude | this branch |
-| [0010](0010-repeated-chrome-guard.md) | Repeated-chrome fixture and identical-band guard | 2 / 4 | done | Codex | this branch |
-| [0011](0011-evaluation-corpus-categories.md) | Evaluation corpus visual categories | 1 follow-up | done | Codex | this branch |
-| [0012](0012-golden-failure-artifacts.md) | Golden-failure CI artifact bundle | 1 follow-up | planned | — | — |
+| [0008](0008-exact-ordering-tooling.md) | Exact-ordering tooling: Lab, smoke, evaluation ordering metrics | 2 | done | Claude | PR #10 |
+| [0009](0009-near-exact-order-recovery.md) | Near-exact order recovery on the exact-ordering contract | 2 | done | Claude | PR #12 |
+| [0010](0010-repeated-chrome-guard.md) | Repeated-chrome fixture and identical-band guard | 2 / 4 | done | Codex | PR #13 |
+| [0011](0011-evaluation-corpus-categories.md) | Evaluation corpus visual categories | 1 follow-up | done | Codex | PR #13 |
+| [0012](0012-golden-failure-artifacts.md) | Golden-failure CI artifact bundle | 1 follow-up | done | Codex | continuation, 2026-09-08 |
 | [0013](0013-peak-memory-instrumentation.md) | Peak-memory and throughput instrumentation | 1 follow-up | planned | — | — |
-| [0014](0014-monospaced-missing-coverage-false-safe.md) | Monospaced missing-coverage false-safe | 1 follow-up | done | Codex | this branch |
+| [0014](0014-monospaced-missing-coverage-false-safe.md) | Monospaced missing-coverage false-safe and directional proof | 1 follow-up | done with documented limits | Codex | continuation, 2026-09-08 |
+| [0015](0015-repository-reconciliation.md) | Repository reconciliation and development handoff | cross-milestone | done; access follow-up recorded | Codex | continuation, 2026-09-08 |
 
 ## Superseded packets and pull requests
+
+- **PR #14** (`codex/check-development-state-and-resume`, closed 2026-09-08):
+  the engine guard and visual-category work already landed in PR #13. The
+  remaining alternate fixture implementation conflicts with main and carries
+  stale task documentation. It is superseded; preserve reference head
+  `b5d090899cb7773524db3e948a293062a3c04a2c` through the closed PR.
 
 - **PR #8** (`claude/traktion-dev-setup-f24qtq`, closed 2026-09-03 as
   superseded) carries packets numbered 0006 ("Automatic order recovery") and
@@ -45,5 +64,14 @@ unmerged packet is renumbered on port (see task 0009 for the PR #8 example).
   2026-08 unmerged) was an earlier foundation attempt superseded by PR #4
   (task 0001); its branch is gone.
 
-Branches of merged pull requests are deleted after merge; `main` is the only
-long-lived branch.
+Policy: delete branches after their work is merged or verified as superseded;
+`main` is the only long-lived branch. Access-blocked cleanup is recorded in
+the continuation note above.
+
+## Native app handoff
+
+The SwiftPM `TRAKTION` executable remains a macOS preview shell. There is no
+Xcode iOS application target, app signing configuration, simulator install
+gate, or device build. Those are the next app milestone after the immediate
+correctness/evidence work; editor, Photos import, project persistence, and
+export flows must not be marked delivered from core/CLI tests.

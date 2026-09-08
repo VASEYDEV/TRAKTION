@@ -1,5 +1,11 @@
 # Evaluation content styles handoff — 2026-09-08
 
+**Superseded resolution:** the gutter adjustment below improved the synthetic
+positive fixture but did not repair the engine's acceptance of the original
+pixels. Task [0014](../tasks/0014-monospaced-missing-coverage-false-safe.md)
+preserves that input and records the engine repair and remaining limits in
+[ADR-018](../adr/ADR-018-bidirectional-near-exact-evidence.md).
+
 Task 0011 expands the deterministic corpus beyond its original light text
 proxy. FixtureForge now exposes six content styles: light text, dark UI,
 mixed photography, tables with one-pixel rules, monospaced code proxies, and

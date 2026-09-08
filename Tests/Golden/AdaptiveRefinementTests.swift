@@ -8,7 +8,7 @@ import XCTest
 /// algorithm (refinementRounds: 1) fails closed with resourceLimitExceeded,
 /// while adaptive refinement prunes the impostors and reconstructs the same
 /// input exactly — with identical fail-closed semantics everywhere else.
-final class AdaptiveRefinementTests: XCTestCase {
+final class AdaptiveRefinementTests: GoldenArtifactTestCase {
   /// 400x800 captures with a 300-row overlap: 793 overlap candidates whose
   /// sparse 24x64 sample sums cannot exceed the thresholds against the full
   /// comparison denominator, so one-pass sampling keeps all of them.
@@ -31,7 +31,9 @@ final class AdaptiveRefinementTests: XCTestCase {
       settings: ReconstructionSettings(refinementRounds: 1)
     )
     XCTAssertThrowsError(
-      try engine.reconstruct(CaptureSequence(captures: bundle.captures))
+      try goldenReconstruct(expected: bundle.source, captures: bundle.captures) {
+        try engine.reconstruct(CaptureSequence(captures: bundle.captures))
+      }
     ) { error in
       guard let failure = error as? ReconstructionFailure,
         case .resourceLimitExceeded = failure
@@ -45,12 +47,16 @@ final class AdaptiveRefinementTests: XCTestCase {
     let bundle = try largeScaleBundle()
     let engine = ReconstructionEngine()
 
-    let first = try engine.reconstruct(CaptureSequence(captures: bundle.captures))
+    let first = try goldenReconstruct(expected: bundle.source, captures: bundle.captures) {
+      try engine.reconstruct(CaptureSequence(captures: bundle.captures))
+    }
     XCTAssertEqual(first.plan.joints.map(\.overlapRows), bundle.groundTruth.expectedOverlaps)
     XCTAssertEqual(first.plan.joints.map(\.confidence), [.exact])
     XCTAssertEqual(first.image, bundle.source)
 
-    let second = try engine.reconstruct(CaptureSequence(captures: bundle.captures))
+    let second = try goldenReconstruct(expected: bundle.source, captures: bundle.captures) {
+      try engine.reconstruct(CaptureSequence(captures: bundle.captures))
+    }
     XCTAssertEqual(first.plan, second.plan)
     XCTAssertEqual(first.image, second.image)
   }

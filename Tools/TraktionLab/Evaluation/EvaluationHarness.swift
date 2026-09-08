@@ -381,8 +381,18 @@ public enum EvaluationHarness {
 
   public static func evaluate(
     _ cases: [EvaluationCase] = standardCorpus(),
-    settings: ReconstructionSettings = ReconstructionSettings()
+    settings: ReconstructionSettings = ReconstructionSettings(),
+    artifacts: EvaluationArtifactOptions? = nil
   ) throws -> EvaluationReport {
+    if artifacts != nil {
+      var names = Set<String>()
+      for evaluationCase in cases {
+        try SyntheticArtifactWriter.validateCaseName(evaluationCase.name)
+        guard names.insert(evaluationCase.name).inserted else {
+          throw EvaluationCaseError.duplicateArtifactCaseName(evaluationCase.name)
+        }
+      }
+    }
     let engine = ReconstructionEngine(settings: settings)
     var results: [EvaluationCaseResult] = []
     results.reserveCapacity(cases.count)
@@ -406,21 +416,29 @@ public enum EvaluationHarness {
         axis: evaluationCase.engineAxis,
         policy: evaluationCase.orderPolicy
       )
-      let deterministic = outcomesMatch(first.outcome, second.outcome)
+      let deterministic =
+        outcomesMatch(first.outcome, second.outcome)
         && first.recoveredOrder == second.recoveredOrder
 
-      results.append(
-        assess(
-          name: evaluationCase.name,
-          bundle: bundle,
-          outcome: first.outcome,
-          ordering: evaluationCase.ordering,
-          recoveredOrder: first.recoveredOrder,
-          deterministic: deterministic,
-          milliseconds: Int(elapsed.components.seconds) * 1000
-            + Int(elapsed.components.attoseconds / 1_000_000_000_000_000)
-        )
+      let assessment = assess(
+        name: evaluationCase.name,
+        bundle: bundle,
+        outcome: first.outcome,
+        ordering: evaluationCase.ordering,
+        recoveredOrder: first.recoveredOrder,
+        deterministic: deterministic,
+        milliseconds: Int(elapsed.components.seconds) * 1000
+          + Int(elapsed.components.attoseconds / 1_000_000_000_000_000)
       )
+      results.append(assessment)
+      if let artifacts,
+        artifacts.includePassingCases || assessment.verdict != .pass || !assessment.deterministic
+      {
+        try SyntheticArtifactWriter.write(
+          caseName: evaluationCase.name, expected: bundle.source, captures: captures,
+          outcome: first.outcome, assessment: assessment, directory: artifacts.directory
+        )
+      }
     }
 
     return EvaluationReport(
@@ -470,16 +488,13 @@ public enum EvaluationHarness {
 
   // MARK: - Assessment
 
-  enum RunOutcome {
-    case reconstructed(ReconstructionResult)
-    case failed(ReconstructionFailure)
-    case unexpectedError(String)
-  }
+  typealias RunOutcome = SyntheticArtifactOutcome
 
   public enum EvaluationCaseError: Error, Equatable, Sendable {
     /// The ordering permutation does not enumerate every generated capture
     /// exactly once.
     case invalidPermutation(caseName: String, permutation: [Int], captureCount: Int)
+    case duplicateArtifactCaseName(String)
   }
 
   private static func inputCaptures(
