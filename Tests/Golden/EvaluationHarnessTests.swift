@@ -5,9 +5,9 @@ import XCTest
 
 @testable import TraktionLabEvaluation
 
-final class EvaluationHarnessTests: XCTestCase {
+final class EvaluationHarnessTests: GoldenArtifactTestCase {
   func testStandardCorpusIsAcceptable() throws {
-    let report = try EvaluationHarness.evaluate()
+    let report = try EvaluationHarness.evaluate(artifacts: evaluationArtifacts())
     XCTAssertTrue(report.summary.isAcceptable, "\(report.summary)")
     XCTAssertEqual(report.summary.cases, report.cases.count)
     XCTAssertEqual(report.summary.pass, report.cases.count)
@@ -53,7 +53,7 @@ final class EvaluationHarnessTests: XCTestCase {
   /// exactly; a coverage gap and a duplicate must end in their pinned typed
   /// refusals; near-exact recovery must order the degraded control.
   func testStandardCorpusOrderingCases() throws {
-    let report = try EvaluationHarness.evaluate()
+    let report = try EvaluationHarness.evaluate(artifacts: evaluationArtifacts())
 
     let shuffled = try XCTUnwrap(report.cases.first { $0.name == "order-shuffled-baseline" })
     XCTAssertEqual(shuffled.orderPolicy, .exact)
@@ -139,8 +139,8 @@ final class EvaluationHarnessTests: XCTestCase {
   }
 
   func testReportIsDeterministicAsideFromTiming() throws {
-    var first = try EvaluationHarness.evaluate()
-    var second = try EvaluationHarness.evaluate()
+    var first = try EvaluationHarness.evaluate(artifacts: evaluationArtifacts())
+    var second = try EvaluationHarness.evaluate(artifacts: evaluationArtifacts())
     for index in first.cases.indices {
       first.cases[index].milliseconds = 0
       second.cases[index].milliseconds = 0
@@ -178,7 +178,7 @@ final class EvaluationHarnessTests: XCTestCase {
           name: "bad-permutation",
           configuration: FixtureControlConfiguration(seed: 9),
           ordering: OrderingCase(permutation: [0, 0, 1], expected: .reconstruct)
-        ),
+        )
       ])
     ) { error in
       XCTAssertEqual(
@@ -299,7 +299,8 @@ final class EvaluationHarnessTests: XCTestCase {
       name: "fabricated",
       bundle: baselineBundle,
       outcome: .reconstructed(baselineResult),
-      ordering: OrderingCase(permutation: [0, 1, 2], expected: .fail(code: "sequenceOrderNotFound")),
+      ordering: OrderingCase(
+        permutation: [0, 1, 2], expected: .fail(code: "sequenceOrderNotFound")),
       recoveredOrder: baselineBundle.captures.map(\.id),
       deterministic: true,
       milliseconds: 0
@@ -309,7 +310,8 @@ final class EvaluationHarnessTests: XCTestCase {
       name: "fabricated",
       bundle: baselineBundle,
       outcome: .failed(.ambiguousSequenceOrder(candidateOrders: [["a", "b"], ["b", "a"]])),
-      ordering: OrderingCase(permutation: [0, 1, 2], expected: .fail(code: "sequenceOrderNotFound")),
+      ordering: OrderingCase(
+        permutation: [0, 1, 2], expected: .fail(code: "sequenceOrderNotFound")),
       deterministic: true,
       milliseconds: 0
     )
@@ -327,7 +329,8 @@ final class EvaluationHarnessTests: XCTestCase {
       name: "pinned",
       bundle: baselineBundle,
       outcome: .failed(.sequenceOrderNotFound(captureIDs: baselineBundle.captures.map(\.id))),
-      ordering: OrderingCase(permutation: [1, 0, 2], expected: .fail(code: "sequenceOrderNotFound")),
+      ordering: OrderingCase(
+        permutation: [1, 0, 2], expected: .fail(code: "sequenceOrderNotFound")),
       deterministic: true,
       milliseconds: 0
     )

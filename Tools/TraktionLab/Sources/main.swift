@@ -361,12 +361,54 @@ private enum TraktionLab {
   /// metrics report. Exits non-zero when the summary is unacceptable —
   /// any false-safe, false-warning, wrong-failure, or nondeterminism.
   static func evaluate(_ arguments: [String]) throws {
-    guard arguments.count == 2, arguments[0] == "--output" else {
-      throw LabError.usage("Usage: traktion-lab evaluate --output <report.json>")
+    var reportURL: URL?
+    var artifactsURL: URL?
+    var allArtifacts = false
+    var seen = Set<String>()
+    var index = 0
+    while index < arguments.count {
+      let argument = arguments[index]
+      guard seen.insert(argument).inserted else {
+        throw LabError.usage("Duplicate option: \(argument)")
+      }
+      switch argument {
+      case "--output", "--artifacts-dir":
+        let value = try optionValue(arguments, index: &index, option: argument)
+        guard !value.isEmpty, !value.hasPrefix("--") else {
+          throw LabError.missingOptionValue(argument)
+        }
+        if argument == "--output" {
+          reportURL = URL(fileURLWithPath: value)
+        } else {
+          artifactsURL = URL(fileURLWithPath: value)
+        }
+      case "--all-artifacts":
+        allArtifacts = true
+      default:
+        throw LabError.unknownOption(argument)
+      }
+      index += 1
     }
-    let reportURL = URL(fileURLWithPath: arguments[1])
-
-    let report = try EvaluationHarness.evaluate()
+    guard let reportURL, !allArtifacts || artifactsURL != nil else {
+      throw LabError.usage(
+        "Usage: traktion-lab evaluate --output <report.json> [--artifacts-dir <dir> [--all-artifacts]]"
+      )
+    }
+    guard (try? FileManager.default.attributesOfItem(atPath: reportURL.path)) == nil else {
+      throw LabError.outputExists(reportURL.path)
+    }
+    if let artifactsURL {
+      let artifactPath = artifactsURL.standardizedFileURL.resolvingSymlinksInPath().path
+      let reportPath = reportURL.standardizedFileURL.resolvingSymlinksInPath().path
+      let artifactPrefix = artifactPath.hasSuffix("/") ? artifactPath : artifactPath + "/"
+      guard reportPath != artifactPath, !reportPath.hasPrefix(artifactPrefix) else {
+        throw LabError.usage("Evaluation report must be outside the artifact directory.")
+      }
+    }
+    let artifacts = artifactsURL.map {
+      EvaluationArtifactOptions(directory: $0, includePassingCases: allArtifacts)
+    }
+    let report = try EvaluationHarness.evaluate(artifacts: artifacts)
     try writeJSON(report, to: reportURL)
 
     let summary = report.summary
@@ -497,9 +539,13 @@ private enum TraktionLab {
       Usage:
         traktion-lab reconstruct --output <composite.png> [options] <capture-001.png> <capture-002.png> [...]
         traktion-lab compare <expected.png> <actual.png>
-        traktion-lab evaluate --output <report.json>
+        traktion-lab evaluate --output <report.json> [--artifacts-dir <dir> [--all-artifacts]]
 
-      Options:
+      Evaluation options:
+        --artifacts-dir <path>           Synthetic failure bundles; includes nondeterminism.
+        --all-artifacts                  Also retain passing cases (requires --artifacts-dir).
+
+      Reconstruction options:
         --axis vertical|horizontal       Horizontal fails explicitly in Milestone 1.
         --manifest <path>                Reconstruction JSON sidecar.
         --diagnostics-dir <path>         Per-joint JSON and difference PNGs.

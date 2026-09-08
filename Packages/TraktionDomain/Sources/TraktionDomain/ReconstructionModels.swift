@@ -123,6 +123,12 @@ public enum ReconstructionFailure: Error, Equatable, Codable, Sendable {
     following: CaptureID,
     rows: Int
   )
+  case ambiguousOverlapDirection(
+    preceding: CaptureID,
+    following: CaptureID,
+    forwardRows: Int,
+    reverseRows: [Int]
+  )
   case sequenceOrderNotFound(captureIDs: [CaptureID])
   case ambiguousSequenceOrder(candidateOrders: [[CaptureID]])
   case resourceLimitExceeded(reason: String)
@@ -143,6 +149,7 @@ extension ReconstructionFailure {
     case .insufficientOverlap: return "insufficientOverlap"
     case .ambiguousOverlap: return "ambiguousOverlap"
     case .repeatedInterfaceArtifact: return "repeatedInterfaceArtifact"
+    case .ambiguousOverlapDirection: return "ambiguousOverlapDirection"
     case .sequenceOrderNotFound: return "sequenceOrderNotFound"
     case .ambiguousSequenceOrder: return "ambiguousSequenceOrder"
     case .resourceLimitExceeded: return "resourceLimitExceeded"
@@ -169,6 +176,8 @@ extension ReconstructionFailure: CustomStringConvertible {
       return "Overlap between \(preceding) and \(following) is ambiguous at rows \(candidateRows)."
     case .repeatedInterfaceArtifact(let preceding, let following, let rows):
       return "Captures \(preceding) and \(following) repeat the same \(rows)-row interface band at a fixed viewport edge."
+    case .ambiguousOverlapDirection(let preceding, let following, let forwardRows, let reverseRows):
+      return "Near-exact overlap between \(preceding) and \(following) is plausible in both directions: forward \(forwardRows) rows, reverse \(reverseRows)."
     case .sequenceOrderNotFound(let captureIDs):
       return "No complete exact-overlap order exists for captures \(captureIDs)."
     case .ambiguousSequenceOrder(let candidateOrders):

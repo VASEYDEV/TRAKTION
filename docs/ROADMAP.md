@@ -5,8 +5,9 @@
 | Milestone | State | Evidence |
 | --- | --- | --- |
 | 0 — Foundation | complete | PR #4, PR #5 |
-| 1 — Exact static reconstruction | passed with follow-ups | `docs/audits/2026-09-03-milestone-1.md`; corpus categories (task 0011) landed, artifact and memory follow-ups are tasks 0012–0013 |
-| 2 — Sequence intelligence | in progress | exact ordering core (task 0007), tooling (task 0008), near-exact recovery (task 0009), and repeated-chrome guard (task 0010) landed; duplicates, missing coverage, confidence states open |
+| 1 — Exact static reconstruction | passed with follow-ups | `docs/audits/2026-09-03-milestone-1.md`; corpus categories (0011), failure artifacts (0012), and preserved gap regression repair (0014) landed; memory instrumentation (0013) remains |
+| 2 — Sequence intelligence | in progress | exact ordering core (task 0007), tooling (task 0008), near-exact recovery (task 0009), repeated-chrome guard (0010), and bounded directional ambiguity guard (0014) landed; broader duplicates, missing-coverage evidence, and confidence workflows remain open |
+| Native iOS app target | not started | SwiftPM executable is a macOS preview; no Xcode app/signing/simulator gate yet |
 | 3–7 | not started | — |
 
 Task packets and their status live in `docs/tasks/README.md`.
@@ -34,3 +35,19 @@ Provider-neutral protocol, disabled/mock implementation, one production adapter,
 
 ## Milestone 7 — Broader capture/export
 Horizontal reconstruction, web capture, share extension, PDF, JPEG/HEIC, split export, target-size controls, long-image optimization.
+
+## Next execution order
+
+1. Complete measured memory/throughput instrumentation (0013). The task-0014
+   original gap regression is preserved and repaired; broader one-direction
+   near-exact ambiguity remains an explicit limit (ADR-018).
+2. Scaffold the native Xcode iOS app target, with a shared simulator scheme,
+   unsigned simulator build in macOS CI, and explicit device-signing setup.
+   Reuse the existing modules; keep reconstruction off the UI thread and
+   preserve typed failure/source-integrity behavior.
+3. Add actual import, inspection, correction, undo/redo, project persistence,
+   and export under Milestone 3 tracked packets. Core/CLI success is not
+   evidence these app workflows exist.
+
+Milestones 4–7 remain the product backlog; superseded PRs and completed task
+packets are historical evidence, not parallel implementation plans.

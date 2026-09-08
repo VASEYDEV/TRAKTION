@@ -7,7 +7,7 @@ import XCTest
 /// Recovery must reproduce the documentary order only when uniquely
 /// registered near-exact evidence forms exactly one complete path; every
 /// other outcome is a typed refusal and never a composite.
-final class NearExactOrderingTests: XCTestCase {
+final class NearExactOrderingTests: GoldenArtifactTestCase {
   private let engine = ReconstructionEngine()
 
   private func degradedBundle(seed: UInt64 = 9001) throws -> FixtureControlBundle {
@@ -51,7 +51,8 @@ final class NearExactOrderingTests: XCTestCase {
     for (index, placement) in result.plan.placements.enumerated() {
       let capture = try XCTUnwrap(capturesByID[placement.captureID], file: file, line: line)
       let startRow = index == 0 ? 0 : result.plan.joints[index - 1].outputSeamRow
-      let endRow = index == result.plan.placements.count - 1
+      let endRow =
+        index == result.plan.placements.count - 1
         ? result.plan.outputHeight
         : result.plan.joints[index].outputSeamRow
       for outputRow in startRow..<endRow {
@@ -75,7 +76,9 @@ final class NearExactOrderingTests: XCTestCase {
     let bundle = try degradedBundle()
     let shuffled = [bundle.captures[1], bundle.captures[2], bundle.captures[0]]
 
-    let result = try engine.reconstructNearExactUnordered(shuffled)
+    let result = try goldenReconstruct(expected: bundle.source, captures: shuffled) {
+      try engine.reconstructNearExactUnordered(shuffled)
+    }
 
     XCTAssertEqual(
       result.plan.placements.map(\.captureID.rawValue),
@@ -91,7 +94,9 @@ final class NearExactOrderingTests: XCTestCase {
 
     // Replaying through the supplied-order path means the plan and pixels are
     // exactly what supplied-order reconstruction of the same order yields.
-    let supplied = try engine.reconstruct(CaptureSequence(captures: bundle.captures))
+    let supplied = try goldenReconstruct(expected: bundle.source, captures: bundle.captures) {
+      try engine.reconstruct(CaptureSequence(captures: bundle.captures))
+    }
     XCTAssertEqual(result.plan, supplied.plan)
     XCTAssertEqual(result.image, supplied.image)
   }
@@ -114,7 +119,9 @@ final class NearExactOrderingTests: XCTestCase {
     )
     let shuffled = [2, 4, 0, 3, 1].map { bundle.captures[$0] }
 
-    let result = try engine.reconstructNearExactUnordered(shuffled)
+    let result = try goldenReconstruct(expected: bundle.source, captures: shuffled) {
+      try engine.reconstructNearExactUnordered(shuffled)
+    }
     XCTAssertEqual(
       result.plan.placements.map(\.captureID.rawValue),
       bundle.groundTruth.expectedOrder
@@ -128,12 +135,26 @@ final class NearExactOrderingTests: XCTestCase {
 
   func testInputPermutationDoesNotChangePlanOrPixels() throws {
     let bundle = try degradedBundle(seed: 9003)
-    let first = try engine.reconstructNearExactUnordered([
-      bundle.captures[2], bundle.captures[0], bundle.captures[1],
-    ])
-    let second = try engine.reconstructNearExactUnordered([
-      bundle.captures[1], bundle.captures[2], bundle.captures[0],
-    ])
+    let first = try goldenReconstruct(
+      expected: bundle.source,
+      captures: [
+        bundle.captures[2], bundle.captures[0], bundle.captures[1],
+      ]
+    ) {
+      try engine.reconstructNearExactUnordered([
+        bundle.captures[2], bundle.captures[0], bundle.captures[1],
+      ])
+    }
+    let second = try goldenReconstruct(
+      expected: bundle.source,
+      captures: [
+        bundle.captures[1], bundle.captures[2], bundle.captures[0],
+      ]
+    ) {
+      try engine.reconstructNearExactUnordered([
+        bundle.captures[1], bundle.captures[2], bundle.captures[0],
+      ])
+    }
     XCTAssertEqual(first.plan, second.plan)
     XCTAssertEqual(first.image, second.image)
   }
@@ -145,7 +166,9 @@ final class NearExactOrderingTests: XCTestCase {
       FixtureControlConfiguration(sourceID: "near-exact-gap", seed: 9004, variant: .missingMiddle)
     )
     XCTAssertThrowsError(
-      try engine.reconstructNearExactUnordered([bundle.captures[1], bundle.captures[0]])
+      try goldenReconstruct(
+        expected: bundle.source, captures: [bundle.captures[1], bundle.captures[0]]
+      ) { try engine.reconstructNearExactUnordered([bundle.captures[1], bundle.captures[0]]) }
     ) { error in
       guard case .sequenceOrderNotFound(let ids) = error as? ReconstructionFailure else {
         return XCTFail("expected sequenceOrderNotFound, got \(error)")
@@ -207,7 +230,9 @@ final class NearExactOrderingTests: XCTestCase {
       settings: ReconstructionSettings(maximumSampleComparisonsPerJoint: 1)
     )
     XCTAssertThrowsError(
-      try starved.reconstructNearExactUnordered([bundle.captures[2], bundle.captures[0], bundle.captures[1]])
+      try starved.reconstructNearExactUnordered([
+        bundle.captures[2], bundle.captures[0], bundle.captures[1],
+      ])
     ) { error in
       guard case .resourceLimitExceeded = error as? ReconstructionFailure else {
         return XCTFail("expected resourceLimitExceeded, got \(error)")
@@ -232,7 +257,11 @@ final class NearExactOrderingTests: XCTestCase {
     let bundle = try degradedBundle(seed: 9007)
     let copy = CaptureAsset(id: "copy", sourceName: "copy.png", image: bundle.captures[0].image)
     XCTAssertThrowsError(
-      try engine.reconstructNearExactUnordered([bundle.captures[0], copy, bundle.captures[1]])
+      try goldenReconstruct(
+        expected: bundle.source, captures: [bundle.captures[0], copy, bundle.captures[1]]
+      ) {
+        try engine.reconstructNearExactUnordered([bundle.captures[0], copy, bundle.captures[1]])
+      }
     ) { error in
       guard case .duplicateCapture = error as? ReconstructionFailure else {
         return XCTFail("expected duplicateCapture, got \(error)")
@@ -242,7 +271,11 @@ final class NearExactOrderingTests: XCTestCase {
 
   func testCaptureCountAndAxisBoundsApply() throws {
     let bundle = try degradedBundle(seed: 9008)
-    XCTAssertThrowsError(try engine.reconstructNearExactUnordered([bundle.captures[0]])) {
+    XCTAssertThrowsError(
+      try goldenReconstruct(expected: bundle.source, captures: [bundle.captures[0]]) {
+        try engine.reconstructNearExactUnordered([bundle.captures[0]])
+      }
+    ) {
       XCTAssertEqual(
         $0 as? ReconstructionFailure,
         .captureCountOutOfRange(actual: 1, allowed: 2...10)

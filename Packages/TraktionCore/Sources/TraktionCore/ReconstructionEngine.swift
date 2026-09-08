@@ -414,16 +414,23 @@ private extension ReconstructionEngine {
     }
   }
 
-  /// Supplied-order registration: the probe's outcome mapped back to the
-  /// identical typed throws at the identical decision points.
+  /// Supplied-order registration maps raw probe outcomes to typed failures
+  /// and rejects fixed chrome or bidirectional near-exact evidence.
   func register(
     preceding: CaptureAsset,
     following: CaptureAsset
   ) throws -> PairRegistration {
-    switch try probePair(preceding: preceding, following: following) {
+    var sampleComparisons = 0
+    var fullComparisonPixels = 0
+    switch try probePair(
+      preceding: preceding,
+      following: following,
+      sampleComparisons: &sampleComparisons,
+      fullComparisonPixels: &fullComparisonPixels
+    ) {
     case .accepted(let registration):
       let rows = registration.candidate.overlapRows
-      if rows < preceding.image.height,
+      if rows < preceding.image.height, rows < following.image.height,
         rowsEqual(preceding.image, startRow: 0, following.image, startRow: 0, count: rows)
           || rowsEqual(
             preceding.image,
@@ -438,6 +445,38 @@ private extension ReconstructionEngine {
           following: following.id,
           rows: rows
         )
+      }
+      // A unique near-exact forward match can still be explained by
+      // repeated content across a coverage gap. If the reverse direction
+      // also has acceptable evidence, supplied order alone must not turn
+      // that ambiguity into a successful composite (task 0014, ADR-018).
+      // Both probes share this joint's existing budgets; the reverse probe
+      // only scores evidence and never recursively checks direction.
+      if registration.confidence != .exact {
+        let reverse = try probePair(
+          preceding: following,
+          following: preceding,
+          sampleComparisons: &sampleComparisons,
+          fullComparisonPixels: &fullComparisonPixels,
+          useRowSumBounds: true
+        )
+        let reverseRows: [Int]
+        switch reverse {
+        case .accepted(let reverseRegistration):
+          reverseRows = [reverseRegistration.candidate.overlapRows]
+        case .ambiguousOverlap(let candidateRows):
+          reverseRows = candidateRows
+        case .insufficientOverlap:
+          reverseRows = []
+        }
+        if !reverseRows.isEmpty {
+          throw ReconstructionFailure.ambiguousOverlapDirection(
+            preceding: preceding.id,
+            following: following.id,
+            forwardRows: rows,
+            reverseRows: reverseRows
+          )
+        }
       }
       return registration
     case .insufficientOverlap:
@@ -457,8 +496,8 @@ private extension ReconstructionEngine {
 
   /// Byte equality at a shared viewport edge is evidence of fixed interface
   /// chrome, not documentary scroll continuity. This intentionally runs only
-  /// after registration accepts one translation and does not cover a
-  /// full-height prefix, which can legitimately extend the document.
+  /// after registration accepts one translation shorter than both captures;
+  /// full-height prefix/suffix containment is legitimate documentary evidence.
   func rowsEqual(
     _ lhs: RasterImage,
     startRow lhsStartRow: Int,
@@ -477,6 +516,23 @@ private extension ReconstructionEngine {
     preceding: CaptureAsset,
     following: CaptureAsset
   ) throws -> PairOutcome {
+    var sampleComparisons = 0
+    var fullComparisonPixels = 0
+    return try probePair(
+      preceding: preceding,
+      following: following,
+      sampleComparisons: &sampleComparisons,
+      fullComparisonPixels: &fullComparisonPixels
+    )
+  }
+
+  func probePair(
+    preceding: CaptureAsset,
+    following: CaptureAsset,
+    sampleComparisons: inout Int,
+    fullComparisonPixels: inout Int,
+    useRowSumBounds: Bool = false
+  ) throws -> PairOutcome {
     if preceding.image == following.image {
       throw ReconstructionFailure.duplicateCapture(
         preceding: preceding.id,
@@ -494,13 +550,6 @@ private extension ReconstructionEngine {
       )
     }
 
-    let exactRows = exactOverlapCandidates(
-      preceding: preceding.image,
-      following: following.image,
-      maximumOverlap: maximumOverlap
-    )
-
-    var sampleComparisons = 0
     func chargeSampleBudget(rows: Int, columns: Int) throws {
       let (candidateComparisons, comparisonOverflow) =
         rows.multipliedReportingOverflow(by: columns)
@@ -516,6 +565,30 @@ private extension ReconstructionEngine {
       }
       sampleComparisons = nextComparisons
     }
+
+    // Reverse verification must fit the original joint's remaining budget.
+    // Triangle inequality gives an exact lower bound without comparing every
+    // pixel: |sum(a)-sum(b)| <= sum(|a-b|) for each row/channel. Charge both
+    // image scans and every summary comparison; surviving candidates still
+    // undergo the unchanged sampled/full pixel proof below.
+    var precedingRowSums: [UInt64] = []
+    var followingRowSums: [UInt64] = []
+    if useRowSumBounds {
+      try chargeSampleBudget(rows: maximumOverlap, columns: preceding.image.width)
+      try chargeSampleBudget(rows: maximumOverlap, columns: following.image.width)
+      precedingRowSums = rowChannelSums(
+        preceding.image,
+        startRow: preceding.image.height - maximumOverlap,
+        rowCount: maximumOverlap
+      )
+      followingRowSums = rowChannelSums(following.image, startRow: 0, rowCount: maximumOverlap)
+    }
+
+    let exactRows = exactOverlapCandidates(
+      preceding: preceding.image,
+      following: following.image,
+      maximumOverlap: maximumOverlap
+    )
     func isPlausible(_ candidate: SampledCandidate) -> Bool {
       candidate.normalizedMeanAbsoluteErrorLowerBound
         <= settings.maximumNormalizedMeanAbsoluteError
@@ -526,6 +599,28 @@ private extension ReconstructionEngine {
     var sampled: [SampledCandidate] = []
     sampled.reserveCapacity(maximumOverlap - settings.minimumOverlapRows + 1)
     for overlapRows in settings.minimumOverlapRows...maximumOverlap {
+      if useRowSumBounds {
+        var lowerBound: UInt64 = 0
+        let denominator = Double(overlapRows * preceding.image.width)
+          * Double(RasterImage.channelsPerPixel) * 255
+        var rejected = false
+        for row in 0..<overlapRows {
+          try chargeSampleBudget(rows: 1, columns: 1)
+          let precedingOffset = (maximumOverlap - overlapRows + row)
+            * RasterImage.channelsPerPixel
+          let followingOffset = row * RasterImage.channelsPerPixel
+          for channel in 0..<RasterImage.channelsPerPixel {
+            let lhs = precedingRowSums[precedingOffset + channel]
+            let rhs = followingRowSums[followingOffset + channel]
+            lowerBound += lhs >= rhs ? lhs - rhs : rhs - lhs
+          }
+          if Double(lowerBound) / denominator > settings.maximumNormalizedMeanAbsoluteError {
+            rejected = true
+            break
+          }
+        }
+        if rejected { continue }
+      }
       let rows = sampleIndices(count: overlapRows, maximum: settings.sampledRows)
       let columns = sampleIndices(count: preceding.image.width, maximum: settings.sampledColumns)
       try chargeSampleBudget(rows: rows.count, columns: columns.count)
@@ -633,7 +728,6 @@ private extension ReconstructionEngine {
 
     var candidatesToScore: [SampledCandidate] = []
     candidatesToScore.reserveCapacity(min(plausible.count, settings.candidateLimit))
-    var fullComparisonPixels = 0
     for candidate in plausible.prefix(settings.candidateLimit) {
       let (candidatePixels, candidateOverflow) =
         preceding.image.width.multipliedReportingOverflow(by: candidate.rows)
@@ -694,6 +788,20 @@ private extension ReconstructionEngine {
         confidence: confidence
       )
     )
+  }
+
+  func rowChannelSums(_ image: RasterImage, startRow: Int, rowCount: Int) -> [UInt64] {
+    var sums = [UInt64](repeating: 0, count: rowCount * RasterImage.channelsPerPixel)
+    for row in 0..<rowCount {
+      let sumOffset = row * RasterImage.channelsPerPixel
+      for column in 0..<image.width {
+        let pixelOffset = image.byteOffset(x: column, y: startRow + row)
+        for channel in 0..<RasterImage.channelsPerPixel {
+          sums[sumOffset + channel] += UInt64(image.pixels[pixelOffset + channel])
+        }
+      }
+    }
+    return sums
   }
 
   func makePlan(

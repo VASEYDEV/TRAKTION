@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Synthetic failure artifacts** (task 0012, ADR-017): `traktion-lab
+  evaluate --artifacts-dir` retains failing synthetic cases; `--all-artifacts`
+  also retains passing cases. Bundles contain source truth, actual output,
+  absolute differences, the plan, and per-joint diagnostics when the engine
+  produces them. Typed refusals explicitly record unavailable outputs.
+  Wrapped golden tests retain the actual inputs on assertion failure, with
+  unique case names and overwrite refusal. Linux and Apple CI upload these
+  synthetic-only bundles on failure.
+
 - **Evaluation corpus visual categories** (task 0011): FixtureForge now
   generates deterministic light-text, dark-UI, mixed-photography, table,
   monospaced-code, and compressed-source proxy documents via `--style`.
@@ -158,8 +167,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the PR #4 independent review; session note
   `docs/notes/2026-08-31-foundation-review-and-adaptation.md`.
 
-### Changed
-
 - CI now separates repository policy, Linux Swift core verification, Apple package/PNG
   smoke verification, and a stable required aggregator.
 - `scripts/gate.sh` is now the complete macOS build/test/synthetic-PNG gate; portable
@@ -169,6 +176,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SwiftPM `.build/` and `.swiftpm/` local state are ignored.
 
 ### Fixed
+
+- **Bidirectional near-exact ambiguity and suffix containment** (task 0014,
+  ADR-018): preserve the original monospaced fixture that falsely joined a
+  48-row gap, reject plausible overlap evidence in both directions, and
+  permit a shorter following capture that is a valid exact suffix. The
+  fixture gutter remains useful positive data; it is no longer described
+  as an engine repair. Resource limits and acceptance thresholds remain
+  explicit, and this bounded guard does not prove all gaps detectable.
+- **Repository handoff** (task 0015): close duplicate PR #14 as superseded,
+  replace stale merged-task references and 23-case documentation with current
+  evidence, distinguish the active queue from historical packets, and record
+  the native iOS target and branch cleanup still outstanding.
 
 - Require a unique fully verified overlap placement, preventing a short exact repeated
   band from silently outranking a longer near-exact overlap and duplicating rows.

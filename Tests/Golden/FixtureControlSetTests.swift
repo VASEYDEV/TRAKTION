@@ -8,7 +8,7 @@ import XCTest
 /// every positive control must reconstruct exactly as recorded. These tests
 /// are the proof that no control-set case silently corrupts documentary
 /// content.
-final class FixtureControlSetTests: XCTestCase {
+final class FixtureControlSetTests: GoldenArtifactTestCase {
   private let engine = ReconstructionEngine()
 
   private func bundle(
@@ -41,13 +41,16 @@ final class FixtureControlSetTests: XCTestCase {
       line: line
     )
     XCTAssertThrowsError(
-      try engine.reconstruct(CaptureSequence(captures: bundle.captures)),
+      try goldenReconstruct(expected: bundle.source, captures: bundle.captures) {
+        try engine.reconstruct(CaptureSequence(captures: bundle.captures))
+      },
       "\(variant.name) must not produce a composite",
       file: file,
       line: line
     ) { error in
       guard let failure = error as? ReconstructionFailure else {
-        return XCTFail("\(variant.name): expected ReconstructionFailure, got \(error)", file: file, line: line)
+        return XCTFail(
+          "\(variant.name): expected ReconstructionFailure, got \(error)", file: file, line: line)
       }
       XCTAssertEqual(failure.code, expectedCode, "\(variant.name)", file: file, line: line)
     }
@@ -102,14 +105,18 @@ final class FixtureControlSetTests: XCTestCase {
 
   func testBaselineReconstructsExactly() throws {
     let bundle = try bundle(.baseline)
-    let result = try engine.reconstruct(CaptureSequence(captures: bundle.captures))
+    let result = try goldenReconstruct(expected: bundle.source, captures: bundle.captures) {
+      try engine.reconstruct(CaptureSequence(captures: bundle.captures))
+    }
     XCTAssertEqual(result.plan.joints.map(\.overlapRows), bundle.groundTruth.expectedOverlaps)
     XCTAssertEqual(result.image, bundle.source)
   }
 
   func testOnePixelOffsetReconstructsWithJitteredOverlaps() throws {
     let bundle = try bundle(.onePixelOffset)
-    let result = try engine.reconstruct(CaptureSequence(captures: bundle.captures))
+    let result = try goldenReconstruct(expected: bundle.source, captures: bundle.captures) {
+      try engine.reconstruct(CaptureSequence(captures: bundle.captures))
+    }
     XCTAssertEqual(result.plan.joints.map(\.overlapRows), bundle.groundTruth.expectedOverlaps)
     XCTAssertNotEqual(
       Set(result.plan.joints.map(\.overlapRows)).count,
@@ -130,7 +137,8 @@ final class FixtureControlSetTests: XCTestCase {
     for (index, capture) in bundle.captures.enumerated() {
       let placement = result.plan.placements[index]
       let startRow = index == 0 ? 0 : result.plan.joints[index - 1].outputSeamRow
-      let endRow = index == bundle.captures.count - 1
+      let endRow =
+        index == bundle.captures.count - 1
         ? result.plan.outputHeight
         : result.plan.joints[index].outputSeamRow
       for outputRow in startRow..<endRow {
@@ -150,7 +158,9 @@ final class FixtureControlSetTests: XCTestCase {
 
   func testDegradedReconstructsNearExactFromContributingCaptures() throws {
     let bundle = try bundle(.degraded(maxChannelDelta: 2))
-    let result = try engine.reconstruct(CaptureSequence(captures: bundle.captures))
+    let result = try goldenReconstruct(expected: bundle.source, captures: bundle.captures) {
+      try engine.reconstruct(CaptureSequence(captures: bundle.captures))
+    }
     XCTAssertEqual(result.plan.joints.map(\.overlapRows), bundle.groundTruth.expectedOverlaps)
     XCTAssertEqual(
       result.plan.joints.map(\.confidence),
@@ -167,7 +177,9 @@ final class FixtureControlSetTests: XCTestCase {
     // scrollbar handling proper is Milestone 4.
     let bundle = try bundle(.scrollbar(width: 4))
     XCTAssertEqual(bundle.groundTruth.expectedStatus, "reconstructable-with-scrollbar-artifacts")
-    let result = try engine.reconstruct(CaptureSequence(captures: bundle.captures))
+    let result = try goldenReconstruct(expected: bundle.source, captures: bundle.captures) {
+      try engine.reconstruct(CaptureSequence(captures: bundle.captures))
+    }
     XCTAssertEqual(result.plan.joints.map(\.overlapRows), bundle.groundTruth.expectedOverlaps)
     assertRowsComeVerbatimFromContributingCaptures(result, bundle)
   }
@@ -176,7 +188,9 @@ final class FixtureControlSetTests: XCTestCase {
     for percent in [10, 25, 50, 66, 80] {
       let overlap = max(10, 96 * percent / 100)
       let bundle = try bundle(.baseline, seed: UInt64(100 + percent), overlap: overlap)
-      let result = try engine.reconstruct(CaptureSequence(captures: bundle.captures))
+      let result = try goldenReconstruct(expected: bundle.source, captures: bundle.captures) {
+        try engine.reconstruct(CaptureSequence(captures: bundle.captures))
+      }
       XCTAssertEqual(
         result.plan.joints.map(\.overlapRows),
         bundle.groundTruth.expectedOverlaps,
@@ -211,7 +225,11 @@ final class FixtureControlSetTests: XCTestCase {
   func testRepeatedChromeFailsTypedWithoutProducingAComposite() throws {
     let bundle = try bundle(.repeatedChrome(rows: 12), seed: 99)
     XCTAssertEqual(bundle.groundTruth.expectedStatus, "repeated-chrome")
-    XCTAssertThrowsError(try engine.reconstruct(CaptureSequence(captures: bundle.captures))) {
+    XCTAssertThrowsError(
+      try goldenReconstruct(expected: bundle.source, captures: bundle.captures) {
+        try engine.reconstruct(CaptureSequence(captures: bundle.captures))
+      }
+    ) {
       XCTAssertEqual(
         $0 as? ReconstructionFailure,
         .repeatedInterfaceArtifact(

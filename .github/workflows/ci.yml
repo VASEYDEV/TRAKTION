@@ -26,6 +26,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build and test platform-neutral targets
+        env:
+          TRAKTION_GOLDEN_ARTIFACTS: ${{ runner.temp }}/traktion-synthetic-artifacts/tests
         run: bash scripts/verify-core.sh
       - name: Install python3 for manifest validation
         run: apt-get update -q && apt-get install -y -q python3
@@ -34,7 +36,7 @@ jobs:
       - name: Evaluation harness (EVALUATION.md metrics gate)
         run: |
           swift build --configuration release --product traktion-lab
-          "$(swift build --configuration release --show-bin-path)/traktion-lab" evaluate --output evaluation-report.json
+          "$(swift build --configuration release --show-bin-path)/traktion-lab" evaluate --output evaluation-report.json --artifacts-dir "${{ runner.temp }}/traktion-synthetic-artifacts/evaluation"
           python3 -m json.tool evaluation-report.json >/dev/null
       - name: Upload evaluation report
         if: always()
@@ -42,6 +44,14 @@ jobs:
         with:
           name: traktion-evaluation-report
           path: evaluation-report.json
+          if-no-files-found: ignore
+
+      - name: Retain synthetic golden and evaluation diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: traktion-synthetic-failure-diagnostics-linux
+          path: ${{ runner.temp }}/traktion-synthetic-artifacts
           if-no-files-found: ignore
 
   apple:
@@ -52,6 +62,7 @@ jobs:
       - name: Run complete verification gate
         env:
           TRAKTION_SMOKE_DIR: ${{ runner.temp }}/traktion-smoke
+          TRAKTION_GOLDEN_ARTIFACTS: ${{ runner.temp }}/traktion-synthetic-artifacts/tests
         run: bash scripts/gate.sh
       - name: Retain synthetic diagnostics on failure
         if: failure()
@@ -59,6 +70,14 @@ jobs:
         with:
           name: traktion-synthetic-smoke-diagnostics
           path: ${{ runner.temp }}/traktion-smoke
+          if-no-files-found: ignore
+
+      - name: Retain synthetic golden diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: traktion-synthetic-failure-diagnostics-apple
+          path: ${{ runner.temp }}/traktion-synthetic-artifacts
           if-no-files-found: ignore
 
   required:

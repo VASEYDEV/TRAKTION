@@ -381,8 +381,18 @@ public enum EvaluationHarness {
 
   public static func evaluate(
     _ cases: [EvaluationCase] = standardCorpus(),
-    settings: ReconstructionSettings = ReconstructionSettings()
+    settings: ReconstructionSettings = ReconstructionSettings(),
+    artifacts: EvaluationArtifactOptions? = nil
   ) throws -> EvaluationReport {
+    if artifacts != nil {
+      var names = Set<String>()
+      for evaluationCase in cases {
+        try SyntheticArtifactWriter.validateCaseName(evaluationCase.name)
+        guard names.insert(evaluationCase.name).inserted else {
+          throw EvaluationCaseError.duplicateArtifactCaseName(evaluationCase.name)
+        }
+      }
+    }
     let engine = ReconstructionEngine(settings: settings)
     var results: [EvaluationCaseResult] = []
     results.reserveCapacity(cases.count)
@@ -391,34 +401,22 @@ public enum EvaluationHarness {
       let bundle = try FixtureControlGenerator.generate(evaluationCase.configuration)
       let captures = try inputCaptures(for: evaluationCase, bundle: bundle)
 
-      let clock = ContinuousClock()
-      let start = clock.now
       let first = run(
         engine,
         captures,
         axis: evaluationCase.engineAxis,
         policy: evaluationCase.orderPolicy
       )
-      let elapsed = clock.now - start
       let second = run(
         engine,
         captures,
         axis: evaluationCase.engineAxis,
         policy: evaluationCase.orderPolicy
       )
-      let deterministic = outcomesMatch(first.outcome, second.outcome)
-        && first.recoveredOrder == second.recoveredOrder
-
       results.append(
-        assess(
-          name: evaluationCase.name,
-          bundle: bundle,
-          outcome: first.outcome,
-          ordering: evaluationCase.ordering,
-          recoveredOrder: first.recoveredOrder,
-          deterministic: deterministic,
-          milliseconds: Int(elapsed.components.seconds) * 1000
-            + Int(elapsed.components.attoseconds / 1_000_000_000_000_000)
+        try assessRuns(
+          name: evaluationCase.name, bundle: bundle, captures: captures,
+          ordering: evaluationCase.ordering, first: first, second: second, artifacts: artifacts
         )
       )
     }
@@ -429,6 +427,49 @@ public enum EvaluationHarness {
       summary: summarize(results),
       cases: results
     )
+  }
+
+  /// Preserve the observations that establish nondeterminism, not just the
+  /// first run's verdict. This is also the processing path for normal runs.
+  static func assessRuns(
+    name: String,
+    bundle: FixtureControlBundle,
+    captures: [CaptureAsset],
+    ordering: OrderingCase? = nil,
+    first: ObservedRun,
+    second: ObservedRun,
+    artifacts: EvaluationArtifactOptions?
+  ) throws -> EvaluationCaseResult {
+    let deterministic = outcomesMatch(first.outcome, second.outcome)
+      && first.recoveredOrder == second.recoveredOrder
+    let assessment = assess(
+      name: name, bundle: bundle, outcome: first.outcome, ordering: ordering,
+      recoveredOrder: first.recoveredOrder, deterministic: deterministic,
+      milliseconds: first.milliseconds
+    )
+    guard let artifacts,
+      artifacts.includePassingCases || assessment.verdict != .pass || !deterministic
+    else { return assessment }
+
+    if deterministic {
+      try SyntheticArtifactWriter.write(
+        caseName: name, expected: bundle.source, captures: captures,
+        outcome: first.outcome, assessment: assessment, directory: artifacts.directory
+      )
+    } else {
+      let secondAssessment = assess(
+        name: name, bundle: bundle, outcome: second.outcome, ordering: ordering,
+        recoveredOrder: second.recoveredOrder, deterministic: false,
+        milliseconds: second.milliseconds
+      )
+      try SyntheticArtifactWriter.writeRuns(
+        caseName: name, expected: bundle.source, captures: captures,
+        first: .init(outcome: first.outcome, assessment: assessment),
+        second: .init(outcome: second.outcome, assessment: secondAssessment),
+        directory: artifacts.directory
+      )
+    }
+    return assessment
   }
 
   static func summarize(_ results: [EvaluationCaseResult]) -> EvaluationSummary {
@@ -470,16 +511,19 @@ public enum EvaluationHarness {
 
   // MARK: - Assessment
 
-  enum RunOutcome {
-    case reconstructed(ReconstructionResult)
-    case failed(ReconstructionFailure)
-    case unexpectedError(String)
+  typealias RunOutcome = SyntheticArtifactOutcome
+
+  struct ObservedRun {
+    let outcome: RunOutcome
+    let recoveredOrder: [CaptureID]?
+    let milliseconds: Int
   }
 
   public enum EvaluationCaseError: Error, Equatable, Sendable {
     /// The ordering permutation does not enumerate every generated capture
     /// exactly once.
     case invalidPermutation(caseName: String, permutation: [Int], captureCount: Int)
+    case duplicateArtifactCaseName(String)
   }
 
   private static func inputCaptures(
@@ -507,24 +551,39 @@ public enum EvaluationHarness {
     _ captures: [CaptureAsset],
     axis: ReconstructionAxis,
     policy: OrderPolicy
-  ) -> (outcome: RunOutcome, recoveredOrder: [CaptureID]?) {
+  ) -> ObservedRun {
+    let clock = ContinuousClock()
+    let start = clock.now
+    let outcome: RunOutcome
+    let recoveredOrder: [CaptureID]?
     do {
       switch policy {
       case .supplied:
         let result = try engine.reconstruct(CaptureSequence(captures: captures), axis: axis)
-        return (.reconstructed(result), nil)
+        outcome = .reconstructed(result)
+        recoveredOrder = nil
       case .exact:
         let result = try engine.reconstructExactUnordered(captures, axis: axis)
-        return (.reconstructed(result), result.plan.placements.map(\.captureID))
+        outcome = .reconstructed(result)
+        recoveredOrder = result.plan.placements.map(\.captureID)
       case .nearExact:
         let result = try engine.reconstructNearExactUnordered(captures, axis: axis)
-        return (.reconstructed(result), result.plan.placements.map(\.captureID))
+        outcome = .reconstructed(result)
+        recoveredOrder = result.plan.placements.map(\.captureID)
       }
     } catch let failure as ReconstructionFailure {
-      return (.failed(failure), nil)
+      outcome = .failed(failure)
+      recoveredOrder = nil
     } catch {
-      return (.unexpectedError(String(describing: error)), nil)
+      outcome = .unexpectedError(String(describing: error))
+      recoveredOrder = nil
     }
+    let elapsed = clock.now - start
+    return ObservedRun(
+      outcome: outcome, recoveredOrder: recoveredOrder,
+      milliseconds: Int(elapsed.components.seconds) * 1000
+        + Int(elapsed.components.attoseconds / 1_000_000_000_000_000)
+    )
   }
 
   private static func outcomesMatch(_ lhs: RunOutcome, _ rhs: RunOutcome) -> Bool {
