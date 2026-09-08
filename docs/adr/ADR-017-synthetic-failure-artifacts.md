@@ -22,6 +22,19 @@ are resolved by ID, so shuffled ordering inputs remain correct diagnostics.
 The manifest retains the plan, evaluation assessment when available, capture IDs
 and dimensions, and synthetic provenance. Input filesystem paths are excluded.
 
+For a nondeterministic evaluation, the case directory instead contains a
+`manifest.json` identifying `status: nondeterministic` and ordered
+`runDirectories: [run-1, run-2]`. Each run subdirectory is a complete bundle
+with that run's actual outcome, plan, recovered order, timing, verdict, and
+unavailable-output metadata. The parent manifest's `caseName` identifies the
+logical evaluation case. A child manifest's `caseName` is its run directory
+(`run-1` or `run-2`); its `assessment.name` retains the logical case name.
+Runs are observations of one case, not additional evaluation cases.
+Identical pixels do not erase an order-only disagreement. Both bundles are staged and published as one complete case;
+a second-run write failure removes the staged first run as well. The evaluation
+report still records the first run's verdict with `deterministic: false`.
+Deterministic cases retain the existing single-bundle layout.
+
 Full expected and actual images are retained without modification. When their
 sizes differ, the difference is the absolute difference over their common
 top-left extent. The manifest explicitly records both original dimensions,

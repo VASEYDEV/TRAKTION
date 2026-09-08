@@ -96,15 +96,8 @@ public enum SyntheticArtifactWriter {
     assessment: EvaluationCaseResult? = nil,
     directory: URL
   ) throws {
-    try validateCaseName(caseName)
-    let manager = FileManager.default
-    let destination = directory.appendingPathComponent(caseName, isDirectory: true)
-    guard !exists(destination) else { throw SyntheticArtifactError.outputExists(destination.path) }
-    let staging = directory.appendingPathComponent(
-      ".\(caseName)-\(UUID().uuidString)", isDirectory: true)
-    do {
-      try manager.createDirectory(at: directory, withIntermediateDirectories: true)
-      try manager.createDirectory(at: staging, withIntermediateDirectories: false)
+    try publishDirectory(caseName: caseName, directory: directory) { staging in
+      let manager = FileManager.default
       try PNGCodec.encodeOpaqueRGBA8(expected, to: staging.appendingPathComponent("expected.png"))
       var plan: ReconstructionPlan?
       var actualSize: Size?
@@ -180,6 +173,60 @@ public enum SyntheticArtifactWriter {
         ),
         to: staging.appendingPathComponent("manifest.json")
       )
+    }
+  }
+
+  struct AssessedRun {
+    let outcome: SyntheticArtifactOutcome
+    let assessment: EvaluationCaseResult
+  }
+
+  private struct RunsManifest: Encodable {
+    let schemaVersion = 1
+    let provenance = "synthetic-only"
+    let status = "nondeterministic"
+    let caseName: String
+    let runDirectories = ["run-1", "run-2"]
+  }
+
+  /// Commit both run bundles together; a second-run write failure must not
+  /// publish a case containing only its first observation.
+  static func writeRuns(
+    caseName: String,
+    expected: RasterImage,
+    captures: [CaptureAsset],
+    first: AssessedRun,
+    second: AssessedRun,
+    directory: URL
+  ) throws {
+    try publishDirectory(caseName: caseName, directory: directory) { staging in
+      for (index, run) in [first, second].enumerated() {
+        try write(
+          caseName: "run-\(index + 1)", expected: expected, captures: captures,
+          outcome: run.outcome, assessment: run.assessment, directory: staging
+        )
+      }
+      try writeJSON(
+        RunsManifest(caseName: caseName), to: staging.appendingPathComponent("manifest.json")
+      )
+    }
+  }
+
+  private static func publishDirectory(
+    caseName: String,
+    directory: URL,
+    contents: (URL) throws -> Void
+  ) throws {
+    try validateCaseName(caseName)
+    let manager = FileManager.default
+    let destination = directory.appendingPathComponent(caseName, isDirectory: true)
+    guard !exists(destination) else { throw SyntheticArtifactError.outputExists(destination.path) }
+    let staging = directory.appendingPathComponent(
+      ".\(caseName)-\(UUID().uuidString)", isDirectory: true)
+    do {
+      try manager.createDirectory(at: directory, withIntermediateDirectories: true)
+      try manager.createDirectory(at: staging, withIntermediateDirectories: false)
+      try contents(staging)
       guard !exists(destination) else {
         throw SyntheticArtifactError.outputExists(destination.path)
       }

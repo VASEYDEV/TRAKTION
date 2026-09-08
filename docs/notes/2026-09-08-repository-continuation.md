@@ -27,8 +27,9 @@ main implementation and preserved the original false-safe evidence separately.
 | `codex/check-development-state-and-resume` | `b5d090899cb7773524db3e948a293062a3c04a2c` | PR #14 closed as superseded; eligible for deletion |
 
 Deletion remains pending: the connected GitHub toolset provides no delete-ref
-action, direct Git push has no credentials in this workspace, and the browser
-is signed out. The branch names and exact reviewed heads above make the
+action, direct Git push has no credentials in this workspace, and GitHub
+rejected secure browser sign-in because this account does not support
+password sign-in. The branch names and exact reviewed heads above make the
 remaining cleanup concrete; do not delete a branch if its head has advanced.
 No protection rules, account permissions, or credentials were changed.
 
@@ -92,3 +93,20 @@ cases with no failure bundles and zero false-safe, false-warning, wrong-failure,
 or nondeterministic verdicts. `scripts/smoke.sh` passed the complete Linux PNG
 path using a transient shell function that added the integrated-driver and
 `-enable-testing` build flags; the repository script itself is unchanged.
+
+## PR #15 review follow-up
+
+The first complete Linux/macOS [CI run](https://github.com/VASEYDEV/TRAKTION/actions/runs/34285874626)
+passed. A late review then identified that nondeterminism retention kept only
+the first observation. The corrected evaluation path publishes both observations
+under `run-1/` and `run-2/`, each with its own outcome, recovered order, timing,
+assessment, and available image/joint evidence. Publication is atomic for the
+whole case, including when writing the second run fails.
+
+Four new regression tests cover differing pixels, recovered-order differences
+with identical images/plans, reconstruction versus refusal in either order,
+and second-run write failure cleanup. The complete updated release suite passed
+**116 tests**, the standard corpus passed **43/43**, and all-artifact evaluation
+retained all 43 deterministic cases with the existing layout. Independent review
+reproduced the four new tests and cleared the fix. The PR requires another full
+CI pass on the updated head before merge.

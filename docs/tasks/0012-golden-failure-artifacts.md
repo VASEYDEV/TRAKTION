@@ -36,7 +36,12 @@ seeing the affected rows. Synthetic evidence should survive the original run.
 6. CI supplies dedicated synthetic output directories in both Linux and Apple
    test lanes. Linux evaluation also supplies `--artifacts-dir`. Bundle uploads
    use `if: failure()`; the existing JSON report still uploads with `always()`.
-7. Publication stages a new directory and refuses pre-existing output entries,
+7. Nondeterministic evaluation retains both observations under `run-1/` and
+   `run-2/`, with a case manifest listing their order. Each run has its own
+   assessment, recovered order, timing, output/typed refusal, and availability
+   metadata. The report keeps its existing first-run verdict semantics.
+   The parent directory publishes atomically only after both runs are complete.
+8. Publication stages a new directory and refuses pre-existing output entries,
    including symlinks. Unsafe/duplicate evaluation case names fail before
    writing. Write and cleanup errors propagate; source files are never removed.
 
@@ -67,8 +72,12 @@ seeing the affected rows. Synthetic evidence should survive the original run.
 - [x] Dimension mismatch, output collision, symlink preservation, unsafe names,
       duplicate names, and late publication failure have regression coverage.
 - [x] Golden helper uses the shared bundle writer only when enabled and failed.
+- [x] Nondeterminism retains both observations, including recovered-order-only
+      disagreement and reconstruction/refusal in either order.
+- [x] Failure while publishing the second observation removes the whole staged
+      case and preserves existing files.
 - [x] CI uploads bundles only on failure and from synthetic-only paths.
-- [x] Full current-branch suite (102 tests) and standard corpus (43 cases) pass.
+- [x] Full current-branch suite (116 tests) and standard corpus (43 cases) pass.
 - [ ] Integrated branch with task 0014 passes required CI.
 - [x] Independent review completed; input-recording and helper-name findings fixed.
 - [ ] Required CI passes before merge.
@@ -79,6 +88,10 @@ fabricate a one-channel pixel mismatch, unexpected axis refusal, incorrect
 ordering expectation, dimension mismatch, unavailable capture diagnosis,
 filesystem collision, and unexpected error. Existing golden assertions are
 preserved; the helper changes retention, never what counts as success.
+`NondeterminismArtifactTests` injects deliberately distinct observations through
+`assessRuns`, the same helper used by `evaluate`, without a public test-only
+option or changing engine behavior. It covers pixels, recovered order with equal
+pixels/plans, both reconstruction/refusal orders, and late second-run failure.
 
 ## Build / test commands
 ```sh
@@ -96,7 +109,8 @@ swift run traktion-lab evaluate --output /tmp/evaluation-all.json --artifacts-di
 - ADR-017 records the internal dependency and truthful absence/dimension policy.
 
 ## Writer
-Codex, branch `codex/golden-failure-artifacts`, sole writer for this packet.
+Codex, initial branch `codex/golden-failure-artifacts`; nondeterminism follow-up
+on `codex/nondeterminism-evidence` from integrated commit `00133ff`.
 
 ## Reviewer
 Independent reviewer required before merge; coordinated by the parent session.
@@ -131,3 +145,29 @@ used for the complete suite to keep phone-scale/evaluation execution bounded.
 The unmodified CI `verify-core.sh` gate remains required before merge. Apple
 ImageIO behavior still requires the Apple CI lane; local checks used Linux's
 existing pure-Swift PNG implementation.
+
+## PR review follow-up: preserve both nondeterministic observations
+
+A valid PR review finding showed that the initial implementation marked
+nondeterminism but retained only the first outcome. That discarded the second
+pixels/plan, refusal, or recovered order that established the disagreement.
+`evaluate` now passes both observed runs through `assessRuns`; each carries its
+own timing. Deterministic cases keep the original selection and layout. For
+nondeterministic cases, independently assessed run bundles publish atomically
+under one case, with explicit ordered subdirectories and logical case identity.
+
+Verification on integrated baseline `00133ff` plus this follow-up:
+
+- `swift build --configuration release --build-tests --use-integrated-swift-driver -j 2 -Xswiftc -enable-testing`:
+  PASS, using the same documented local toolchain adaptation.
+- `TRAKTION_GOLDEN_ARTIFACTS=/tmp/traktion-nondeterminism-final-test-artifacts .build/x86_64-unknown-linux-gnu/release/TRAKTIONPackageTests.xctest`:
+  PASS, all 116 official tests, zero failures; includes the four new
+  nondeterminism contracts. No injected temporary tests.
+- Release evaluation with `--artifacts-dir`: PASS, 43 cases; no default
+  artifacts. `--all-artifacts`: PASS, exactly 43 original-layout bundles.
+- `bash scripts/check-repository.sh` and `git diff --check`: PASS.
+- Independent review covers logical case/run identity, distinct assessments,
+  recovered-order-only disagreements, truthful refusal metadata, and atomic
+  cleanup after a second-run write failure.
+
+Required CI must rerun on the new PR head before merge.
