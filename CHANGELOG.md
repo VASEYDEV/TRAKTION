@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Evaluation corpus visual categories** (task 0011): FixtureForge now
+  generates deterministic light-text, dark-UI, mixed-photography, table,
+  monospaced-code, and compressed-source proxy documents via `--style`.
+  Ground truth and evaluation results record the style, and the standard
+  corpus exercises baseline, missing-middle, and duplicate behavior for all
+  six categories.
+
 - **Repeated-interface artifact guard** (task 0010, ADR-016): supplied-order
   registration now returns the stable typed `repeatedInterfaceArtifact`
   failure when its uniquely accepted strict-suffix overlap is byte-identical

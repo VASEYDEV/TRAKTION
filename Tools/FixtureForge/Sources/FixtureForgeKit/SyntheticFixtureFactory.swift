@@ -103,7 +103,8 @@ public enum SyntheticFixtureFactory {
     width: Int,
     height: Int,
     seed: UInt64,
-    repeatedRows: Bool = false
+    repeatedRows: Bool = false,
+    contentStyle: FixtureContentStyle = .lightText
   ) throws -> RasterImage {
     var pixels = [UInt8](
       repeating: 255,
@@ -150,9 +151,47 @@ public enum SyntheticFixtureFactory {
           blue = 229 &+ ((noise &* 5) % 18)
         }
 
-        pixels[offset] = red
-        pixels[offset + 1] = green
-        pixels[offset + 2] = blue
+        let styled: (UInt8, UInt8, UInt8)
+        switch contentStyle {
+        case .lightText:
+          styled = (red, green, blue)
+        case .darkUI:
+          styled = (255 &- red, 255 &- green, 255 &- blue)
+        case .mixedPhotography:
+          if (y / 32) % 3 == 1 {
+            styled = (
+              UInt8(truncatingIfNeeded: Int(noise) + x * 3),
+              UInt8(truncatingIfNeeded: Int(noise) + y * 5),
+              UInt8(truncatingIfNeeded: Int(noise) + x + y)
+            )
+          } else {
+            styled = (red, green, blue)
+          }
+        case .tables:
+          if x % max(8, width / 4) == 0 || y % 17 == 0 {
+            styled = (20, 38, 52)
+          } else {
+            styled = (red, green, blue)
+          }
+        case .monospacedCode:
+          let glyph = x >= margin && (x / 4 + y / 7 + Int(seed & 7)) % 5 < 2
+            && y % 7 < 5
+          let variation = noise % 7
+          if x < 3 {
+            let lineMarker = UInt8(truncatingIfNeeded: y &* 37 &+ x &* 73)
+            styled = (lineMarker, lineMarker &* 3, lineMarker &* 5)
+          } else {
+            styled = glyph
+              ? (38 &+ variation, 52 &+ variation, 68 &+ variation)
+              : (235 &+ variation, 238 &+ variation, 241 &+ variation)
+          }
+        case .compressedSource:
+          styled = (red / 16 * 16, green / 16 * 16, blue / 16 * 16)
+        }
+
+        pixels[offset] = styled.0
+        pixels[offset + 1] = styled.1
+        pixels[offset + 2] = styled.2
         pixels[offset + 3] = 255
       }
     }

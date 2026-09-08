@@ -1,5 +1,14 @@
 import TraktionDomain
 
+public enum FixtureContentStyle: String, Codable, CaseIterable, Sendable {
+  case lightText = "light-text"
+  case darkUI = "dark-ui"
+  case mixedPhotography = "mixed-photography"
+  case tables
+  case monospacedCode = "monospaced-code"
+  case compressedSource = "compressed-source"
+}
+
 // The prompt-02 control set (docs/tasks/0003): deterministic generation of the
 // adversarial and positive-control fixture families, each carrying ground
 // truth that records both the semantic condition and the exact behavior
@@ -82,6 +91,7 @@ public struct FixtureControlConfiguration: Equatable, Sendable {
   public var overlapLength: Int
   public var seed: UInt64
   public var variant: FixtureVariant
+  public var contentStyle: FixtureContentStyle
 
   public init(
     sourceID: String = "control",
@@ -91,7 +101,8 @@ public struct FixtureControlConfiguration: Equatable, Sendable {
     captureCount: Int = 3,
     overlapLength: Int = 24,
     seed: UInt64 = 0x5452_414B,
-    variant: FixtureVariant = .baseline
+    variant: FixtureVariant = .baseline,
+    contentStyle: FixtureContentStyle = .lightText
   ) {
     self.sourceID = sourceID
     self.axis = axis
@@ -101,6 +112,7 @@ public struct FixtureControlConfiguration: Equatable, Sendable {
     self.overlapLength = overlapLength
     self.seed = seed
     self.variant = variant
+    self.contentStyle = contentStyle
   }
 
   public var sourceLength: Int {
@@ -134,6 +146,7 @@ public struct FixtureGroundTruth: Codable, Equatable, Sendable {
   public let schemaVersion: Int
   public let fixtureName: String
   public let sourceID: String
+  public let contentStyle: String
   public let axis: String
   public let seed: UInt64
   public let sourceWidth: Int
@@ -153,9 +166,10 @@ public struct FixtureGroundTruth: Codable, Equatable, Sendable {
   public let expectedFailureCode: String?
 
   public init(
-    schemaVersion: Int = 1,
+    schemaVersion: Int = 2,
     fixtureName: String,
     sourceID: String,
+    contentStyle: String,
     axis: String,
     seed: UInt64,
     sourceWidth: Int,
@@ -171,6 +185,7 @@ public struct FixtureGroundTruth: Codable, Equatable, Sendable {
     self.schemaVersion = schemaVersion
     self.fixtureName = fixtureName
     self.sourceID = sourceID
+    self.contentStyle = contentStyle
     self.axis = axis
     self.seed = seed
     self.sourceWidth = sourceWidth
@@ -208,7 +223,8 @@ public enum FixtureControlGenerator {
     let source = try SyntheticFixtureFactory.document(
       width: config.crossAxisSize,
       height: config.sourceLength,
-      seed: config.seed
+      seed: config.seed,
+      contentStyle: config.contentStyle
     )
 
     // Everything is generated in vertical orientation; horizontal fixtures
@@ -282,8 +298,9 @@ public enum FixtureControlGenerator {
     }
 
     let groundTruth = FixtureGroundTruth(
-      fixtureName: "\(config.variant.name)-\(config.axis.rawValue)",
+      fixtureName: "\(config.contentStyle.rawValue)-\(config.variant.name)-\(config.axis.rawValue)",
       sourceID: config.sourceID,
+      contentStyle: config.contentStyle.rawValue,
       axis: config.axis.rawValue,
       seed: config.seed,
       sourceWidth: finalSource.width,

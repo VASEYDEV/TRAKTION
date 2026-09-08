@@ -11,7 +11,7 @@ final class EvaluationHarnessTests: XCTestCase {
     XCTAssertTrue(report.summary.isAcceptable, "\(report.summary)")
     XCTAssertEqual(report.summary.cases, report.cases.count)
     XCTAssertEqual(report.summary.pass, report.cases.count)
-    XCTAssertEqual(report.schemaVersion, 2)
+    XCTAssertEqual(report.schemaVersion, 3)
 
     let baseline = try XCTUnwrap(report.cases.first { $0.name == "baseline" })
     XCTAssertEqual(baseline.verdict, .pass)
@@ -23,6 +23,17 @@ final class EvaluationHarnessTests: XCTestCase {
     XCTAssertEqual(baseline.seamEnergies, [0, 0])
     XCTAssertNil(baseline.recoveredOrder)
     XCTAssertTrue(baseline.deterministic)
+    XCTAssertEqual(baseline.contentStyle, "light-text")
+
+    for style in FixtureContentStyle.allCases {
+      for variant in [FixtureVariant.baseline, .missingMiddle, .duplicateCapture] {
+        let result = try XCTUnwrap(
+          report.cases.first { $0.name == "style-\(style.rawValue)-\(variant.name)" }
+        )
+        XCTAssertEqual(result.contentStyle, style.rawValue)
+        XCTAssertEqual(result.verdict, .pass)
+      }
+    }
 
     let degraded = try XCTUnwrap(report.cases.first { $0.name == "degraded" })
     XCTAssertEqual(degraded.verdict, .pass)

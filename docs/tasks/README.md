@@ -25,9 +25,10 @@ unmerged packet is renumbered on port (see task 0009 for the PR #8 example).
 | [0008](0008-exact-ordering-tooling.md) | Exact-ordering tooling: Lab, smoke, evaluation ordering metrics | 2 | done | Claude | this branch |
 | [0009](0009-near-exact-order-recovery.md) | Near-exact order recovery on the exact-ordering contract | 2 | done | Claude | this branch |
 | [0010](0010-repeated-chrome-guard.md) | Repeated-chrome fixture and identical-band guard | 2 / 4 | done | Codex | this branch |
-| [0011](0011-evaluation-corpus-categories.md) | Evaluation corpus visual categories | 1 follow-up | planned | — | — |
+| [0011](0011-evaluation-corpus-categories.md) | Evaluation corpus visual categories | 1 follow-up | done | Codex | this branch |
 | [0012](0012-golden-failure-artifacts.md) | Golden-failure CI artifact bundle | 1 follow-up | planned | — | — |
 | [0013](0013-peak-memory-instrumentation.md) | Peak-memory and throughput instrumentation | 1 follow-up | planned | — | — |
+| [0014](0014-monospaced-missing-coverage-false-safe.md) | Monospaced missing-coverage false-safe | 1 follow-up | done | Codex | this branch |
 
 ## Superseded packets and pull requests
 

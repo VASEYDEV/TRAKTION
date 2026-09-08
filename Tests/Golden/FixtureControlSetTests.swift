@@ -68,6 +68,22 @@ final class FixtureControlSetTests: XCTestCase {
     }
   }
 
+  func testEveryContentStyleIsDeterministicAndRecordedInGroundTruth() throws {
+    var fingerprints = Set<String>()
+    for style in FixtureContentStyle.allCases {
+      let configuration = FixtureControlConfiguration(seed: 901, contentStyle: style)
+      let first = try FixtureControlGenerator.generate(configuration)
+      let second = try FixtureControlGenerator.generate(configuration)
+      XCTAssertEqual(first.source, second.source)
+      XCTAssertEqual(first.captures, second.captures)
+      XCTAssertEqual(first.groundTruth, second.groundTruth)
+      XCTAssertEqual(first.groundTruth.contentStyle, style.rawValue)
+      XCTAssertEqual(first.groundTruth.schemaVersion, 2)
+      fingerprints.insert(first.groundTruth.sourcePixelFingerprint)
+    }
+    XCTAssertEqual(fingerprints.count, FixtureContentStyle.allCases.count)
+  }
+
   func testGroundTruthRoundTripsThroughCodable() throws {
     let truth = try bundle(.duplicateCapture).groundTruth
     let encoded = try JSONEncoder().encode(truth)
