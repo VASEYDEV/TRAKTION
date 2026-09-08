@@ -20,9 +20,6 @@ current `main`; never restart a superseded branch.
    order, reconstruction, and result/failure presentation. Editor, persistence,
    and export follow in separate packets. Physical-device signing requires
    the developer's actual team and device.
-2. **Repository operations:** delete the completed/superseded remote branches
-   listed in the [continuation note](../notes/2026-09-08-repository-continuation.md)
-   when authenticated branch-deletion access is available.
 
 ## Index
 
@@ -42,7 +39,7 @@ current `main`; never restart a superseded branch.
 | [0012](0012-golden-failure-artifacts.md) | Golden-failure CI artifact bundle | 1 follow-up | done | Codex | PR #15 |
 | [0013](0013-peak-memory-instrumentation.md) | Peak-memory and throughput instrumentation | 1 follow-up | done | Codex | PR #16 |
 | [0014](0014-monospaced-missing-coverage-false-safe.md) | Monospaced missing-coverage false-safe and directional proof | 1 follow-up | done with documented limits | Codex | PR #15 |
-| [0015](0015-repository-reconciliation.md) | Repository reconciliation and development handoff | cross-milestone | done; access follow-up recorded | Codex | PR #15 |
+| [0015](0015-repository-reconciliation.md) | Repository reconciliation and development handoff | cross-milestone | done | Codex | PR #15 |
 | [0016](0016-native-ios-scaffold.md) | Native iOS target and required simulator gate | native foundation | done | Codex | PR #16 |
 | [0017](0017-native-png-reconstruction.md) | Native PNG import and supplied-order reconstruction | first native workflow | queued | assign at start | — |
 
@@ -68,8 +65,8 @@ current `main`; never restart a superseded branch.
   (task 0001); its branch is gone.
 
 Policy: delete branches after their work is merged or verified as superseded;
-`main` is the only long-lived branch. Access-blocked cleanup is recorded in
-the continuation note above.
+`main` is the only long-lived branch. The earlier access-blocked cleanup was
+verified resolved during PR #16; the continuation note preserves its history.
 
 ## Native app handoff
 

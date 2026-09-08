@@ -1,11 +1,11 @@
 # Task: Repository reconciliation and development handoff
 
-Status: complete; authenticated remote branch deletion remains an access follow-up
+Status: complete; remote branch cleanup verified resolved during PR #16.
 
 ## Goal
 Make the active plan agree with merged history and the verified app boundary.
 
-## Current behavior
+## Starting point
 The task index still says "this branch" for merged work, README cites an old
 23-case corpus, and PR #14 repeats the already-merged PR #13 implementation.
 Three remote branches are complete or superseded. The iOS app target remains absent.
@@ -40,3 +40,11 @@ Codex (continuation branch).
 
 ## Reviewer
 Independent code review plus owner-visible PR diff.
+
+## Branch cleanup follow-up
+A read-only Git fetch/prune and GitHub branch inventory on 2026-09-08, during
+PR #16, verified that all three previously blocked obsolete remote branches
+were gone. Only `main` and `codex/performance-and-native-ios` remained. This
+records the observed state, not a claim that this session deleted those
+branches. The access follow-up is closed; the original heads and dispositions
+remain preserved in the repository continuation note.

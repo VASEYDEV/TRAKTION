@@ -87,8 +87,10 @@ persistence, and export remain subsequent implementation work.
 ## Repository conditions
 
 Main remains unprotected; all required CI lanes and independent review are
-still required for this continuation. The three obsolete remote branches
-documented in the earlier continuation note remain blocked by unavailable
-delete-ref capability and GitHub's rejected browser password sign-in. Their
-heads must be rechecked before deletion. No account or protection settings
-were changed, and there is no repeated authentication attempt in this work.
+still required for this continuation. A read-only Git fetch/prune and GitHub
+branch inventory during PR #16 verified that the three previously blocked
+obsolete remote branches had been removed. Only `main` and the current PR
+branch remained. The deletion actor was not established; the active cleanup
+item is resolved from observed repository state. No account or protection
+settings were changed and no authentication retry was needed. Temporary
+branches/worktrees from this continuation are removed after verified merge.
