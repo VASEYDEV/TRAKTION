@@ -154,6 +154,79 @@ final class ReconstructionGoldenTests: XCTestCase {
     XCTAssertEqual(result.plan.joints.map(\.overlapRows), fixture.expectedOverlaps)
   }
 
+  func testSolidRepeatedViewportChromeFailsClosed() throws {
+    let fixture = try SyntheticFixtureFactory.baseline()
+    let bandRows = 8
+    let captures = try fixture.sequence.captures.map { capture in
+      var pixels = capture.image.pixels
+      let band = [UInt8](
+        repeating: 0,
+        count: bandRows * capture.image.rowByteCount
+      )
+      pixels.replaceSubrange(0..<band.count, with: band)
+      pixels.replaceSubrange((pixels.count - band.count)..<pixels.count, with: band)
+      return CaptureAsset(
+        id: capture.id,
+        sourceName: capture.sourceName,
+        image: try RasterImage(
+          width: capture.image.width,
+          height: capture.image.height,
+          pixels: pixels
+        )
+      )
+    }
+
+    XCTAssertThrowsError(
+      try ReconstructionEngine().reconstruct(CaptureSequence(captures: captures))
+    ) {
+      XCTAssertEqual(
+        $0 as? ReconstructionFailure,
+        .repeatedInterfaceArtifact(
+          preceding: captures[0].id,
+          following: captures[1].id,
+          rows: bandRows
+        )
+      )
+    }
+  }
+
+  /// Conservative known cost of the task-0010 guard: repeated documentary
+  /// content at a viewport edge is indistinguishable from fixed chrome using
+  /// byte evidence alone, so it must fail visibly rather than risk corruption.
+  func testLegitimateRepeatedContentIsPinnedAsTypedFalseWarning() throws {
+    let fixture = try SyntheticFixtureFactory.exactTwoCapture()
+    let rows = fixture.expectedOverlaps[0]
+    let preceding = fixture.sequence.captures[0]
+    let following = fixture.sequence.captures[1]
+    var pixels = preceding.image.pixels
+    let byteCount = rows * preceding.image.rowByteCount
+    pixels.replaceSubrange(0..<byteCount, with: following.image.pixels[0..<byteCount])
+    let repeatedPreceding = CaptureAsset(
+      id: preceding.id,
+      sourceName: preceding.sourceName,
+      image: try RasterImage(
+        width: preceding.image.width,
+        height: preceding.image.height,
+        pixels: pixels
+      )
+    )
+
+    XCTAssertThrowsError(
+      try ReconstructionEngine().reconstruct(
+        CaptureSequence(captures: [repeatedPreceding, following])
+      )
+    ) {
+      XCTAssertEqual(
+        $0 as? ReconstructionFailure,
+        .repeatedInterfaceArtifact(
+          preceding: preceding.id,
+          following: following.id,
+          rows: rows
+        )
+      )
+    }
+  }
+
   func testInsufficientOverlapFailsClosed() throws {
     let sequence = try SyntheticFixtureFactory.unrelatedPair()
     let expected = ReconstructionFailure.insufficientOverlap(

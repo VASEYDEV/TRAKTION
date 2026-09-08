@@ -1,6 +1,6 @@
 # Task: Evaluation corpus visual categories
 
-Status: planned (Milestone 1 audit follow-up, §2).
+Status: done (Milestone 1 audit follow-up, §2).
 
 ## Goal
 Every fixture category named in `docs/EVALUATION.md` that the engine can be
@@ -45,10 +45,10 @@ proxy; all control-set variants and the overlap sweep derive from it.
 - `Packages/*`, CI, gate scripts.
 
 ## Acceptance criteria
-- [ ] Each style generates byte-identically across two runs.
-- [ ] Standard corpus reports 0 false-safe across all styles, or the defect
+- [x] Each style generates byte-identically across two runs.
+- [x] Standard corpus reports 0 false-safe across all styles, or the defect
       is filed as its own task.
-- [ ] Tests pass deterministically; no unrelated diff.
+- [x] Tests pass deterministically; no unrelated diff.
 
 ## Build / test commands
 ```sh
@@ -58,7 +58,7 @@ swift run traktion-lab evaluate --output /tmp/evaluation-report.json
 ```
 
 ## Writer
-Unassigned.
+Codex.
 
 ## Reviewer
 Independent reviewer required before merge.

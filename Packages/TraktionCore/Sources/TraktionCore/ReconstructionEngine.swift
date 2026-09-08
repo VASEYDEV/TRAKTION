@@ -422,6 +422,23 @@ private extension ReconstructionEngine {
   ) throws -> PairRegistration {
     switch try probePair(preceding: preceding, following: following) {
     case .accepted(let registration):
+      let rows = registration.candidate.overlapRows
+      if rows < preceding.image.height,
+        rowsEqual(preceding.image, startRow: 0, following.image, startRow: 0, count: rows)
+          || rowsEqual(
+            preceding.image,
+            startRow: preceding.image.height - rows,
+            following.image,
+            startRow: following.image.height - rows,
+            count: rows
+          )
+      {
+        throw ReconstructionFailure.repeatedInterfaceArtifact(
+          preceding: preceding.id,
+          following: following.id,
+          rows: rows
+        )
+      }
       return registration
     case .insufficientOverlap:
       throw ReconstructionFailure.insufficientOverlap(
@@ -436,6 +453,24 @@ private extension ReconstructionEngine {
         candidateRows: candidateRows
       )
     }
+  }
+
+  /// Byte equality at a shared viewport edge is evidence of fixed interface
+  /// chrome, not documentary scroll continuity. This intentionally runs only
+  /// after registration accepts one translation and does not cover a
+  /// full-height prefix, which can legitimately extend the document.
+  func rowsEqual(
+    _ lhs: RasterImage,
+    startRow lhsStartRow: Int,
+    _ rhs: RasterImage,
+    startRow rhsStartRow: Int,
+    count: Int
+  ) -> Bool {
+    let byteCount = count * lhs.rowByteCount
+    let lhsStart = lhsStartRow * lhs.rowByteCount
+    let rhsStart = rhsStartRow * rhs.rowByteCount
+    return lhs.pixels[lhsStart..<(lhsStart + byteCount)]
+      .elementsEqual(rhs.pixels[rhsStart..<(rhsStart + byteCount)])
   }
 
   func probePair(
