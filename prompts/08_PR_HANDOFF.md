@@ -2,6 +2,10 @@
 
 Prepare a concise implementation handoff for the reviewer.
 
+Use `.github/pull_request_template.md`, GitHub's default PR body, as the
+handoff structure. `templates/PR_TEMPLATE.md` is its synchronized portable copy.
+Remove inapplicable conditional sections and link detailed task evidence.
+
 Include:
 - Behavior implemented
 - Files changed
