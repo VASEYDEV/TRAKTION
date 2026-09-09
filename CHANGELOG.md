@@ -9,11 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Native PNG reconstruction** (task 0017, ADR-021): atomic Files import with
+  content/resource preflight, explicit supplied-order confirmation, numbered
+  thumbnails and move/remove controls, off-main reconstruction, bounded result
+  previews, joint confidence, and typed failures. Cancellation/reset keep the
+  worker occupied until synchronous image work drains. Originals remain
+  unchanged; replacement admission includes the retained workspace. Five native
+  simulator scenarios cover actual service import and real picker cancellation.
+  Pure-Swift PNG inflation now rejects expansion beyond the checked IHDR bound.
+
 - **Native iOS foundation** (task 0016, ADR-020): checked-in Xcode app and
   XCTest UI targets, a shared simulator scheme, configurable device signing,
   and required simulator build/install/launch verification. The existing
   read-only shell now scrolls and fits iPhone portrait/landscape and larger
-  text. Import, reconstruction controls, editing, and export remain future work.
+  text. Task 0017 adds the first workflow; editing and export remain future work.
 
 - **Peak-memory and throughput diagnostics** (task 0013, ADR-019): evaluation
   schema 4 adds measured process peak RSS, raw-input amplification, and precise

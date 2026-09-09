@@ -35,7 +35,7 @@ let package = Package(
     ),
     .target(
       name: "TraktionUI",
-      dependencies: ["TraktionDomain", "TraktionCore"],
+      dependencies: ["TraktionDomain", "TraktionCore", "TraktionVision"],
       path: "Packages/TraktionUI/Sources/TraktionUI"
     ),
     .target(
@@ -96,6 +96,14 @@ let package = Package(
       name: "TraktionVisionPureCodecTests",
       dependencies: ["TraktionDomain", "TraktionVision"],
       path: "Tests/Unit/TraktionVisionPureCodecTests"
+    ),
+    .testTarget(
+      name: "TraktionWorkspaceTests",
+      dependencies: [
+        "TraktionUI", "TraktionDomain", "TraktionCore", "TraktionVision",
+        "FixtureForgeKit",
+      ],
+      path: "Tests/Unit/TraktionWorkspaceTests"
     ),
     .testTarget(
       name: "TraktionAITests",

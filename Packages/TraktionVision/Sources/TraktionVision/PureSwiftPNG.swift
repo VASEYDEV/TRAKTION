@@ -50,7 +50,8 @@ public enum PurePNGCodec {
 
   /// Decodes an opaque PNG into RGBA8. Any transparency (an alpha sample
   /// below 255 or a tRNS chunk) throws `nonOpaque`; `maximumPixelCount` is
-  /// enforced from the header before pixel data is inflated.
+  /// enforced from the header before pixel data is inflated. Inflation is
+  /// bounded by the exact filtered-byte count declared by the header.
   public static func decode(
     _ bytes: [UInt8],
     maximumPixelCount: Int? = nil
@@ -128,18 +129,31 @@ public enum PurePNGCodec {
     guard sawEnd else { throw PurePNGError.truncated }
     guard !idat.isEmpty else { throw PurePNGError.invalidStructure("missing IDAT") }
 
+    let channels = header.colorType == 6 ? 4 : (header.colorType == 2 ? 3 : 1)
+    let (rowBytes, rowOverflow) = header.width.multipliedReportingOverflow(by: channels)
+    let (filteredRowBytes, filterOverflow) = rowBytes.addingReportingOverflow(1)
+    let (filteredBytes, filteredOverflow) = header.height.multipliedReportingOverflow(
+      by: filteredRowBytes
+    )
+    // IHDR parsing has already checked width * height. Also check the
+    // eventual RGBA expansion for grayscale/RGB before any decompression.
+    let (rgbaBytes, rgbaOverflow) = (header.width * header.height).multipliedReportingOverflow(
+      by: RasterImage.channelsPerPixel
+    )
+    guard !rowOverflow, !filterOverflow, !filteredOverflow, !rgbaOverflow else {
+      throw PurePNGError.dimensionLimitExceeded
+    }
+
     let raw: [UInt8]
     do {
-      raw = try PureZlib.decompress(idat)
+      raw = try PureZlib.decompress(idat, outputLimit: filteredBytes)
     } catch {
       throw PurePNGError.compressionError(String(describing: error))
     }
 
-    let channels = header.colorType == 6 ? 4 : (header.colorType == 2 ? 3 : 1)
-    let rowBytes = header.width * channels
-    guard raw.count == header.height * (1 + rowBytes) else {
+    guard raw.count == filteredBytes else {
       throw PurePNGError.invalidPixelData(
-        "expected \(header.height * (1 + rowBytes)) filtered bytes, found \(raw.count)"
+        "expected \(filteredBytes) filtered bytes, found \(raw.count)"
       )
     }
 
@@ -161,7 +175,7 @@ public enum PurePNGCodec {
       }
     case 3:
       pixels = [UInt8]()
-      pixels.reserveCapacity(header.width * header.height * 4)
+      pixels.reserveCapacity(rgbaBytes)
       var index = 0
       while index < unfiltered.count {
         pixels.append(unfiltered[index])
@@ -172,7 +186,7 @@ public enum PurePNGCodec {
       }
     default:
       pixels = [UInt8]()
-      pixels.reserveCapacity(header.width * header.height * 4)
+      pixels.reserveCapacity(rgbaBytes)
       for value in unfiltered {
         pixels.append(value)
         pixels.append(value)

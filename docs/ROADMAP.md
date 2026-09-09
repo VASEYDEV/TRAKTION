@@ -1,13 +1,13 @@
 # TRAKTION Roadmap
 
-## Status (2026-09-08)
+## Status (2026-09-09)
 
 | Milestone | State | Evidence |
 | --- | --- | --- |
 | 0 — Foundation | complete | PR #4, PR #5 |
 | 1 — Exact static reconstruction | passed with measured platform evidence | corpus categories (0011), failure artifacts (0012), and gap regression repair (0014) landed; memory/throughput instrumentation (0013) verified on Linux and macOS in PR #16 |
 | 2 — Sequence intelligence | in progress | exact ordering core (task 0007), tooling (task 0008), near-exact recovery (task 0009), repeated-chrome guard (0010), and bounded directional ambiguity guard (0014) landed; broader duplicates, missing-coverage evidence, and confidence workflows remain open |
-| Native iOS app target | scaffold verified | task 0016 / PR #16: Xcode target and simulator build/install/launch; both UI tests passed; physical-device signing remains separate |
+| Native iOS app | first workflow verified | task 0017 / PR #18: PNG import, explicit supplied order, reconstruction preview and typed failures; five simulator tests passed; physical-device signing remains separate |
 | 3–7 | not started | — |
 
 Task packets and their status live in `docs/tasks/README.md`.
@@ -38,14 +38,11 @@ Horizontal reconstruction, web capture, share extension, PDF, JPEG/HEIC, split e
 
 ## Next execution order
 
-1. Implement [task 0017](tasks/0017-native-png-reconstruction.md): native PNG
-   import, explicit supplied order, reconstruction, and result/failure display.
-   Preserve originals, bound resource admission, keep reconstruction off the
-   UI thread, and retain typed ambiguity failures.
-2. Add inspection, correction, undo/redo, project persistence, and export
-   under Milestone 3 tracked packets. Verify device signing with the actual
-   developer team/device when available. Simulator success is not evidence
-   of device installation or App Store readiness.
+1. Implement [task 0019](tasks/0019-native-pixel-inspection.md): read-only
+   pixel/joint inspection with bounded display memory and a real 1:1 view.
+2. Add correction, undo/redo, project persistence, and export under separate
+   Milestone 3 packets. Verify physical-device signing and resource behavior
+   with the actual developer team/device when available.
 
 The original task-0014 gap regression remains preserved and repaired; broader
 one-direction near-exact ambiguity is still an explicit limit (ADR-018).

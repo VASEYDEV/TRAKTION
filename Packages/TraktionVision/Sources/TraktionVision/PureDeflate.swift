@@ -10,6 +10,8 @@ enum PureInflateError: Error, Equatable, Sendable {
   case invalidHuffmanTable
   case invalidSymbol
   case invalidDistance
+  case invalidOutputLimit
+  case outputLimitExceeded(limit: Int)
   case invalidZlibHeader
   case checksumMismatch(expected: UInt32, found: UInt32)
 }
@@ -168,11 +170,15 @@ enum PureInflate {
     16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15,
   ]
 
-  /// Raw DEFLATE stream (no zlib framing).
+  /// Raw DEFLATE stream (no zlib framing). The output limit is enforced
+  /// before each literal, stored block, or match grows the output buffer.
   static func decompress(
     _ input: [UInt8],
-    startingAt offset: Int = 0
+    startingAt offset: Int = 0,
+    outputLimit: Int = .max
   ) throws -> (output: [UInt8], bytesRead: Int) {
+    guard outputLimit >= 0 else { throw PureInflateError.invalidOutputLimit }
+    guard offset >= 0, offset <= input.count else { throw PureInflateError.truncated }
     var reader = BitReader(input, startingAt: offset)
     var output = [UInt8]()
 
@@ -191,6 +197,7 @@ enum PureInflate {
         guard length ^ 0xffff == complementLow | (complementHigh << 8) else {
           throw PureInflateError.invalidStoredBlockLength
         }
+        try validateGrowth(by: length, currentCount: output.count, outputLimit: outputLimit)
         for _ in 0..<length {
           output.append(try reader.byte())
         }
@@ -200,7 +207,9 @@ enum PureInflate {
         for index in 256...279 { literalLengths[index] = 7 }
         let literalTable = try HuffmanTable(lengths: literalLengths)
         let distanceTable = try HuffmanTable(lengths: [Int](repeating: 5, count: 30))
-        try decodeCompressedBlock(&reader, literalTable, distanceTable, into: &output)
+        try decodeCompressedBlock(
+          &reader, literalTable, distanceTable, into: &output, outputLimit: outputLimit
+        )
       case 2:
         let literalCount = try reader.bits(5) + 257
         let distanceCount = try reader.bits(5) + 1
@@ -244,7 +253,9 @@ enum PureInflate {
 
         let literalTable = try HuffmanTable(lengths: Array(lengths[0..<literalCount]))
         let distanceTable = try HuffmanTable(lengths: Array(lengths[literalCount...]))
-        try decodeCompressedBlock(&reader, literalTable, distanceTable, into: &output)
+        try decodeCompressedBlock(
+          &reader, literalTable, distanceTable, into: &output, outputLimit: outputLimit
+        )
       default:
         throw PureInflateError.invalidBlockType
       }
@@ -260,11 +271,13 @@ enum PureInflate {
     _ reader: inout BitReader,
     _ literalTable: HuffmanTable,
     _ distanceTable: HuffmanTable,
-    into output: inout [UInt8]
+    into output: inout [UInt8],
+    outputLimit: Int
   ) throws {
     while true {
       let symbol = try literalTable.decode(&reader)
       if symbol < 256 {
+        try validateGrowth(by: 1, currentCount: output.count, outputLimit: outputLimit)
         output.append(UInt8(symbol))
       } else if symbol == 256 {
         return
@@ -279,6 +292,7 @@ enum PureInflate {
           distanceBases[distanceSymbol] + (try reader.bits(distanceExtraBits[distanceSymbol]))
         guard distance <= output.count else { throw PureInflateError.invalidDistance }
 
+        try validateGrowth(by: length, currentCount: output.count, outputLimit: outputLimit)
         let start = output.count - distance
         for index in 0..<length {
           output.append(output[start + index])  // may overlap; must copy forward
@@ -286,11 +300,22 @@ enum PureInflate {
       }
     }
   }
+
+  private static func validateGrowth(
+    by count: Int, currentCount: Int, outputLimit: Int
+  ) throws {
+    // Subtraction avoids overflowing currentCount + count for a caller's
+    // Int.max budget. All callers supply nonnegative growth lengths.
+    guard currentCount <= outputLimit, count <= outputLimit - currentCount else {
+      throw PureInflateError.outputLimitExceeded(limit: outputLimit)
+    }
+  }
 }
 
 enum PureZlib {
   /// Decompresses a zlib stream (RFC 1950) and verifies its Adler-32 trailer.
-  static func decompress(_ input: [UInt8]) throws -> [UInt8] {
+  static func decompress(_ input: [UInt8], outputLimit: Int = .max) throws -> [UInt8] {
+    guard outputLimit >= 0 else { throw PureInflateError.invalidOutputLimit }
     guard input.count >= 6 else { throw PureInflateError.truncated }
     let cmf = input[0]
     let flg = input[1]
@@ -300,7 +325,9 @@ enum PureZlib {
     }
     guard flg & 0x20 == 0 else { throw PureInflateError.invalidZlibHeader }  // no preset dictionaries
 
-    let (output, bytesRead) = try PureInflate.decompress(input, startingAt: 2)
+    let (output, bytesRead) = try PureInflate.decompress(
+      input, startingAt: 2, outputLimit: outputLimit
+    )
     let trailerStart = 2 + bytesRead
     guard trailerStart + 4 <= input.count else { throw PureInflateError.truncated }
     let expected =

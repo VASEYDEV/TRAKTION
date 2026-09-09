@@ -80,6 +80,23 @@ app_path="$run_dir/DerivedData/Build/Products/Debug-iphonesimulator/TRAKTION.app
 test -d "$app_path"
 bundle_id="$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$app_path/Info.plist")"
 xcrun simctl install "$simulator_id" "$app_path"
+
+# Generate genuine PNG inputs outside the shipping app. Preserve source truth
+# and manifests with diagnostics; only capture files enter its data container.
+swift build --configuration release --product fixture-forge
+fixture_bin="$(swift build --configuration release --show-bin-path)/fixture-forge"
+fixture_root="$run_dir/fixtures"
+mkdir -p "$fixture_root"
+app_data="$(xcrun simctl get_app_container "$simulator_id" "$bundle_id" data)"
+for scenario in baseline duplicate-capture missing-middle; do
+  "$fixture_bin" generate --scenario "$scenario" \
+    --width 96 --viewport 160 --captures 3 --overlap 48 --seed 51 \
+    --output-dir "$fixture_root/$scenario"
+  destination="$app_data/Documents/UIFixtures/$scenario"
+  mkdir -p "$destination"
+  cp "$fixture_root/$scenario"/capture-*.png "$destination/"
+done
+
 xcrun simctl launch --terminate-running-process "$simulator_id" "$bundle_id" | tee "$run_dir/launch.log"
 
 xcodebuild test-without-building "${build_args[@]}" \

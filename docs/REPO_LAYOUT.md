@@ -8,19 +8,18 @@
 | `Package.swift` | Local Swift package products, tools, and portable test targets |
 | `Packages/TraktionDomain` | Raster/capture values and typed reconstruction contracts |
 | `Packages/TraktionCore` | Deterministic reconstruction, registration, ordering, and diagnostics |
-| `Packages/TraktionVision` | Apple ImageIO and portable PNG codec boundary |
-| `Packages/TraktionUI` | Shared read-only SwiftUI shell |
+| `Packages/TraktionVision` | Apple ImageIO, portable PNG codec, and atomic PNG preflight/import |
+| `Packages/TraktionUI` | MainActor workspace, serial image worker, and shared SwiftUI workflow |
 | `Packages/TraktionAI` | Optional semantic-reviewer interface; no active model dependency |
 | `Tools/TraktionLab` | Diagnostic CLI, evaluation, failure artifacts, memory/throughput reports |
 | `Tools/FixtureForge` | Deterministic synthetic fixtures and genuine source truth |
-| `Tests/Unit`, `Tests/Golden`, `Tests/Performance`, `Tests/Integration` | Portable domain/engine/codec and evaluation contracts |
-| `Tests/UITests` | Native simulator launch, layout, rotation, and text-size checks |
+| `Tests/Unit`, `Tests/Golden`, `Tests/Performance`, `Tests/Integration` | Portable domain/engine/codec, workspace lifecycle, real PNG pipeline, and evaluation contracts |
+| `Tests/UITests` | Native import/order/result/refusal/reset, picker cancellation, rotation, and text-size checks |
 | `Tests/SyntheticFixtures`, `Tests/RealWorldFixtures` | Fixture metadata and private-capture boundary |
 | `scripts` | Repository, Swift, PNG smoke, and native simulator verification |
 
 The native target links the repository's local package. There is no external
-package download or Xcode project generator. Import, reconstruction controls,
-editing, persistence, and export are still future native workflows.
+package download or Xcode project generator. Pixel inspection, editing, persistence, and export remain future native workflows.
 
 The Lab remains the executable reconstruction and diagnostic path:
 

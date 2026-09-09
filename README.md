@@ -21,7 +21,7 @@ Full-page capture often fails: content scrolls inside nested frames, headers sta
 
 ## Status
 
-**Milestone 1 has measured evidence; Milestone 2 and native app development are in progress.** The deterministic reconstruction core, synthetic fixture generator, diagnostic CLI, golden tests, cross-platform PNG adapters, evaluation harness, and minimal SwiftUI shell are implemented. Tasks 0012–0014 address the diagnostic and memory evidence identified by the [2026-09-03 milestone audit](docs/audits/2026-09-03-milestone-1.md). The Xcode iOS target has a required simulator build/install/launch test; device signing and usable import/editor/export flows remain separate work. Every tracked task and its verification status is in the [task index](docs/tasks/README.md).
+**Milestone 1 has measured evidence; Milestone 2 and native app development are in progress.** The deterministic reconstruction core, synthetic fixture generator, diagnostic CLI, golden tests, cross-platform PNG adapters, evaluation harness, and native PNG reconstruction workflow are implemented. Tasks 0012–0014 address the diagnostic and memory evidence identified by the [2026-09-03 milestone audit](docs/audits/2026-09-03-milestone-1.md). The Xcode iOS target has a required simulator workflow gate; device signing, pixel inspection, editing, persistence, and export remain separate work. Every tracked task and its verification status is in the [task index](docs/tasks/README.md).
 
 | Current capability | State |
 | --- | --- |
@@ -32,7 +32,7 @@ Full-page capture often fails: content scrolls inside nested frames, headers sta
 | Machine-readable evaluation gate | Implemented for the standard 45-case corpus, including ordering metrics and diagnostic memory/throughput baselines |
 | Composite, manifest, and joint diagnostics | Implemented in `traktion-lab`; evaluation/golden failure bundles are retained in CI |
 | Horizontal, sticky UI, video, web capture | Later milestones; fail or remain disabled. Identical top-and-bottom chrome is rejected by task 0010; general fixed-element recovery remains unimplemented |
-| Native application | Xcode iOS target and shared scheme verified (task 0016 / PR #16); simulator build/install/launch and both UI tests passed for the read-only shell. Device signing and import/editor/export flows remain |
+| Native application | Native Files PNG import, numbered move/remove controls, explicit order confirmation, local reconstruction preview, joint confidence, and typed failures (task 0017). Editor, persistence, export, and device signing remain |
 
 ## Design invariants
 
@@ -84,6 +84,11 @@ The Lab writes a reconstruction JSON sidecar plus per-joint JSON and absolute-di
 For the native app, open `App/TRAKTION.xcodeproj` and use its shared `TRAKTION`
 scheme with an iPhone simulator. The [iOS runbook](docs/runbooks/ios-development.md)
 documents CI reproduction, test evidence, and developer-owned device signing.
+Choose **Import PNG captures**, arrange the numbered captures from top to bottom,
+confirm the order, and select **Reconstruct locally**. A failed replacement
+keeps the previous workspace. Reset/remove only affect the workspace; original
+files remain unchanged. The result is a bounded preview of the full reconstruction.
+See [ADR-021](docs/adr/ADR-021-native-png-workspace.md) for input and resource limits.
 
 Captures whose order is unknown can be ordered from byte-exact evidence (`--order exact`) or from uniquely registered near-exact overlaps (`--order near-exact`); missing or ambiguous ordering evidence is a typed failure:
 
@@ -97,7 +102,7 @@ swift run traktion-lab reconstruct --order exact \
 
 ## Tech stack & environment
 
-- **Stack:** Swift 6, SwiftPM and Xcode, shared native SwiftUI shell, Apple ImageIO PNG boundary, dependency-free platform-neutral reconstruction core ([ADR-001](docs/adr/ADR-001-native-swift.md)).
+- **Stack:** Swift 6, SwiftPM and Xcode, shared native SwiftUI workspace, Apple ImageIO PNG boundary, dependency-free platform-neutral reconstruction core ([ADR-001](docs/adr/ADR-001-native-swift.md)).
 - **Environment variables:** verification supports `TRAKTION_SMOKE_DIR` for synthetic smoke output and `TRAKTION_GOLDEN_ARTIFACTS` for opt-in test failure evidence; see the [verification runbook](docs/runbooks/verification.md). No runtime secrets or model API are needed.
 - **Architecture:** module boundaries and data flow in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md); layout in [`docs/REPO_LAYOUT.md`](docs/REPO_LAYOUT.md).
 

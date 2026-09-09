@@ -16,10 +16,9 @@ unmerged packet is renumbered on port (see task 0009 for the PR #8 example).
 Completed packets below are historical evidence, not queued work. Continue from
 current `main`; never restart a superseded branch.
 
-1. **[0017](0017-native-png-reconstruction.md):** PNG import, explicit supplied
-   order, reconstruction, and result/failure presentation. Editor, persistence,
-   and export follow in separate packets. Physical-device signing requires
-   the developer's actual team and device.
+1. **[0019](0019-native-pixel-inspection.md):** read-only pixel/joint inspection
+   with bounded display memory. Editing, persistence, and export follow in
+   separate packets; physical-device signing requires the actual team/device.
 
 ## Index
 
@@ -41,8 +40,9 @@ current `main`; never restart a superseded branch.
 | [0014](0014-monospaced-missing-coverage-false-safe.md) | Monospaced missing-coverage false-safe and directional proof | 1 follow-up | done with documented limits | Codex | PR #15 |
 | [0015](0015-repository-reconciliation.md) | Repository reconciliation and development handoff | cross-milestone | done | Codex | PR #15 |
 | [0016](0016-native-ios-scaffold.md) | Native iOS target and required simulator gate | native foundation | done | Codex | PR #16 |
-| [0017](0017-native-png-reconstruction.md) | Native PNG import and supplied-order reconstruction | first native workflow | queued | assign at start | — |
-| [0018](0018-project-pr-template.md) | Project-specific pull request template | workflow | done | Codex | template documentation commit |
+| [0017](0017-native-png-reconstruction.md) | Native PNG import and supplied-order reconstruction | first native workflow | done | Codex | PR #18 |
+| [0018](0018-project-pr-template.md) | Project-specific pull request template | workflow | done | Codex | PR #17 |
+| [0019](0019-native-pixel-inspection.md) | Native pixel and joint inspection | native inspection | queued | assign at start | — |
 
 ## Superseded packets and pull requests
 
@@ -74,6 +74,7 @@ verified resolved during PR #16; the continuation note preserves its history.
 The SwiftPM `TRAKTION` executable remains a macOS preview path. Task 0016 verified
 the Xcode iOS target, shared scheme, simulator installation/UI tests, and
 developer-owned signing configuration. Its CI evidence is distinct from
-core/CLI tests. The shell is read-only: import, reconstruction UI, editor,
-project persistence, and export still require implementation. A simulator
+core/CLI tests. Task 0017 adds real PNG import, explicit supplied-order reconstruction, and
+result/failure presentation. Pixel inspection, editor, project persistence, and
+export still require implementation. A simulator
 pass does not establish physical-device signing or App Store readiness.
