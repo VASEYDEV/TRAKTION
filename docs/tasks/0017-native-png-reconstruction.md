@@ -1,17 +1,17 @@
 # Task: Native PNG import and supplied-order reconstruction
 
-Status: implemented locally; publication authorized, Apple/simulator CI pending.
+Status: complete — PR #18; portable, Apple PNG and native simulator gates passed.
 
 ## Goal
 Import a user's PNG captures in the native app, confirm their top-to-bottom
 order, and show the real reconstruction or its typed failure.
 
 ## Why it matters
-The verified engine currently runs through the Lab. The native shell needs
+At task start, the verified engine ran through the Lab. The native app needed
 one usable reconstruction workflow before an editor or project format.
 
-## Current behavior
-The native app is a read-only shell. The shared PNG codec and supplied-order
+## Starting behavior
+Before this task, the native app was a read-only shell. The shared PNG codec and supplied-order
 vertical engine exist. The engine is synchronous and does not cooperatively
 cancel; its aggregate raster limit is checked after input decoding.
 
@@ -74,11 +74,11 @@ ambiguity cases. Keep private screenshots out of CI and diagnostic artifacts.
       their typed failures and never display a successful composite.
 - [x] Worker tests prove one active operation, non-main execution, cancelled
       result suppression, stale-completion rejection, and bounded admission.
-- [ ] Simulator tests exercise the real importer service with synthetic file
+- [x] Simulator tests exercise the real importer service with synthetic file
       URLs, order confirmation, success, failure, and reset in portrait,
       landscape, and larger text. Real picker presentation/cancellation is
       checked separately from deterministic service injection.
-- [ ] Existing repository, portable, Apple PNG, and native simulator gates
+- [x] Existing repository, portable, Apple PNG, and native simulator gates
       pass; independent review confirms source integrity and memory ownership.
 - [x] No unrelated diff or claim of physical-device readiness.
 
@@ -107,8 +107,10 @@ file access, concurrency, memory admission, typed failures, and UI behavior.
 Swift 6.0.3 build, 165/165 XCTest tests and 45/45 evaluation cases pass locally.
 Independent service, codec, UI and workspace review is complete. Actual
 fresh-process worker import/reconstruction memory and reproduction sources are
-recorded with model-scheduler and device limits. Native tests are implemented
-but not executed; retain the unchecked simulator/platform criteria until CI
-passes. Sean explicitly approved all GitHub interaction on 2026-09-09,
-resolving the earlier publication approval block. Publish the reviewed branch,
-verify every required lane, then merge and delete the completed branch.
+recorded with model-scheduler and device limits. [Implementation CI run 34304298288](https://github.com/VASEYDEV/TRAKTION/actions/runs/34304298288) passed all required lanes. Both
+platforms executed all 165 portable tests and passed PNG smoke and the 45-case
+evaluation. Xcode 16.4 (16F6); iPhone SE (3rd generation), iOS 26.2: build, install, launch and all five native UI
+tests passed. Screenshots are retained in the test result; visual inspection
+status is recorded in the evidence note. Final documentation changes must also
+pass the required aggregator before merge. Sean explicitly authorized GitHub
+publication, verification, merge and branch cleanup.

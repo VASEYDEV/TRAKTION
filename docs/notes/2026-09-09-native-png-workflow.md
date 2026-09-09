@@ -127,12 +127,12 @@ sha256sum "$probe_dir"/phone/*.png "$probe_dir"/long/*.png > "$probe_dir/origina
 sha256sum --check "$probe_dir/originals.sha256"
 ```
 
-## Remaining merge gate and repository cleanup
+## Pre-publication gate and repository cleanup
 Five actual-app simulator scenarios are implemented for import/order/success,
 reordering, duplicate/gap refusals, reset, portrait/landscape, larger text and
-real Files picker presentation/cancellation. They have **not run** for this
-change. Apple SwiftUI compilation, ImageIO verification, simulator screenshots
-and final-head remote CI remain pending. No screenshots were visually inspected.
+real Files picker presentation/cancellation. At the local handoff, these scenarios had **not run**. Apple SwiftUI compilation,
+ImageIO verification, simulator screenshots and remote CI were then pending.
+The published verification below supersedes that gate status.
 
 Automatic approval review rejected `github_create_tree` twice, saying direct
 end-user authorization to publish the local payload to GitHub was required.
@@ -147,6 +147,24 @@ only the verified head and delete the completed integration branch.
 Three isolated implementation branches were integrated as commits `cf4ecb4`,
 `78fa946`, `8e062bb` and `853e697`, then their clean worktrees and branches were
 removed. The old PR-template worktree was clean and its full tree
-matched merged `main`; it was also removed. Only `main` and
-`codex/native-png-workflow` remain locally; the remote inventory contains only
-`main`. All implemented source, tests and documentation are committed locally.
+matched merged `main`; it was also removed. At that handoff, only `main` and `codex/native-png-workflow` remained locally,
+and the remote inventory contained only `main`. The implementation was committed
+locally before publication.
+
+## Published platform verification
+Sean's explicit GitHub authorization resolved the publication block. PR #18
+contains the verified implementation. [CI run 34304298288](https://github.com/VASEYDEV/TRAKTION/actions/runs/34304298288) passed the
+repository, Linux, Apple package/PNG, iOS simulator and required-aggregator jobs.
+Both Linux and Apple executed all 165 portable tests, PNG smoke, full 45/45
+evaluation and fresh phone/long performance cases. Xcode 16.4 (16F6); iPhone SE (3rd generation), iOS 26.2: native
+build, install, launch and all five UI tests passed. XCTest exercised actual
+service import, confirmation/reorder, reconstruction, duplicate/gap refusals,
+reset, rotation, larger text and real Files picker cancellation.
+
+Six named screenshot attachments and xcresult are retained in the
+[native artifact](https://github.com/VASEYDEV/TRAKTION/actions/runs/34304298288/artifacts/10086264945);
+no manual visual inspection is claimed. The five UI tests completed in
+136.520 seconds. Xcode used the iPhoneSimulator 18.5 SDK and iOS 17 deployment
+minimum on the installed iOS 26.2 runtime. No physical-device, export or pixel-scale inspection
+claim is added. Final-head verification and merge identifiers are recorded in
+the PR; documentation-only follow-up changes retain the same required gates.
