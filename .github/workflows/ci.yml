@@ -105,7 +105,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - name: Build, install, launch, and test the native shell
+      - name: Build, install, launch, and test the native PNG workflow
         env:
           TRAKTION_IOS_ARTIFACTS: ${{ runner.temp }}/traktion-ios
         run: bash scripts/verify-ios.sh

@@ -1,0 +1,42 @@
+{
+  "afterImport" : {
+    "currentResidentBytes" : 151056384,
+    "processLifetimePeakResidentBytes" : 182755328
+  },
+  "afterReconstruction" : {
+    "currentResidentBytes" : 240074752,
+    "processLifetimePeakResidentBytes" : 239988736
+  },
+  "beforeImport" : {
+    "currentResidentBytes" : 18616320,
+    "processLifetimePeakResidentBytes" : 18644992
+  },
+  "captureCount" : 10,
+  "caseName" : "performance-long-10",
+  "importSeconds" : 4.564273383,
+  "inputBytes" : 118497600,
+  "jointConfidences" : [
+    "exact",
+    "exact",
+    "exact",
+    "exact",
+    "exact",
+    "exact",
+    "exact",
+    "exact",
+    "exact"
+  ],
+  "jointCount" : 9,
+  "outputHeight" : 19020,
+  "outputWidth" : 1170,
+  "ownedRasterBudgetBytes" : 268435456,
+  "ownedRasterBytesAfterReconstruction" : 211890424,
+  "platform" : "Linux x86_64; Swift 6.0.3 release; synchronous NativeWorkspaceWorker + NativeRasterPreview; no SwiftUI/CGImage/model scheduler",
+  "reconstructionAdmissionBytes" : 247021168,
+  "reconstructionSeconds" : 9.557637832,
+  "resultBytes" : 89013600,
+  "resultPreviewBytes" : 3560544,
+  "sourceFingerprint" : "fnv1a64:e8c6c1b51d062135",
+  "sourceFingerprintMatches" : true,
+  "thumbnailBytes" : 818680
+}

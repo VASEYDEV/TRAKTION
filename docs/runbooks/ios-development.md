@@ -1,8 +1,9 @@
 # Native iOS development
 
-The Xcode target runs the existing read-only TRAKTION shell. Import,
-reconstruction controls, inspection/editing, persistence, and export are
-subsequent tasks. No production icon or physical-device release is claimed.
+The Xcode target imports 2–10 opaque equal-width PNG captures from Files,
+requires explicit top-to-bottom order confirmation, and shows local supplied-order
+reconstruction or a typed failure. Inspection/editing, persistence, and export
+are subsequent tasks. No production icon or physical-device release is claimed.
 
 ## Open and run
 1. Use macOS with Xcode 16 or newer and an installed iOS 17+ simulator runtime.
@@ -36,10 +37,15 @@ The verification sequence is:
 2. Boot the dedicated simulator.
 3. Run `xcodebuild build-for-testing` with the shared scheme and
    `CODE_SIGNING_ALLOWED=NO` for this simulator invocation.
-4. Use `simctl install` and `simctl launch` on the resulting `TRAKTION.app`.
-5. Run `xcodebuild test-without-building`; XCTest verifies title, workflow
-   steps, read-only status, horizontal containment, scrolling, rotation, and
-   larger text on the actual app.
+4. Generate baseline/duplicate/missing-middle PNG fixtures in a separate
+   release CLI process, install the app, and copy only capture PNGs into the
+   dedicated simulator app container. Source truth/manifests stay outside it.
+5. Launch and run `xcodebuild test-without-building`; five XCTest scenarios
+   verify real-service import, explicit order/reordering, actual results,
+   duplicate/gap refusals, reset, portrait/landscape and larger text. A separate
+   scenario presents and cancels the actual system Files picker. The Debug-only
+   `TRAKTION_UI_FIXTURE` bootstrap reads these files through the production
+   importer; it never confirms order or injects a reconstruction result.
 6. Shut down and delete the dedicated simulator, preserving the test result.
 
 Results live in a new run directory beneath `.traktion-local/ios-smoke`.
@@ -47,6 +53,9 @@ Set `TRAKTION_IOS_ARTIFACTS` to change that parent directory. Runs do not
 overwrite each other's diagnostics. `TRAKTION.xcresult` contains XCTest
 results; `build.log`, `launch.log`, `tests.log`, and toolchain/device JSON
 support diagnosis. CI uploads those files as `traktion-ios-verification`.
+Screenshots are attached to `TRAKTION.xcresult`; test assertion success and
+actual human/agent visual inspection must be reported separately. These tests
+do not automate third-party Files provider selection or physical-device use.
 Build products remain under the run's `DerivedData` directory and are not
 uploaded. Missing prerequisites, build failures, launch failures, and failed
 UI assertions make the lane and required aggregator fail.

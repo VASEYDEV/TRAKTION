@@ -1,0 +1,35 @@
+{
+  "afterImport" : {
+    "currentResidentBytes" : 68169728,
+    "processLifetimePeakResidentBytes" : 100012032
+  },
+  "afterReconstruction" : {
+    "currentResidentBytes" : 97173504,
+    "processLifetimePeakResidentBytes" : 100012032
+  },
+  "beforeImport" : {
+    "currentResidentBytes" : 18374656,
+    "processLifetimePeakResidentBytes" : 18472960
+  },
+  "captureCount" : 3,
+  "caseName" : "performance-phone-3",
+  "importSeconds" : 1.027313115,
+  "inputBytes" : 35549280,
+  "jointConfidences" : [
+    "exact",
+    "exact"
+  ],
+  "jointCount" : 2,
+  "outputHeight" : 6196,
+  "outputWidth" : 1170,
+  "ownedRasterBudgetBytes" : 268435456,
+  "ownedRasterBytesAfterReconstruction" : 68013564,
+  "platform" : "Linux x86_64; Swift 6.0.3 release; synchronous NativeWorkspaceWorker + NativeRasterPreview; no SwiftUI/CGImage/model scheduler",
+  "reconstructionAdmissionBytes" : 79978376,
+  "reconstructionSeconds" : 1.8463505040000001,
+  "resultBytes" : 28997280,
+  "resultPreviewBytes" : 3221400,
+  "sourceFingerprint" : "fnv1a64:a5a149b498052670",
+  "sourceFingerprintMatches" : true,
+  "thumbnailBytes" : 245604
+}

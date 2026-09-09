@@ -1,6 +1,6 @@
 # Task: Native PNG import and supplied-order reconstruction
 
-Status: queued — next implementation task after PR #16.
+Status: implemented locally; publication authorized, Apple/simulator CI pending.
 
 ## Goal
 Import a user's PNG captures in the native app, confirm their top-to-bottom
@@ -47,6 +47,9 @@ export, semantic review, production artwork, and device distribution.
 - `Packages/TraktionUI`: workspace state, importer coordination, and views.
 - `Packages/TraktionVision`: narrowly scoped PNG metadata/resource preflight
   and platform file/image adapters where the existing codec is insufficient.
+  This includes bounding pure-Swift inflation by the checked IHDR filtered-byte
+  length: import preflight cannot admit hostile compressed expansion safely
+  while decoding can allocate beyond the declared raster.
 - App/package target linkage and relevant unit, integration, and UI tests.
 - This packet, the task index, roadmap, runbooks, and an ADR for the workflow.
 
@@ -61,15 +64,15 @@ including supplied-order success, duplicate, missing-coverage, and directional
 ambiguity cases. Keep private screenshots out of CI and diagnostic artifacts.
 
 ## Acceptance criteria
-- [ ] Real synthetic PNG import through the production service reconstructs
+- [x] Real synthetic PNG import through the production service reconstructs
       exact source pixels; user-confirmed order reaches the engine unchanged.
-- [ ] Invalid count, corrupt/non-PNG content, transparency, animation, width
+- [x] Invalid count, corrupt/non-PNG content, transparency, animation, width
       mismatch, and excessive dimensions fail atomically with useful errors.
-- [ ] Source hashes are unchanged after success, failure, cancellation, reset,
+- [x] Source hashes are unchanged after success, failure, cancellation, reset,
       and replacement; temporary-file cleanup affects owned copies only.
-- [ ] Duplicate, missing-coverage, and directional-ambiguity fixtures preserve
+- [x] Duplicate, missing-coverage, and directional-ambiguity fixtures preserve
       their typed failures and never display a successful composite.
-- [ ] Worker tests prove one active operation, non-main execution, cancelled
+- [x] Worker tests prove one active operation, non-main execution, cancelled
       result suppression, stale-completion rejection, and bounded admission.
 - [ ] Simulator tests exercise the real importer service with synthetic file
       URLs, order confirmation, success, failure, and reset in portrait,
@@ -77,7 +80,7 @@ ambiguity cases. Keep private screenshots out of CI and diagnostic artifacts.
       checked separately from deterministic service injection.
 - [ ] Existing repository, portable, Apple PNG, and native simulator gates
       pass; independent review confirms source integrity and memory ownership.
-- [ ] No unrelated diff or claim of physical-device readiness.
+- [x] No unrelated diff or claim of physical-device readiness.
 
 ## Build / test commands
 ```sh
@@ -95,5 +98,17 @@ Record actual import/reconstruction memory behavior before choosing a mobile
 resource policy; process peaks from task 0013 do not establish device limits.
 
 ## Writer and reviewer
-Assign one implementation owner when starting; require independent review of
+Codex owns integration; isolated service, codec, and UI branches each have one
+writer. Require independent review of
 file access, concurrency, memory admission, typed failures, and UI behavior.
+
+## Verification handoff
+[2026-09-09 evidence](../notes/2026-09-09-native-png-workflow.md): optimized
+Swift 6.0.3 build, 165/165 XCTest tests and 45/45 evaluation cases pass locally.
+Independent service, codec, UI and workspace review is complete. Actual
+fresh-process worker import/reconstruction memory and reproduction sources are
+recorded with model-scheduler and device limits. Native tests are implemented
+but not executed; retain the unchecked simulator/platform criteria until CI
+passes. Sean explicitly approved all GitHub interaction on 2026-09-09,
+resolving the earlier publication approval block. Publish the reviewed branch,
+verify every required lane, then merge and delete the completed branch.
