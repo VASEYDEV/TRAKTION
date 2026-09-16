@@ -104,3 +104,10 @@ pan, joint/source selection, portrait/landscape, reopening/reset and larger text
 The 1170 × 19020 ten-capture Linux probe measures the same bounded raster renderer
 while retaining the full workspace; it is not a device memory claim. Commands
 and scoped evidence: [inspection note](../notes/2026-09-16-native-inspection.md).
+
+Native verification runs six small-input UI cases in Debug and the full phone-size
+inspection case in a Release test build. Both build/install/test invocations must
+pass. The explicit `TRAKTION_UI_TESTING` flag enables synthetic bootstrap in that
+Release test binary only; normal Release builds exclude test input. See the task
+note for the initial unoptimized reconstruction timeout. Both xcresults and
+exported attachments are retained in `traktion-ios-verification`.

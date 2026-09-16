@@ -127,10 +127,15 @@ final class TRAKTIONLaunchTests: XCTestCase {
     let app = launch(scenario: "inspection-long")
     confirmOrder(in: app)
     app.buttons["workspace.reconstruct"].tap()
-    XCTAssertTrue(app.staticTexts["workspace.result.dimensions"].waitForExistence(timeout: 30))
+    guard app.staticTexts["workspace.result.dimensions"].waitForExistence(timeout: 30) else {
+      attachScreenshot(app, name: "Long reconstruction not ready")
+      XCTFail("Phone-size reconstruction did not complete: \(app.staticTexts["workspace.status"].label)")
+      return
+    }
     openInspection(in: app)
     let scroll = app.scrollViews["inspection.scroll"]
-    XCTAssertEqual(app.staticTexts["inspection.dimensions"].label, "1170 × 6196 pixels")
+    XCTAssertEqual(app.staticTexts["inspection.dimensions"].label,
+      String.localizedStringWithFormat("%lld × %lld pixels", 1170, 6196))
     let one = app.buttons["inspection.oneToOne"]
     reveal(one, in: scroll)
     one.tap()
@@ -156,7 +161,7 @@ final class TRAKTIONLaunchTests: XCTestCase {
       "First: capture-002.png\nSecond: capture-003.png")
     XCTAssertEqual(app.staticTexts["inspection.joint.confidence"].label,
       "Confidence: Exact. Overlap: 700 rows.")
-    XCTAssertTrue(app.staticTexts["inspection.joint.seam"].label.contains("output row 4014"))
+    XCTAssertTrue(app.staticTexts["inspection.joint.seam"].label.contains(String.localizedStringWithFormat("output row %lld", 4014)))
     let source = app.buttons["inspection.source.choose"]
     reveal(source, in: scroll)
     source.tap()

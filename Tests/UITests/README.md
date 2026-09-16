@@ -27,3 +27,8 @@ metadata, orientation, dismiss/reopen/reset, and XXXL controls. Four additional
 named screenshots are attached. The ten-capture 19,020-row raster and resource
 checks run separately in the portable tests/probe. See ADR-022 for pixel-scale
 semantics and the distinction between owned raster reservation and device RSS.
+
+`verify-ios.sh` runs the six small-input cases against Debug and the unchanged
+full-size inspection case against a separately built Release app. No test is
+omitted overall. `TRAKTION_UI_TESTING` is set only for that optimized simulator
+test build; regular Release builds cannot import fixtures from launch environment.

@@ -11,13 +11,13 @@
     var body: some Scene {
       WindowGroup {
         TraktionWorkspaceView(model: model)
-          #if DEBUG
+          #if DEBUG || TRAKTION_UI_TESTING
             .task { importUITestFixtureIfRequested() }
           #endif
       }
     }
 
-    #if DEBUG
+    #if DEBUG || TRAKTION_UI_TESTING
       @State private var didLoadUITestFixture = false
 
       private func importUITestFixtureIfRequested() {

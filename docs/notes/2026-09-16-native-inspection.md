@@ -70,7 +70,24 @@ and exact seam coordinates, both original views, portrait/landscape, closing and
 reopening without stale selection, reset, and XXXL accessibility controls. The
 five existing PNG workflow/failure tests remain enabled.
 
-Apple package, PNG and iOS simulator runs are pending publication. Screenshots
+[Initial CI run 35158214111](https://github.com/VASEYDEV/TRAKTION/actions/runs/35158214111)
+passed repository, Linux and Apple package/ImageIO gates: 177 tests each and
+45/45 evaluations, plus isolated phone/long performance cases. Xcode 16.4 built
+and launched the native app on iPhone SE (3rd generation), iOS 26.2. Six UI tests
+passed, including the new XXXL inspection test (72.376 s). The full-size phone
+case failed because its Debug reconstruction was still busy after 107 seconds;
+its dependent inspection assertions never ran. The test did not observe a typed
+reconstruction failure, and this is not evidence of a successful phone UI flow.
+
+The native script now preserves those six Debug UI cases and runs the exact
+same full-size inputs and inspection assertions in a separate Release test
+build. This matches the existing portable gate's optimized full-size policy;
+there is no fixture reduction, timeout increase or skipped overall test. The
+explicit `TRAKTION_UI_TESTING` compilation flag enables the synthetic bootstrap
+only in that Release test build; ordinary Release apps still exclude it.
+Localized numeric expectations follow Foundation's formatting used by SwiftUI.
+Both xcresults and exported screenshots are retained. The revised native run
+is pending. Screenshots
 are retained by XCTest; this note does not claim manual visual inspection until
 those artifacts are retrieved and reviewed. Physical-device signing/memory,
 VoiceOver speech, third-party Files-provider selection and export are not tested

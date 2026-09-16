@@ -21,7 +21,8 @@ debug mode, then runs the complete XCTest suite in release mode with testable im
 unit, golden, failure-path, determinism, performance-shape, and conditional PNG tests.
 All assertions and full-size cases remain. The full suite now verifies optimized
 runtime behavior; the portable debug configuration is compiled, not fully exercised
-at runtime. PNG smoke already uses release tools; the native UI lane runs a debug app.
+at runtime. PNG smoke already uses release tools; the native UI lane retains Debug interaction tests and additionally runs the
+full phone-size inspection scenario in an optimized simulator test build.
 This keeps production-sized image work practical without filtering or skipping tests.
 Pure-Swift PNG tests run on Linux; Apple-only ImageIO parity tests compile and run on macOS.
 

@@ -43,7 +43,6 @@ current `main`; never restart a superseded branch.
 | [0017](0017-native-png-reconstruction.md) | Native PNG import and supplied-order reconstruction | first native workflow | done | Codex | PR #18 |
 | [0018](0018-project-pr-template.md) | Project-specific pull request template | workflow | done | Codex | PR #17 |
 | [0019](0019-native-pixel-inspection.md) | Native pixel and joint inspection | native inspection | in progress | Codex | — |
-
 | [0020](0020-nondestructive-seam-adjustment.md) | Non-destructive seam adjustment and undo | first editing step | queued | assign at start | — |
 
 ## Superseded packets and pull requests
@@ -77,6 +76,7 @@ The SwiftPM `TRAKTION` executable remains a macOS preview path. Task 0016 verifi
 the Xcode iOS target, shared scheme, simulator installation/UI tests, and
 developer-owned signing configuration. Its CI evidence is distinct from
 core/CLI tests. Task 0017 adds real PNG import, explicit supplied-order reconstruction, and
-result/failure presentation. Pixel inspection, editor, project persistence, and
-export still require implementation. A simulator
+result/failure presentation. Task 0019 adds bounded 1:1 pixel/joint inspection
+and original-capture evidence. Editing, project persistence and export still
+require implementation. A simulator
 pass does not establish physical-device signing or App Store readiness.

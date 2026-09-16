@@ -111,6 +111,41 @@ xcodebuild test-without-building "${build_args[@]}" \
   -test-timeouts-enabled YES \
   -default-test-execution-time-allowance 120 \
   -maximum-test-execution-time-allowance 180 \
+  -skip-testing:TRAKTIONUITests/TRAKTIONLaunchTests/testLongPixelInspectionPanZoomJointSourcesAndReturn \
   -resultBundlePath "$run_dir/TRAKTION.xcresult" | tee "$run_dir/tests.log"
+
+mkdir -p "$run_dir/attachments"
+xcrun xcresulttool export attachments --path "$run_dir/TRAKTION.xcresult" \
+  --output-path "$run_dir/attachments/debug"
+
+# Full phone-size core work is verified with production optimization, matching
+# the portable performance gate. Keep the six small-input Debug UI tests above.
+# This flag enables only the existing synthetic-fixture bootstrap in this test
+# build; ordinary Release apps do not include it.
+release_args=(
+  -project App/TRAKTION.xcodeproj
+  -scheme TRAKTION
+  -configuration Release
+  -destination "platform=iOS Simulator,id=$simulator_id"
+  -destination-timeout 60
+  -derivedDataPath "$run_dir/DerivedData"
+  SWIFT_ACTIVE_COMPILATION_CONDITIONS=TRAKTION_UI_TESTING
+  CODE_SIGNING_ALLOWED=NO
+)
+xcodebuild build-for-testing "${release_args[@]}" | tee "$run_dir/release-build.log"
+xcrun simctl terminate "$simulator_id" "$bundle_id" || true
+xcrun simctl install "$simulator_id" "$run_dir/DerivedData/Build/Products/Release-iphonesimulator/TRAKTION.app"
+xcodebuild test-without-building "${release_args[@]}" \
+  -parallel-testing-enabled NO \
+  -maximum-concurrent-test-simulator-destinations 1 \
+  -test-timeouts-enabled YES \
+  -default-test-execution-time-allowance 120 \
+  -maximum-test-execution-time-allowance 180 \
+  -only-testing:TRAKTIONUITests/TRAKTIONLaunchTests/testLongPixelInspectionPanZoomJointSourcesAndReturn \
+  -resultBundlePath "$run_dir/TRAKTION-Release.xcresult" | tee "$run_dir/release-tests.log"
+
+# Export retained synthetic screenshots alongside xcresult for direct visual review.
+xcrun xcresulttool export attachments --path "$run_dir/TRAKTION-Release.xcresult" \
+  --output-path "$run_dir/attachments/release"
 
 echo "IOS SIMULATOR VERIFICATION: PASS"

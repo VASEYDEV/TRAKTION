@@ -119,6 +119,7 @@ jobs:
             ${{ runner.temp }}/traktion-ios/run.*/*.json
             ${{ runner.temp }}/traktion-ios/run.*/*.log
             ${{ runner.temp }}/traktion-ios/run.*/*.xcresult
+            ${{ runner.temp }}/traktion-ios/run.*/attachments
           if-no-files-found: warn
 
   required:
