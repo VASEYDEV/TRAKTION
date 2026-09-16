@@ -86,10 +86,9 @@
       VStack(alignment: .leading, spacing: 8) {
         Text("First: \(joint.preceding.sourceName)\nSecond: \(joint.following.sourceName)")
           .accessibilityIdentifier("inspection.joint.names")
-        Text("Capture IDs: \(joint.preceding.id) → \(joint.following.id)")
+        Text("Capture \(joint.precedingPosition) → capture \(joint.followingPosition)")
           .font(.caption)
-          .textSelection(.enabled)
-          .accessibilityIdentifier("inspection.joint.ids")
+          .accessibilityIdentifier("inspection.joint.positions")
         Text("Confidence: \(joint.diagnosis.confidence.rawValue.capitalized). Overlap: \(joint.diagnosis.overlapRows) rows.")
           .accessibilityIdentifier("inspection.joint.confidence")
         Text("Seam boundary at output row \(joint.diagnosis.outputSeamRow); overlap row \(joint.diagnosis.seamRowInOverlap). First original row \(joint.precedingSeamRow); second original row \(joint.followingSeamRow).")

@@ -116,14 +116,20 @@ struct InspectionJoint: Sendable {
   let diagnosis: JointDiagnosis
   let preceding: CaptureAsset
   let following: CaptureAsset
+  let precedingPosition: Int
+  let followingPosition: Int
   let precedingOrigin: Int
   let followingOrigin: Int
 
   init(_ diagnosis: JointDiagnosis, result: ReconstructionResult, captures: [CaptureAsset]) throws {
     guard let preceding = captures.first(where: { $0.id == diagnosis.precedingCaptureID }),
       let following = captures.first(where: { $0.id == diagnosis.followingCaptureID }),
-      let first = result.plan.placements.first(where: { $0.captureID == preceding.id }),
-      let second = result.plan.placements.first(where: { $0.captureID == following.id }),
+      let firstIndex = result.plan.placements.firstIndex(where: { $0.captureID == preceding.id }),
+      let secondIndex = result.plan.placements.firstIndex(where: { $0.captureID == following.id })
+    else { throw InspectionFailure.invalidJoint }
+    let first = result.plan.placements[firstIndex]
+    let second = result.plan.placements[secondIndex]
+    guard
       diagnosis.overlapRows > 0,
       diagnosis.overlapRows <= min(preceding.image.height, following.image.height),
       (0...diagnosis.overlapRows).contains(diagnosis.seamRowInOverlap),
@@ -137,6 +143,8 @@ struct InspectionJoint: Sendable {
     self.diagnosis = diagnosis
     self.preceding = preceding
     self.following = following
+    precedingPosition = firstIndex + 1
+    followingPosition = secondIndex + 1
     precedingOrigin = first.originY
     followingOrigin = second.originY
   }

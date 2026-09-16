@@ -16,9 +16,10 @@ unmerged packet is renumbered on port (see task 0009 for the PR #8 example).
 Completed packets below are historical evidence, not queued work. Continue from
 current `main`; never restart a superseded branch.
 
-1. **[0019](0019-native-pixel-inspection.md):** read-only pixel/joint inspection
-   with bounded display memory. Editing, persistence, and export follow in
-   separate packets; physical-device signing requires the actual team/device.
+1. **[0020](0020-nondestructive-seam-adjustment.md):** deliberate seam adjustment
+   inside proven overlaps, with apply/cancel and undo/redo. Persistence and export
+   follow in separate packets; physical-device signing requires the actual
+   team/device.
 
 ## Index
 
@@ -42,7 +43,7 @@ current `main`; never restart a superseded branch.
 | [0016](0016-native-ios-scaffold.md) | Native iOS target and required simulator gate | native foundation | done | Codex | PR #16 |
 | [0017](0017-native-png-reconstruction.md) | Native PNG import and supplied-order reconstruction | first native workflow | done | Codex | PR #18 |
 | [0018](0018-project-pr-template.md) | Project-specific pull request template | workflow | done | Codex | PR #17 |
-| [0019](0019-native-pixel-inspection.md) | Native pixel and joint inspection | native inspection | in progress | Codex | — |
+| [0019](0019-native-pixel-inspection.md) | Native pixel and joint inspection | native inspection | done | Codex | PR #19 |
 | [0020](0020-nondestructive-seam-adjustment.md) | Non-destructive seam adjustment and undo | first editing step | queued | assign at start | — |
 
 ## Superseded packets and pull requests

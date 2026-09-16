@@ -1,6 +1,6 @@
 # Task: Native pixel and joint inspection
 
-Status: in progress — Codex owns implementation; independent review required.
+Status: done — Codex implementation, independent review, and required CI in PR #19.
 
 ## Goal
 Let users inspect the reconstructed pixels and each proven joint before adding
@@ -9,7 +9,7 @@ editing, persistence, or export.
 ## Current behavior
 Task 0017 imports actual PNG captures, confirms supplied order, and presents a
 bounded preview plus joint confidence. The full reconstruction and captures are
-retained, but users cannot zoom to source pixels or inspect seam evidence.
+retained. This task adds source-pixel zoom and seam evidence inspection.
 
 ## Required behavior
 - Add an accessible read-only inspection route from a successful result.
@@ -38,9 +38,9 @@ Core registration thresholds and source pixels remain unchanged.
 - [x] Joint selection maps stable capture IDs to visible names and exact seam
       coordinates/confidence without re-running or weakening registration.
 - [x] Reset/replacement/navigation cannot display stale results or tiles.
-- [ ] Portrait, landscape, larger text, labels, and controls are exercised on
+- [x] Portrait, landscape, larger text, labels, and controls are exercised on
       the actual simulator target, with inspection evidence recorded honestly.
-- [ ] Existing repository/core/Apple PNG/native gates and independent review pass.
+- [x] Existing repository/core/Apple PNG/native gates and independent review pass.
 
 ## Evidence and ownership
 Assign one implementation writer; independently review pixel coordinates,

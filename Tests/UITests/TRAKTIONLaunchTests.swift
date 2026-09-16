@@ -164,6 +164,7 @@ final class TRAKTIONLaunchTests: XCTestCase {
     app.buttons["inspection.region.joint.1"].tap()
     XCTAssertEqual(app.staticTexts["inspection.joint.names"].label,
       "First: capture-002.png\nSecond: capture-003.png")
+    XCTAssertEqual(app.staticTexts["inspection.joint.positions"].label, "Capture 2 → capture 3")
     XCTAssertEqual(app.staticTexts["inspection.joint.confidence"].label,
       "Confidence: Exact. Overlap: 700 rows.")
     XCTAssertTrue(app.staticTexts["inspection.joint.seam"].label.contains(String.localizedStringWithFormat("output row %lld", 4014)))
@@ -342,7 +343,8 @@ final class TRAKTIONLaunchTests: XCTestCase {
   }
 
   private func attachScreenshot(_ app: XCUIApplication, name: String) {
-    let screenshot = XCTAttachment(screenshot: app.screenshot())
+    // Capture the display rather than a rotated application's cropped bounds.
+    let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
     screenshot.name = name
     screenshot.lifetime = .keepAlways
     add(screenshot)

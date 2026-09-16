@@ -58,6 +58,8 @@ final class InspectionRasterTests: XCTestCase {
       let joint = try InspectionJoint(diagnosis, result: result, captures: captures)
       XCTAssertEqual(joint.preceding.id, fixture.captures[index].id)
       XCTAssertEqual(joint.following.id, fixture.captures[index + 1].id)
+      XCTAssertEqual(joint.precedingPosition, index + 1)
+      XCTAssertEqual(joint.followingPosition, index + 2)
       XCTAssertEqual(joint.followingOrigin, fixture.sourceOrigins[index + 1])
       XCTAssertEqual(joint.diagnosis.confidence, .exact)
       let row = diagnosis.outputSeamRow

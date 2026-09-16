@@ -97,7 +97,7 @@ After successful reconstruction, select **Inspect pixels and joints**. Fit shows
 an overview; **1:1 pixels** maps one source pixel to one physical display pixel.
 Drag the image to pan on release, or use direction and top/bottom buttons. The
 zoom percentage and zero-based origin describe the current source viewport.
-Select a joint to see both filenames/IDs, confidence, overlap and seam boundaries;
+Select a joint to see both filenames/positions, confidence, overlap and seam boundaries;
 choose Result, First original or Second original to inspect their unchanged
 pixels. Done clears the inspection session; reopening begins at the result.
 

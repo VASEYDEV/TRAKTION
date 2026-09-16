@@ -20,7 +20,7 @@ git diff --check
 .build/x86_64-unknown-linux-gnu/release/traktion-lab evaluate --output /tmp/traktion-inspection-evaluation.json
 ```
 
-The release suite passed **177 tests, zero failures**, in 29.436 seconds.
+The initial release suite passed **177 tests, zero failures**, in 29.436 seconds.
 Repository/shell/whitespace checks passed; evaluation passed **45/45**, with zero
 false-safe, false-warning, wrong-failure or nondeterministic cases. Twelve
 new tests cover independent source-coordinate crops, all original/result joint
@@ -33,7 +33,10 @@ An initial test setup expected an origin at the left edge after center-preservin
 zoom; the test now explicitly pans left before checking its independent movement.
 A SwiftPM attempt also hit the host's known libdispatch `/proc/<thread>/stat`
 accounting crash; the unchanged command succeeded on retry. No production code
-or test assertions were weakened to work around that host crash.
+or test assertions were weakened to work around that host crash. The final local
+release suite, including the tall-image regression and capture-position checks,
+passed **178 tests, zero failures**, in 28.380 seconds. All 13 focused inspection
+tests also passed; the reviewer independently reran the position/pixel case.
 
 The independent reviewer identified final-row loss at fractional magnification.
 The corrected clamp aligns the last sampled coordinate. The regression asserts
@@ -86,10 +89,8 @@ there is no fixture reduction, timeout increase or skipped overall test. The
 explicit `TRAKTION_UI_TESTING` compilation flag enables the synthetic bootstrap
 only in that Release test build; ordinary Release apps still exclude it.
 Localized numeric expectations follow Foundation's formatting used by SwiftUI.
-Both xcresults and exported screenshots are retained. The revised native run
-is pending. Screenshots
-are retained by XCTest; this note does not claim manual visual inspection until
-those artifacts are retrieved and reviewed. Physical-device signing/memory,
+Both xcresults and exported screenshots are retained. The completed run and
+actual screenshot review are recorded below. Physical-device signing/memory,
 VoiceOver speech, third-party Files-provider selection and export are not tested
 by this inspection change.
 
@@ -114,3 +115,39 @@ assertion: the generic ScrollView swipe was inside the canvas, so it intentional
 panned pixels to the bottom instead of revealing the control. Test scrolling now
 uses the inspector margin; an explicit image swipe separately asserts that pixels
 pan. Inputs, coordinate assertions and timeouts remain unchanged.
+
+## Visual review
+
+The second run's exported `Large text joint evidence` screenshot was retrieved
+and actually inspected. At XXXL, raw capture UUIDs dominated the screen. The
+inspector now shows supplied-order capture positions beside the filenames,
+resolved through the same stable IDs. A reversed-array/duplicate-basename unit
+case verifies these positions, and the native test asserts joint 2's capture 2
+to capture 3 label. Full identifiers remain implementation metadata.
+
+## Completed gate and final review
+
+[Run 35160746034](https://github.com/VASEYDEV/TRAKTION/actions/runs/35160746034)
+passed all required checks at head `80e8c79`: repository, Linux, Apple package/PNG,
+iOS simulator and aggregate verification. Linux and Apple each ran 178 tests,
+45/45 evaluations and the isolated performance cases. The six Debug UI tests
+passed in 197.459 s; the unchanged full-size Release inspection case passed in
+58.907 s, including explicit image dragging, direction controls, joint/source
+checks, rotation, reopening and reset. The Release script also requires that
+exact test's passing record, preventing a stale selector from accepting zero tests.
+
+The exported 1:1 bottom and original-source portrait screenshots were retrieved
+and visually inspected: pixel view, zoom/coordinates, controls and exact joint
+evidence are visible. The landscape attachment was also inspected but was clipped
+with a black region despite passing window-orientation and containment checks.
+Its PNG has a rotated screenshot orientation tag; inspecting its unchanged raw
+pixels confirmed this was not merely the image viewer's presentation. The test
+now captures `XCUIScreen.main` rather than the rotated application's bounds.
+That evidence-capture change and the shorter capture labels receive another full
+required gate. Final-head results and post-change screenshot review are recorded
+in [PR #19](https://github.com/VASEYDEV/TRAKTION/pull/19) before merge; this note
+does not present the clipped attachment as a clean landscape visual pass.
+
+Task 0019 is complete once those final merge gates pass. The task index and roadmap
+advance to task 0020; historical completed/superseded packets remain evidence,
+not queued work. Delete the feature branch after its tree is preserved on main.

@@ -37,7 +37,7 @@ preserving the successful result and originals. No budget or core threshold is
 increased by this task.
 
 Joints are resolved by stable capture IDs and existing plan placements. The view
-shows both filenames and IDs, confidence, overlap length, output seam boundary,
+shows both filenames and supplied-order positions, confidence, overlap length, output seam boundary,
 overlap seam offset and each original's seam row. Selecting result/first/second
 original centers its own existing pixels around the same boundary. Coordinates
 are zero-based; the following capture owns the output seam row and subsequent
