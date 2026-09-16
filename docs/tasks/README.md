@@ -42,7 +42,9 @@ current `main`; never restart a superseded branch.
 | [0016](0016-native-ios-scaffold.md) | Native iOS target and required simulator gate | native foundation | done | Codex | PR #16 |
 | [0017](0017-native-png-reconstruction.md) | Native PNG import and supplied-order reconstruction | first native workflow | done | Codex | PR #18 |
 | [0018](0018-project-pr-template.md) | Project-specific pull request template | workflow | done | Codex | PR #17 |
-| [0019](0019-native-pixel-inspection.md) | Native pixel and joint inspection | native inspection | queued | assign at start | — |
+| [0019](0019-native-pixel-inspection.md) | Native pixel and joint inspection | native inspection | in progress | Codex | — |
+
+| [0020](0020-nondestructive-seam-adjustment.md) | Non-destructive seam adjustment and undo | first editing step | queued | assign at start | — |
 
 ## Superseded packets and pull requests
 

@@ -20,3 +20,10 @@ results remain in the run's artifact directory. See
 identity and source hashes are also tested below the UI boundary. These tests
 do not claim third-party Files-provider selection, physical-device signing,
 editing, persistence, or export coverage.
+
+Task 0019 adds pixel/joint inspection on a genuine 1170 × 6196 composite, covering
+1:1, both-axis pan, bottom navigation, stable joint/source selection, exact seam
+metadata, orientation, dismiss/reopen/reset, and XXXL controls. Four additional
+named screenshots are attached. The ten-capture 19,020-row raster and resource
+checks run separately in the portable tests/probe. See ADR-022 for pixel-scale
+semantics and the distinction between owned raster reservation and device RSS.

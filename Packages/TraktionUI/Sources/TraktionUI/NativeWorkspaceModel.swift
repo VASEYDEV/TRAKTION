@@ -12,6 +12,8 @@ public enum NativeWorkspaceOperation: Equatable, Sendable {
 @MainActor
 @Observable
 public final class NativeWorkspaceModel {
+  let inspection: NativeInspectionModel
+
   public private(set) var captures: [CaptureAsset] = []
   public private(set) var thumbnails: [CaptureID: RasterImage] = [:]
   public private(set) var result: ReconstructionResult?
@@ -51,9 +53,16 @@ public final class NativeWorkspaceModel {
   ) {
     self.worker = worker ?? NativeWorkspaceWorker(limits: limits)
     self.limits = limits
+    self.inspection = NativeInspectionModel()
   }
 
-  public var isBusy: Bool { operation != nil }
+  init(worker: any NativeWorkspaceWorking, inspection: NativeInspectionModel) {
+    self.worker = worker
+    self.limits = PNGImportLimits()
+    self.inspection = inspection
+  }
+
+  public var isBusy: Bool { operation != nil || inspection.isRendering }
 
   public var canReconstruct: Bool {
     !isBusy && orderConfirmed && (2...10).contains(captures.count) && result == nil
@@ -63,6 +72,7 @@ public final class NativeWorkspaceModel {
     if isCancelling {
       return "Cancelling. Waiting for image work to finish before another operation."
     }
+    if inspection.isRendering { return "Updating pixel inspection…" }
     switch operation {
     case .importing: return "Reading and validating PNG captures…"
     case .reconstructing: return "Reconstructing on this device…"
@@ -80,6 +90,7 @@ public final class NativeWorkspaceModel {
 
   public func importCaptures(from urls: [URL]) {
     guard !isBusy else { return }
+    inspection.close()
     let retainedBytes: Int
     do {
       retainedBytes = try ownedRasterBytes()
@@ -183,6 +194,16 @@ public final class NativeWorkspaceModel {
     }
   }
 
+  public func inspectResult() {
+    guard !isBusy, let result else { return }
+    do {
+      try inspection.open(result: result, captures: captures,
+        retainedBytes: ownedRasterBytes(), budget: limits.maximumRetainedRasterBytes)
+    } catch {
+      failure = .selection("There is not enough workspace raster memory for pixel inspection. The result and originals are unchanged.")
+    }
+  }
+
   public func cancel() {
     guard let job = activeJob else { return }
     job.token.cancel()
@@ -271,6 +292,7 @@ public final class NativeWorkspaceModel {
   }
 
   private func invalidateReconstruction() {
+    inspection.close()
     result = nil
     resultPreview = nil
     failure = nil

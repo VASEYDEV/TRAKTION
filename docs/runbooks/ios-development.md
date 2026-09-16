@@ -88,3 +88,19 @@ the selected team's actual credentials and device.
 
 Production artwork, physical-device checks, distribution provisioning, App
 Store metadata, and release signing are still required before distribution.
+
+## Pixel and joint inspection
+
+After successful reconstruction, select **Inspect pixels and joints**. Fit shows
+an overview; **1:1 pixels** maps one source pixel to one physical display pixel.
+Drag the image to pan on release, or use direction and top/bottom buttons. The
+zoom percentage and zero-based origin describe the current source viewport.
+Select a joint to see both filenames/IDs, confidence, overlap and seam boundaries;
+choose Result, First original or Second original to inspect their unchanged
+pixels. Done clears the inspection session; reopening begins at the result.
+
+The inspection gate adds a 1170 × 6196 three-capture PNG fixture and tests 1:1,
+pan, joint/source selection, portrait/landscape, reopening/reset and larger text.
+The 1170 × 19020 ten-capture Linux probe measures the same bounded raster renderer
+while retaining the full workspace; it is not a device memory claim. Commands
+and scoped evidence: [inspection note](../notes/2026-09-16-native-inspection.md).

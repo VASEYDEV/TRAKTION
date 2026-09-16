@@ -97,6 +97,12 @@ for scenario in baseline duplicate-capture missing-middle; do
   cp "$fixture_root/$scenario"/capture-*.png "$destination/"
 done
 
+"$fixture_bin" generate --scenario baseline \
+  --width 1170 --viewport 2532 --captures 3 --overlap 700 --seed 51 \
+  --output-dir "$fixture_root/inspection-long"
+mkdir -p "$app_data/Documents/UIFixtures/inspection-long"
+cp "$fixture_root/inspection-long"/capture-*.png "$app_data/Documents/UIFixtures/inspection-long/"
+
 xcrun simctl launch --terminate-running-process "$simulator_id" "$bundle_id" | tee "$run_dir/launch.log"
 
 xcodebuild test-without-building "${build_args[@]}" \

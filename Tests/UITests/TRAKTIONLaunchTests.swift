@@ -123,6 +123,105 @@ final class TRAKTIONLaunchTests: XCTestCase {
     XCTAssertFalse(app.staticTexts["workspace.failure"].exists)
   }
 
+  func testLongPixelInspectionPanZoomJointSourcesAndReturn() {
+    let app = launch(scenario: "inspection-long")
+    confirmOrder(in: app)
+    app.buttons["workspace.reconstruct"].tap()
+    XCTAssertTrue(app.staticTexts["workspace.result.dimensions"].waitForExistence(timeout: 30))
+    openInspection(in: app)
+    let scroll = app.scrollViews["inspection.scroll"]
+    XCTAssertEqual(app.staticTexts["inspection.dimensions"].label, "1170 × 6196 pixels")
+    let one = app.buttons["inspection.oneToOne"]
+    reveal(one, in: scroll)
+    one.tap()
+    XCTAssertEqual(app.staticTexts["inspection.zoom"].label, "Zoom: 100.00% (1:1)")
+    let down = app.buttons["inspection.pan.down"]
+    reveal(down, in: scroll)
+    let before = app.staticTexts["inspection.coordinates"].label
+    down.tap()
+    XCTAssertNotEqual(app.staticTexts["inspection.coordinates"].label, before)
+    let right = app.buttons["inspection.pan.right"]
+    let beforeRight = app.staticTexts["inspection.coordinates"].label
+    right.tap()
+    XCTAssertNotEqual(app.staticTexts["inspection.coordinates"].label, beforeRight)
+    app.buttons["inspection.bottom"].tap()
+    reveal(app.images["inspection.canvas"], in: scroll)
+    attachScreenshot(app, name: "Pixel inspection 1 to 1 bottom")
+
+    let region = app.buttons["inspection.region"]
+    reveal(region, in: scroll)
+    region.tap()
+    app.buttons["inspection.region.joint.1"].tap()
+    XCTAssertEqual(app.staticTexts["inspection.joint.names"].label,
+      "First: capture-002.png\nSecond: capture-003.png")
+    XCTAssertEqual(app.staticTexts["inspection.joint.confidence"].label,
+      "Confidence: Exact. Overlap: 700 rows.")
+    XCTAssertTrue(app.staticTexts["inspection.joint.seam"].label.contains("output row 4014"))
+    let source = app.buttons["inspection.source.choose"]
+    reveal(source, in: scroll)
+    source.tap()
+    app.buttons["inspection.source.preceding"].tap()
+    XCTAssertEqual(app.staticTexts["inspection.source"].label, "Pixels: capture-002.png")
+    source.tap()
+    app.buttons["inspection.source.following"].tap()
+    XCTAssertEqual(app.staticTexts["inspection.source"].label, "Pixels: capture-003.png")
+    reveal(app.images["inspection.canvas"], in: scroll)
+    attachScreenshot(app, name: "Joint second original portrait")
+    XCUIDevice.shared.orientation = .landscapeLeft
+    waitForOrientation(in: app, landscape: true)
+    reveal(one, in: scroll)
+    one.tap()
+    XCTAssertEqual(app.staticTexts["inspection.zoom"].label, "Zoom: 100.00% (1:1)")
+    reveal(app.images["inspection.canvas"], in: scroll)
+    assertHorizontallyContained(app.images["inspection.canvas"], in: app)
+    attachScreenshot(app, name: "Joint second original landscape")
+    app.buttons["inspection.done"].tap()
+    XCTAssertFalse(app.staticTexts["inspection.dimensions"].exists)
+    openInspection(in: app)
+    XCTAssertFalse(app.staticTexts["inspection.joint.names"].exists)
+    XCTAssertEqual(app.staticTexts["inspection.source"].label, "Pixels: Result")
+    app.buttons["inspection.done"].tap()
+    reset(in: app)
+    XCTAssertFalse(app.buttons["workspace.result.inspect"].exists)
+  }
+
+  func testLargeTextInspectionControlsRemainReachable() {
+    let app = XCUIApplication()
+    XCUIDevice.shared.orientation = .portrait
+    app.launchEnvironment["TRAKTION_UI_FIXTURE"] = "baseline"
+    app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
+    app.launch()
+    waitForImport(in: app, count: 3)
+    confirmOrder(in: app)
+    app.buttons["workspace.reconstruct"].tap()
+    XCTAssertTrue(app.staticTexts["workspace.result.dimensions"].waitForExistence(timeout: 30))
+    openInspection(in: app)
+    let scroll = app.scrollViews["inspection.scroll"]
+    for id in ["inspection.oneToOne", "inspection.fit", "inspection.zoomIn", "inspection.pan.down", "inspection.bottom"] {
+      let button = app.buttons[id]
+      reveal(button, in: scroll)
+      assertHorizontallyContained(button, in: app)
+      XCTAssertTrue(button.isEnabled)
+      button.tap()
+    }
+    let region = app.buttons["inspection.region"]
+    reveal(region, in: scroll)
+    region.tap()
+    app.buttons["inspection.region.joint.0"].tap()
+    let seam = app.staticTexts["inspection.joint.seam"]
+    reveal(seam, in: scroll)
+    assertHorizontallyContained(seam, in: app)
+    attachScreenshot(app, name: "Large text joint evidence")
+    app.buttons["inspection.done"].tap()
+  }
+
+  private func openInspection(in app: XCUIApplication) {
+    let inspect = app.buttons["workspace.result.inspect"]
+    reveal(inspect, in: app.scrollViews["workspace.scroll"])
+    inspect.tap()
+    XCTAssertTrue(app.staticTexts["inspection.dimensions"].waitForExistence(timeout: 10))
+  }
+
   private func launch(scenario: String, count: Int = 3) -> XCUIApplication {
     let app = XCUIApplication()
     XCUIDevice.shared.orientation = .portrait
