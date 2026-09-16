@@ -123,6 +123,116 @@ final class TRAKTIONLaunchTests: XCTestCase {
     XCTAssertFalse(app.staticTexts["workspace.failure"].exists)
   }
 
+  func testLongPixelInspectionPanZoomJointSourcesAndReturn() {
+    let app = launch(scenario: "inspection-long")
+    confirmOrder(in: app)
+    app.buttons["workspace.reconstruct"].tap()
+    guard app.staticTexts["workspace.result.dimensions"].waitForExistence(timeout: 30) else {
+      attachScreenshot(app, name: "Long reconstruction not ready")
+      XCTFail("Phone-size reconstruction did not complete: \(app.staticTexts["workspace.status"].label)")
+      return
+    }
+    openInspection(in: app)
+    let scroll = app.scrollViews["inspection.scroll"]
+    XCTAssertEqual(app.staticTexts["inspection.dimensions"].label,
+      String.localizedStringWithFormat("%lld × %lld pixels", 1170, 6196))
+    let one = app.buttons["inspection.oneToOne"]
+    reveal(one, in: scroll)
+    one.tap()
+    XCTAssertEqual(app.staticTexts["inspection.zoom"].label, "Zoom: 100.00% (1:1)")
+    let canvas = app.images["inspection.canvas"]
+    reveal(canvas, in: scroll)
+    let beforeDrag = app.staticTexts["inspection.coordinates"].label
+    canvas.swipeUp()
+    XCTAssertNotEqual(app.staticTexts["inspection.coordinates"].label, beforeDrag)
+    let down = app.buttons["inspection.pan.down"]
+    reveal(down, in: scroll)
+    let before = app.staticTexts["inspection.coordinates"].label
+    down.tap()
+    XCTAssertNotEqual(app.staticTexts["inspection.coordinates"].label, before)
+    let right = app.buttons["inspection.pan.right"]
+    let beforeRight = app.staticTexts["inspection.coordinates"].label
+    right.tap()
+    XCTAssertNotEqual(app.staticTexts["inspection.coordinates"].label, beforeRight)
+    app.buttons["inspection.bottom"].tap()
+    reveal(app.images["inspection.canvas"], in: scroll)
+    attachScreenshot(app, name: "Pixel inspection 1 to 1 bottom")
+
+    let region = app.buttons["inspection.region"]
+    reveal(region, in: scroll)
+    region.tap()
+    app.buttons["inspection.region.joint.1"].tap()
+    XCTAssertEqual(app.staticTexts["inspection.joint.names"].label,
+      "First: capture-002.png\nSecond: capture-003.png")
+    XCTAssertEqual(app.staticTexts["inspection.joint.positions"].label, "Capture 2 → capture 3")
+    XCTAssertEqual(app.staticTexts["inspection.joint.confidence"].label,
+      "Confidence: Exact. Overlap: 700 rows.")
+    XCTAssertTrue(app.staticTexts["inspection.joint.seam"].label.contains(String.localizedStringWithFormat("output row %lld", 4014)))
+    let source = app.buttons["inspection.source.choose"]
+    reveal(source, in: scroll)
+    source.tap()
+    app.buttons["inspection.source.preceding"].tap()
+    XCTAssertEqual(app.staticTexts["inspection.source"].label, "Pixels: capture-002.png")
+    source.tap()
+    app.buttons["inspection.source.following"].tap()
+    XCTAssertEqual(app.staticTexts["inspection.source"].label, "Pixels: capture-003.png")
+    reveal(app.images["inspection.canvas"], in: scroll)
+    attachScreenshot(app, name: "Joint second original portrait")
+    XCUIDevice.shared.orientation = .landscapeLeft
+    waitForOrientation(in: app, landscape: true)
+    reveal(one, in: scroll)
+    one.tap()
+    XCTAssertEqual(app.staticTexts["inspection.zoom"].label, "Zoom: 100.00% (1:1)")
+    reveal(app.images["inspection.canvas"], in: scroll)
+    assertHorizontallyContained(app.images["inspection.canvas"], in: app)
+    attachScreenshot(app, name: "Joint second original landscape")
+    app.buttons["inspection.done"].tap()
+    XCTAssertFalse(app.staticTexts["inspection.dimensions"].exists)
+    openInspection(in: app)
+    XCTAssertFalse(app.staticTexts["inspection.joint.names"].exists)
+    XCTAssertEqual(app.staticTexts["inspection.source"].label, "Pixels: Result")
+    app.buttons["inspection.done"].tap()
+    reset(in: app)
+    XCTAssertFalse(app.buttons["workspace.result.inspect"].exists)
+  }
+
+  func testLargeTextInspectionControlsRemainReachable() {
+    let app = XCUIApplication()
+    XCUIDevice.shared.orientation = .portrait
+    app.launchEnvironment["TRAKTION_UI_FIXTURE"] = "baseline"
+    app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
+    app.launch()
+    waitForImport(in: app, count: 3)
+    confirmOrder(in: app)
+    app.buttons["workspace.reconstruct"].tap()
+    XCTAssertTrue(app.staticTexts["workspace.result.dimensions"].waitForExistence(timeout: 30))
+    openInspection(in: app)
+    let scroll = app.scrollViews["inspection.scroll"]
+    for id in ["inspection.oneToOne", "inspection.fit", "inspection.zoomIn", "inspection.pan.down", "inspection.bottom"] {
+      let button = app.buttons[id]
+      reveal(button, in: scroll)
+      assertHorizontallyContained(button, in: app)
+      XCTAssertTrue(button.isEnabled)
+      button.tap()
+    }
+    let region = app.buttons["inspection.region"]
+    reveal(region, in: scroll)
+    region.tap()
+    app.buttons["inspection.region.joint.0"].tap()
+    let seam = app.staticTexts["inspection.joint.seam"]
+    reveal(seam, in: scroll)
+    assertHorizontallyContained(seam, in: app)
+    attachScreenshot(app, name: "Large text joint evidence")
+    app.buttons["inspection.done"].tap()
+  }
+
+  private func openInspection(in app: XCUIApplication) {
+    let inspect = app.buttons["workspace.result.inspect"]
+    reveal(inspect, in: app.scrollViews["workspace.scroll"])
+    inspect.tap()
+    XCTAssertTrue(app.staticTexts["inspection.dimensions"].waitForExistence(timeout: 10))
+  }
+
   private func launch(scenario: String, count: Int = 3) -> XCUIApplication {
     let app = XCUIApplication()
     XCUIDevice.shared.orientation = .portrait
@@ -208,14 +318,26 @@ final class TRAKTIONLaunchTests: XCTestCase {
   private func reveal(_ element: XCUIElement, in scroll: XCUIElement) {
     // A previous action or rotation can retain a position below this element.
     for _ in 0..<20 where !element.isHittable {
-      if element.exists && element.frame.maxY <= scroll.frame.minY {
+      if scroll.identifier == "inspection.scroll" {
+        // The image intentionally consumes drags for pixel panning. Scroll the
+        // padding and move the target toward the viewport center. Fixed full
+        // swipes can oscillate past a large-text control hidden by the toolbar.
+        let viewport = scroll.frame
+        let targetY = element.exists ? element.frame.midY : viewport.maxY
+        let distance = (viewport.midY - targetY) / max(1, viewport.height)
+        let bounded = max(-0.3, min(0.3, distance))
+        let movement = abs(bounded) < 0.1 ? (bounded < 0 ? -0.1 : 0.1) : bounded
+        let start = scroll.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.5))
+        let end = scroll.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.5 + movement))
+        start.press(forDuration: 0.01, thenDragTo: end)
+      } else if element.exists && element.frame.maxY <= scroll.frame.minY {
         scroll.swipeDown()
       } else {
         scroll.swipeUp()
       }
     }
     XCTAssertTrue(element.exists)
-    XCTAssertTrue(element.isHittable)
+    XCTAssertTrue(element.isHittable, "Could not reveal \(element.identifier)")
   }
 
   private func assertHorizontallyContained(_ element: XCUIElement, in app: XCUIApplication) {
@@ -226,7 +348,8 @@ final class TRAKTIONLaunchTests: XCTestCase {
   }
 
   private func attachScreenshot(_ app: XCUIApplication, name: String) {
-    let screenshot = XCTAttachment(screenshot: app.screenshot())
+    // Capture the display rather than a rotated application's cropped bounds.
+    let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
     screenshot.name = name
     screenshot.lifetime = .keepAlways
     add(screenshot)

@@ -51,6 +51,12 @@ import TraktionDomain
           .frame(minWidth: 520, minHeight: 420)
         #endif
       }
+      .sheet(isPresented: Binding(
+        get: { model.inspection.isOpen },
+        set: { if !$0 { model.inspection.close() } }
+      )) {
+        NativeInspectionView(model: model.inspection)
+      }
       .fileImporter(
         isPresented: $isImportPresented,
         allowedContentTypes: [.png],
@@ -215,6 +221,9 @@ import TraktionDomain
             .frame(maxWidth: .infinity)
             .frame(maxHeight: 420)
             .accessibilityIdentifier("workspace.result.preview")
+          Button("Inspect pixels and joints") { model.inspectResult() }
+            .disabled(model.isBusy)
+            .accessibilityIdentifier("workspace.result.inspect")
           Text("Preview scaled to fit. Original captures are unchanged.")
             .font(.caption)
             .foregroundStyle(.secondary)

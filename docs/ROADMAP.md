@@ -1,13 +1,13 @@
 # TRAKTION Roadmap
 
-## Status (2026-09-09)
+## Status (2026-09-16)
 
 | Milestone | State | Evidence |
 | --- | --- | --- |
 | 0 — Foundation | complete | PR #4, PR #5 |
 | 1 — Exact static reconstruction | passed with measured platform evidence | corpus categories (0011), failure artifacts (0012), and gap regression repair (0014) landed; memory/throughput instrumentation (0013) verified on Linux and macOS in PR #16 |
 | 2 — Sequence intelligence | in progress | exact ordering core (task 0007), tooling (task 0008), near-exact recovery (task 0009), repeated-chrome guard (0010), and bounded directional ambiguity guard (0014) landed; broader duplicates, missing-coverage evidence, and confidence workflows remain open |
-| Native iOS app | first workflow verified | task 0017 / PR #18: PNG import, explicit supplied order, reconstruction preview and typed failures; five simulator tests passed; physical-device signing remains separate |
+| Native iOS app | read-only inspection verified | task 0019 / PR #19 adds bounded 1:1 pan/zoom and original-capture joint evidence to PNG import/reconstruction; seven simulator tests passed; physical-device signing remains separate |
 | 3–7 | not started | — |
 
 Task packets and their status live in `docs/tasks/README.md`.
@@ -38,9 +38,9 @@ Horizontal reconstruction, web capture, share extension, PDF, JPEG/HEIC, split e
 
 ## Next execution order
 
-1. Implement [task 0019](tasks/0019-native-pixel-inspection.md): read-only
-   pixel/joint inspection with bounded display memory and a real 1:1 view.
-2. Add correction, undo/redo, project persistence, and export under separate
+1. Implement [task 0020](tasks/0020-nondestructive-seam-adjustment.md): deliberate
+   seam adjustment inside proven overlaps, with apply/cancel and undo/redo.
+2. Add further correction, project persistence, and export under separate
    Milestone 3 packets. Verify physical-device signing and resource behavior
    with the actual developer team/device when available.
 

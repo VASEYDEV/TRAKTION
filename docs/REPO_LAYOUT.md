@@ -9,17 +9,18 @@
 | `Packages/TraktionDomain` | Raster/capture values and typed reconstruction contracts |
 | `Packages/TraktionCore` | Deterministic reconstruction, registration, ordering, and diagnostics |
 | `Packages/TraktionVision` | Apple ImageIO, portable PNG codec, and atomic PNG preflight/import |
-| `Packages/TraktionUI` | MainActor workspace, serial image worker, and shared SwiftUI workflow |
+| `Packages/TraktionUI` | MainActor workspace/inspection state, bounded raster workers, and shared SwiftUI workflow |
 | `Packages/TraktionAI` | Optional semantic-reviewer interface; no active model dependency |
 | `Tools/TraktionLab` | Diagnostic CLI, evaluation, failure artifacts, memory/throughput reports |
 | `Tools/FixtureForge` | Deterministic synthetic fixtures and genuine source truth |
 | `Tests/Unit`, `Tests/Golden`, `Tests/Performance`, `Tests/Integration` | Portable domain/engine/codec, workspace lifecycle, real PNG pipeline, and evaluation contracts |
-| `Tests/UITests` | Native import/order/result/refusal/reset, picker cancellation, rotation, and text-size checks |
+| `Tests/UITests` | Native import/order/result/refusal/reset, picker cancellation, pixel/joint inspection, rotation, and text-size checks |
 | `Tests/SyntheticFixtures`, `Tests/RealWorldFixtures` | Fixture metadata and private-capture boundary |
 | `scripts` | Repository, Swift, PNG smoke, and native simulator verification |
 
 The native target links the repository's local package. There is no external
-package download or Xcode project generator. Pixel inspection, editing, persistence, and export remain future native workflows.
+package download or Xcode project generator. The native workflow includes read-only pixel/joint inspection. Editing, persistence,
+and export remain future native workflows.
 
 The Lab remains the executable reconstruction and diagnostic path:
 

@@ -10,7 +10,7 @@ the real Files picker and verifies cancellation preserves the workspace.
 Run `bash scripts/verify-ios.sh` on macOS with Xcode and an installed iOS
 simulator runtime. The script generates deterministic PNGs with FixtureForge
 and copies capture files into the dedicated simulator app's Documents directory.
-A Debug-only bootstrap reads the named scenario from `TRAKTION_UI_FIXTURE` and
+A Debug/test-build bootstrap reads the named scenario from `TRAKTION_UI_FIXTURE` and
 passes those URLs to the production importer. It never confirms order or runs
 reconstruction automatically, and FixtureForge is not linked into the app.
 
@@ -20,3 +20,15 @@ results remain in the run's artifact directory. See
 identity and source hashes are also tested below the UI boundary. These tests
 do not claim third-party Files-provider selection, physical-device signing,
 editing, persistence, or export coverage.
+
+Task 0019 adds pixel/joint inspection on a genuine 1170 × 6196 composite, covering
+1:1, both-axis pan, bottom navigation, stable joint/source selection, exact seam
+metadata, orientation, dismiss/reopen/reset, and XXXL controls. Four additional
+named screenshots are attached. The ten-capture 19,020-row raster and resource
+checks run separately in the portable tests/probe. See ADR-022 for pixel-scale
+semantics and the distinction between owned raster reservation and device RSS.
+
+`verify-ios.sh` runs the six small-input cases against Debug and the unchanged
+full-size inspection case against a separately built Release app. No test is
+omitted overall. `TRAKTION_UI_TESTING` is set only for that optimized simulator
+test build; regular Release builds cannot import fixtures from launch environment.

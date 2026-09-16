@@ -1,0 +1,20 @@
+{
+  "admittedTotalBytes" : 241435472,
+  "captures" : 10,
+  "currentResidentAfterInspection" : 240332800,
+  "currentResidentBeforeInspection" : 240132096,
+  "frameSeconds" : [
+    0.004819807,
+    0.00477876,
+    0.009241363,
+    0.001710475
+  ],
+  "height" : 19020,
+  "inspectionReservedBytes" : 25165824,
+  "maximumActualFrameBytes" : 2764800,
+  "peakResidentAfterInspection" : 240197632,
+  "peakResidentBeforeInspection" : 239915008,
+  "scope" : "Linux Swift 6.0.3 release; synchronous production import\/reconstruction\/inspection raster renderer; no SwiftUI\/CGImage\/model scheduler\/GPU\/device claim",
+  "width" : 1170,
+  "workspaceRetainedBytesWithPreviewCopies" : 216269648
+}

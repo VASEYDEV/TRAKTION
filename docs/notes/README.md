@@ -8,3 +8,5 @@ Notes hold context, observations, and open questions. They are not the system of
 - Decisions graduate to `docs/decisions/` as ADRs.
 - Shipped changes get an entry in `CHANGELOG.md`.
 - Repo-wide rules land in `CLAUDE.md` Project Notes.
+
+- [2026-09-16 native inspection](2026-09-16-native-inspection.md): bounded pixel/joint viewport, independent review, resource measurements and native verification.

@@ -21,7 +21,7 @@ Full-page capture often fails: content scrolls inside nested frames, headers sta
 
 ## Status
 
-**Milestone 1 has measured evidence; Milestone 2 and native app development are in progress.** The deterministic reconstruction core, synthetic fixture generator, diagnostic CLI, golden tests, cross-platform PNG adapters, evaluation harness, and native PNG reconstruction workflow are implemented. Tasks 0012–0014 address the diagnostic and memory evidence identified by the [2026-09-03 milestone audit](docs/audits/2026-09-03-milestone-1.md). The Xcode iOS target has a required simulator workflow gate; device signing, pixel inspection, editing, persistence, and export remain separate work. Every tracked task and its verification status is in the [task index](docs/tasks/README.md).
+**Milestone 1 has measured evidence; Milestone 2 and native app development are in progress.** The deterministic reconstruction core, synthetic fixture generator, diagnostic CLI, golden tests, cross-platform PNG adapters, evaluation harness, native PNG reconstruction workflow, and bounded pixel/joint inspection are implemented. Tasks 0012–0014 address the diagnostic and memory evidence identified by the [2026-09-03 milestone audit](docs/audits/2026-09-03-milestone-1.md). The Xcode iOS target has a required simulator workflow gate; device signing, editing, persistence, and export remain separate work. Every tracked task and its verification status is in the [task index](docs/tasks/README.md).
 
 | Current capability | State |
 | --- | --- |
@@ -32,7 +32,7 @@ Full-page capture often fails: content scrolls inside nested frames, headers sta
 | Machine-readable evaluation gate | Implemented for the standard 45-case corpus, including ordering metrics and diagnostic memory/throughput baselines |
 | Composite, manifest, and joint diagnostics | Implemented in `traktion-lab`; evaluation/golden failure bundles are retained in CI |
 | Horizontal, sticky UI, video, web capture | Later milestones; fail or remain disabled. Identical top-and-bottom chrome is rejected by task 0010; general fixed-element recovery remains unimplemented |
-| Native application | Native Files PNG import, numbered move/remove controls, explicit order confirmation, local reconstruction preview, joint confidence, and typed failures (task 0017). Editor, persistence, export, and device signing remain |
+| Native application | Native Files PNG import, numbered move/remove controls, explicit order confirmation, local reconstruction preview, joint confidence, typed failures (task 0017), and read-only 1:1 pixel/joint inspection with original-source views (task 0019). Editor, persistence, export, and device signing remain |
 
 ## Design invariants
 
@@ -87,7 +87,9 @@ documents CI reproduction, test evidence, and developer-owned device signing.
 Choose **Import PNG captures**, arrange the numbered captures from top to bottom,
 confirm the order, and select **Reconstruct locally**. A failed replacement
 keeps the previous workspace. Reset/remove only affect the workspace; original
-files remain unchanged. The result is a bounded preview of the full reconstruction.
+files remain unchanged. Select **Inspect pixels and joints** on the result for
+1:1 source pixels, pan/zoom and each joint’s original-capture evidence. The
+viewport stays bounded while the full reconstruction remains intact.
 See [ADR-021](docs/adr/ADR-021-native-png-workspace.md) for input and resource limits.
 
 Captures whose order is unknown can be ordered from byte-exact evidence (`--order exact`) or from uniquely registered near-exact overlaps (`--order near-exact`); missing or ambiguous ordering evidence is a typed failure:

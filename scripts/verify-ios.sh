@@ -15,6 +15,18 @@ simulator_id=""
 cleanup() {
   result=$?
   trap - EXIT
+  # Keep visible evidence even when a UI assertion stops the script before its
+  # normal export. Preserve the original failure status if diagnostics fail.
+  for configuration in debug release; do
+    result_bundle="$run_dir/TRAKTION.xcresult"
+    [[ "$configuration" == release ]] && result_bundle="$run_dir/TRAKTION-Release.xcresult"
+    attachment_dir="$run_dir/attachments/$configuration"
+    if [[ -d "$result_bundle" && ! -d "$attachment_dir" ]]; then
+      mkdir -p "$run_dir/attachments" || { echo "Could not create attachment directory" >&2; continue; }
+      xcrun xcresulttool export attachments --path "$result_bundle" \
+        --output-path "$attachment_dir" || echo "Could not export $configuration attachments" >&2
+    fi
+  done
   if [[ -n "$simulator_id" ]]; then
     xcrun simctl shutdown "$simulator_id" >/dev/null 2>&1 || true
     xcrun simctl delete "$simulator_id" || echo "Could not delete dedicated simulator $simulator_id" >&2
@@ -97,6 +109,12 @@ for scenario in baseline duplicate-capture missing-middle; do
   cp "$fixture_root/$scenario"/capture-*.png "$destination/"
 done
 
+"$fixture_bin" generate --scenario baseline \
+  --width 1170 --viewport 2532 --captures 3 --overlap 700 --seed 51 \
+  --output-dir "$fixture_root/inspection-long"
+mkdir -p "$app_data/Documents/UIFixtures/inspection-long"
+cp "$fixture_root/inspection-long"/capture-*.png "$app_data/Documents/UIFixtures/inspection-long/"
+
 xcrun simctl launch --terminate-running-process "$simulator_id" "$bundle_id" | tee "$run_dir/launch.log"
 
 xcodebuild test-without-building "${build_args[@]}" \
@@ -105,6 +123,52 @@ xcodebuild test-without-building "${build_args[@]}" \
   -test-timeouts-enabled YES \
   -default-test-execution-time-allowance 120 \
   -maximum-test-execution-time-allowance 180 \
+  -skip-testing:TRAKTIONUITests/TRAKTIONLaunchTests/testLongPixelInspectionPanZoomJointSourcesAndReturn \
   -resultBundlePath "$run_dir/TRAKTION.xcresult" | tee "$run_dir/tests.log"
+
+mkdir -p "$run_dir/attachments"
+xcrun xcresulttool export attachments --path "$run_dir/TRAKTION.xcresult" \
+  --output-path "$run_dir/attachments/debug"
+
+# Full phone-size core work is verified with production optimization, matching
+# the portable performance gate. Keep the six small-input Debug UI tests above.
+# This flag enables only the existing synthetic-fixture bootstrap in this test
+# build; ordinary Release apps do not include it.
+release_args=(
+  -project App/TRAKTION.xcodeproj
+  -scheme TRAKTION
+  -configuration Release
+  -destination "platform=iOS Simulator,id=$simulator_id"
+  -destination-timeout 60
+  -derivedDataPath "$run_dir/DerivedData"
+  SWIFT_ACTIVE_COMPILATION_CONDITIONS=TRAKTION_UI_TESTING
+  CODE_SIGNING_ALLOWED=NO
+)
+xcodebuild build-for-testing "${release_args[@]}" | tee "$run_dir/release-build.log"
+xcrun simctl terminate "$simulator_id" "$bundle_id" || true
+xcrun simctl install "$simulator_id" "$run_dir/DerivedData/Build/Products/Release-iphonesimulator/TRAKTION.app"
+xcodebuild test-without-building "${release_args[@]}" \
+  -parallel-testing-enabled NO \
+  -maximum-concurrent-test-simulator-destinations 1 \
+  -test-timeouts-enabled YES \
+  -default-test-execution-time-allowance 120 \
+  -maximum-test-execution-time-allowance 180 \
+  -only-testing:TRAKTIONUITests/TRAKTIONLaunchTests/testLongPixelInspectionPanZoomJointSourcesAndReturn \
+  -resultBundlePath "$run_dir/TRAKTION-Release.xcresult" | tee "$run_dir/release-tests.log"
+
+# An obsolete -only-testing selector must not turn this gate into a zero-test pass.
+python3 - "$run_dir/release-tests.log" <<'VERIFY_RELEASE'
+import pathlib
+import sys
+
+log = pathlib.Path(sys.argv[1]).read_text()
+required = "Test Case '-[TRAKTIONUITests.TRAKTIONLaunchTests testLongPixelInspectionPanZoomJointSourcesAndReturn]' passed"
+if required not in log:
+    sys.exit("The required optimized phone-size inspection test did not pass.")
+VERIFY_RELEASE
+
+# Export retained synthetic screenshots alongside xcresult for direct visual review.
+xcrun xcresulttool export attachments --path "$run_dir/TRAKTION-Release.xcresult" \
+  --output-path "$run_dir/attachments/release"
 
 echo "IOS SIMULATOR VERIFICATION: PASS"

@@ -47,7 +47,9 @@ Provider-independent reconstruction orchestration: normalization policy, overlap
 Platform-specific computer vision and image operations: OCR observations, translation registration, edge/difference generation, pixel operations, frame extraction, viewport-motion analysis.
 
 ### TraktionUI
-User-facing canvas and editing components. No direct model-provider calls. No ownership of reconstruction mathematics.
+User-facing canvas and editing components. No direct model-provider calls. No ownership of reconstruction mathematics. The read-only inspector samples existing
+result/original pixels into a bounded off-main viewport and resolves joint metadata
+from the existing plan; it does not perform registration or compositing (ADR-022).
 
 ### TraktionAI
 Optional semantic review only. Must expose a provider-neutral interface such as `VisualReviewer`. Expected implementations are disabled reviewer, mock reviewer, and one production provider adapter. No provider-specific type may escape this package.

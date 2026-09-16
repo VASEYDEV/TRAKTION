@@ -1,6 +1,6 @@
 # Task: Native pixel and joint inspection
 
-Status: queued — next after task 0017.
+Status: done — Codex implementation, independent review, and required CI in PR #19.
 
 ## Goal
 Let users inspect the reconstructed pixels and each proven joint before adding
@@ -9,7 +9,7 @@ editing, persistence, or export.
 ## Current behavior
 Task 0017 imports actual PNG captures, confirms supplied order, and presents a
 bounded preview plus joint confidence. The full reconstruction and captures are
-retained, but users cannot zoom to source pixels or inspect seam evidence.
+retained. This task adds source-pixel zoom and seam evidence inspection.
 
 ## Required behavior
 - Add an accessible read-only inspection route from a successful result.
@@ -32,15 +32,15 @@ adapter if needed, native routing, focused unit/UI tests, runbook and ADR.
 Core registration thresholds and source pixels remain unchanged.
 
 ## Acceptance criteria
-- [ ] Actual result and joint regions match independent source-coordinate crops.
-- [ ] Pan/zoom and a 1:1 view work on a long synthetic result without an extra
+- [x] Actual result and joint regions match independent source-coordinate crops.
+- [x] Pan/zoom and a 1:1 view work on a long synthetic result without an extra
       full-resolution display allocation; memory evidence states its scope.
-- [ ] Joint selection maps stable capture IDs to visible names and exact seam
+- [x] Joint selection maps stable capture IDs to visible names and exact seam
       coordinates/confidence without re-running or weakening registration.
-- [ ] Reset/replacement/navigation cannot display stale results or tiles.
-- [ ] Portrait, landscape, larger text, labels, and controls are exercised on
+- [x] Reset/replacement/navigation cannot display stale results or tiles.
+- [x] Portrait, landscape, larger text, labels, and controls are exercised on
       the actual simulator target, with inspection evidence recorded honestly.
-- [ ] Existing repository/core/Apple PNG/native gates and independent review pass.
+- [x] Existing repository/core/Apple PNG/native gates and independent review pass.
 
 ## Evidence and ownership
 Assign one implementation writer; independently review pixel coordinates,
@@ -48,3 +48,6 @@ resource ownership, main-thread responsiveness, and accessibility. Use genuine
 synthetic PNG/source truth; keep private captures out of CI. Physical-device
 memory and signing require the developer's actual team/device and are separate
 from simulator evidence.
+
+Implementation and verification: [2026-09-16 inspection note](../notes/2026-09-16-native-inspection.md), [ADR-022](../adr/ADR-022-bounded-pixel-inspection.md).
+Next packet: [0020 — non-destructive seam adjustment and undo](0020-nondestructive-seam-adjustment.md).

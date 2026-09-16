@@ -40,13 +40,15 @@ The verification sequence is:
 4. Generate baseline/duplicate/missing-middle PNG fixtures in a separate
    release CLI process, install the app, and copy only capture PNGs into the
    dedicated simulator app container. Source truth/manifests stay outside it.
-5. Launch and run `xcodebuild test-without-building`; five XCTest scenarios
-   verify real-service import, explicit order/reordering, actual results,
-   duplicate/gap refusals, reset, portrait/landscape and larger text. A separate
-   scenario presents and cancels the actual system Files picker. The Debug-only
-   `TRAKTION_UI_FIXTURE` bootstrap reads these files through the production
-   importer; it never confirms order or injects a reconstruction result.
-6. Shut down and delete the dedicated simulator, preserving the test result.
+5. Launch and run six Debug XCTest scenarios for real import, supplied order,
+   reconstruction/refusals, reset, rotation, larger text (including inspection)
+   and actual Files picker cancellation.
+6. Build/install a Release test app and run the same full-size phone inspection
+   scenario with production optimization. The `TRAKTION_UI_FIXTURE` bootstrap
+   is available in Debug or with the explicit `TRAKTION_UI_TESTING` test flag;
+   it calls the production importer without confirming order or injecting results.
+7. Export retained screenshot attachments and shut down/delete the dedicated
+   simulator, preserving both test results.
 
 Results live in a new run directory beneath `.traktion-local/ios-smoke`.
 Set `TRAKTION_IOS_ARTIFACTS` to change that parent directory. Runs do not
@@ -88,3 +90,26 @@ the selected team's actual credentials and device.
 
 Production artwork, physical-device checks, distribution provisioning, App
 Store metadata, and release signing are still required before distribution.
+
+## Pixel and joint inspection
+
+After successful reconstruction, select **Inspect pixels and joints**. Fit shows
+an overview; **1:1 pixels** maps one source pixel to one physical display pixel.
+Drag the image to pan on release, or use direction and top/bottom buttons. The
+zoom percentage and zero-based origin describe the current source viewport.
+Select a joint to see both filenames/positions, confidence, overlap and seam boundaries;
+choose Result, First original or Second original to inspect their unchanged
+pixels. Done clears the inspection session; reopening begins at the result.
+
+The inspection gate adds a 1170 × 6196 three-capture PNG fixture and tests 1:1,
+pan, joint/source selection, portrait/landscape, reopening/reset and larger text.
+The 1170 × 19020 ten-capture Linux probe measures the same bounded raster renderer
+while retaining the full workspace; it is not a device memory claim. Commands
+and scoped evidence: [inspection note](../notes/2026-09-16-native-inspection.md).
+
+Native verification runs six small-input UI cases in Debug and the full phone-size
+inspection case in a Release test build. Both build/install/test invocations must
+pass. The explicit `TRAKTION_UI_TESTING` flag enables synthetic bootstrap in that
+Release test binary only; normal Release builds exclude test input. See the task
+note for the initial unoptimized reconstruction timeout. Both xcresults and
+exported attachments are retained in `traktion-ios-verification`.
