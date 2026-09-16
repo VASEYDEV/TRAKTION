@@ -15,6 +15,18 @@ simulator_id=""
 cleanup() {
   result=$?
   trap - EXIT
+  # Keep visible evidence even when a UI assertion stops the script before its
+  # normal export. Preserve the original failure status if diagnostics fail.
+  for configuration in debug release; do
+    result_bundle="$run_dir/TRAKTION.xcresult"
+    [[ "$configuration" == release ]] && result_bundle="$run_dir/TRAKTION-Release.xcresult"
+    attachment_dir="$run_dir/attachments/$configuration"
+    if [[ -d "$result_bundle" && ! -d "$attachment_dir" ]]; then
+      mkdir -p "$run_dir/attachments" || { echo "Could not create attachment directory" >&2; continue; }
+      xcrun xcresulttool export attachments --path "$result_bundle" \
+        --output-path "$attachment_dir" || echo "Could not export $configuration attachments" >&2
+    fi
+  done
   if [[ -n "$simulator_id" ]]; then
     xcrun simctl shutdown "$simulator_id" >/dev/null 2>&1 || true
     xcrun simctl delete "$simulator_id" || echo "Could not delete dedicated simulator $simulator_id" >&2

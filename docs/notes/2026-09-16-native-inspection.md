@@ -151,3 +151,18 @@ does not present the clipped attachment as a clean landscape visual pass.
 Task 0019 is complete once those final merge gates pass. The task index and roadmap
 advance to task 0020; historical completed/superseded packets remain evidence,
 not queued work. Delete the feature branch after its tree is preserved on main.
+
+The next [run 35161855267](https://github.com/VASEYDEV/TRAKTION/actions/runs/35161855267)
+again passed repository/Linux/Apple gates, but the XXXL test exposed the reveal
+helper alternating large up/down drags around the region picker. Its final
+hittability assertion failed; XCTest's subsequent tap scrolled the same picker
+into view and the joint checks continued. The inspector helper now moves toward
+the target's center with a bounded distance, keeping the drag in the margin and
+retaining all assertions and retry limits. The script also exports attachments
+on failure while preserving its original exit status, so a failed case does not
+hide visual diagnostics inside an xcresult bundle. Final-head native validation
+is still required; the earlier green run does not substitute for it.
+Independent review found no blocker in the revised geometry or shell cleanup.
+An isolated execution of the actual cleanup function preserved both successful
+and failing original exit codes even when diagnostic export/cleanup failed;
+shell syntax, repository policy and whitespace checks passed.
