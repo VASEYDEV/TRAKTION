@@ -27,10 +27,17 @@ struct InspectionViewport: Equatable, Sendable {
   let y: Double
   let zoom: Double
 
+  var zoomPercentText: String {
+    let percentage = zoom * 100
+    // Keep tiny valid fit scales visible instead of rounding them to zero.
+    return String(format: percentage >= 0.01 ? "%.2f" : "%.6g",
+      locale: .current, percentage) + "%"
+  }
+
   init(width: Int, height: Int, x: Double, y: Double, zoom: Double) throws {
     guard (1...Self.maximumEdge).contains(width),
       (1...Self.maximumEdge).contains(height), x.isFinite, y.isFinite,
-      x >= 0, y >= 0, zoom.isFinite, (1.0 / 65_536...16).contains(zoom)
+      x >= 0, y >= 0, zoom.isFinite, zoom > 0, zoom <= 16
     else { throw InspectionFailure.invalidViewport }
     self.width = width
     self.height = height

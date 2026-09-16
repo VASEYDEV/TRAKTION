@@ -136,7 +136,7 @@
     private var viewportDetails: some View {
       VStack(alignment: .leading, spacing: 4) {
         if let viewport = model.viewport {
-          Text("Zoom: \(viewport.zoom * 100, specifier: "%.2f")%\(viewport.zoom == 1 ? " (1:1)" : "")")
+          Text("Zoom: \(viewport.zoomPercentText)\(viewport.zoom == 1 ? " (1:1)" : "")")
             .accessibilityIdentifier("inspection.zoom")
           Text("\(model.sourceWidth) × \(model.sourceHeight) source pixels. View starts at x \(Int(viewport.x)), y \(Int(viewport.y)).")
             .accessibilityIdentifier("inspection.coordinates")

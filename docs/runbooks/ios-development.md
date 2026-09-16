@@ -40,13 +40,15 @@ The verification sequence is:
 4. Generate baseline/duplicate/missing-middle PNG fixtures in a separate
    release CLI process, install the app, and copy only capture PNGs into the
    dedicated simulator app container. Source truth/manifests stay outside it.
-5. Launch and run `xcodebuild test-without-building`; five XCTest scenarios
-   verify real-service import, explicit order/reordering, actual results,
-   duplicate/gap refusals, reset, portrait/landscape and larger text. A separate
-   scenario presents and cancels the actual system Files picker. The Debug-only
-   `TRAKTION_UI_FIXTURE` bootstrap reads these files through the production
-   importer; it never confirms order or injects a reconstruction result.
-6. Shut down and delete the dedicated simulator, preserving the test result.
+5. Launch and run six Debug XCTest scenarios for real import, supplied order,
+   reconstruction/refusals, reset, rotation, larger text (including inspection)
+   and actual Files picker cancellation.
+6. Build/install a Release test app and run the same full-size phone inspection
+   scenario with production optimization. The `TRAKTION_UI_FIXTURE` bootstrap
+   is available in Debug or with the explicit `TRAKTION_UI_TESTING` test flag;
+   it calls the production importer without confirming order or injecting results.
+7. Export retained screenshot attachments and shut down/delete the dedicated
+   simulator, preserving both test results.
 
 Results live in a new run directory beneath `.traktion-local/ios-smoke`.
 Set `TRAKTION_IOS_ARTIFACTS` to change that parent directory. Runs do not

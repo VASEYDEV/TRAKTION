@@ -37,6 +37,36 @@ final class NativeInspectionModelTests: XCTestCase, @unchecked Sendable {
     XCTAssertEqual(model.frame?.viewport.zoom, 1.0 / 6)
   }
 
+  func testFitHasNoFixedZoomFloorForTallNarrowRasters() async throws {
+    // Isolate inspection geometry from registration: a small byte count can
+    // still have a large edge. This shape is below the workspace pixel limits.
+    let image = try RasterImage(width: 1, height: 262_145,
+      pixels: [UInt8](repeating: 255, count: 262_145 * 4))
+    let result = ReconstructionResult(plan: ReconstructionPlan(axis: .vertical,
+      outputWidth: 1, outputHeight: image.height, placements: [], joints: []), image: image)
+    let model = NativeInspectionModel()
+    try model.open(result: result, captures: [], retainedBytes: image.pixels.count, budget: 268_435_456)
+    model.resize(width: 2, height: 2)
+    try await idle(model)
+    let fit = 2.0 / Double(image.height)
+    XCTAssertEqual(model.frame?.viewport.zoom, fit)
+    XCTAssertLessThan(fit, 1.0 / 65_536)
+    let formatter = NumberFormatter()
+    formatter.locale = .current
+    let percentText = try XCTUnwrap(model.frame?.viewport.zoomPercentText)
+    let displayedPercentage = try XCTUnwrap(formatter.number(from: String(percentText.dropLast()))).doubleValue
+    XCTAssertGreaterThan(displayedPercentage, 0)
+    XCTAssertEqual(displayedPercentage, fit * 100, accuracy: 1e-9)
+    model.setZoom(1)
+    model.fit()
+    try await idle(model)
+    XCTAssertEqual(model.frame?.viewport.zoom, fit)
+    model.setZoom(fit / 2)
+    try await idle(model)
+    XCTAssertEqual(model.frame?.viewport.zoom, fit, "Zoom out stops at the actual fit scale")
+    XCTAssertEqual(model.frame?.viewport.y, 0)
+  }
+
   func testFractionalZoomCanReachTheLastSourceRowAndColumn() async throws {
     let fixture = try SyntheticFixtureFactory.baseline()
     let result = try ReconstructionEngine().reconstruct(fixture.sequence, axis: .vertical)

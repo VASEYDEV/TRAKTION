@@ -140,6 +140,11 @@ final class TRAKTIONLaunchTests: XCTestCase {
     reveal(one, in: scroll)
     one.tap()
     XCTAssertEqual(app.staticTexts["inspection.zoom"].label, "Zoom: 100.00% (1:1)")
+    let canvas = app.images["inspection.canvas"]
+    reveal(canvas, in: scroll)
+    let beforeDrag = app.staticTexts["inspection.coordinates"].label
+    canvas.swipeUp()
+    XCTAssertNotEqual(app.staticTexts["inspection.coordinates"].label, beforeDrag)
     let down = app.buttons["inspection.pan.down"]
     reveal(down, in: scroll)
     let before = app.staticTexts["inspection.coordinates"].label
@@ -312,7 +317,14 @@ final class TRAKTIONLaunchTests: XCTestCase {
   private func reveal(_ element: XCUIElement, in scroll: XCUIElement) {
     // A previous action or rotation can retain a position below this element.
     for _ in 0..<20 where !element.isHittable {
-      if element.exists && element.frame.maxY <= scroll.frame.minY {
+      let downward = element.exists && element.frame.maxY <= scroll.frame.minY
+      if scroll.identifier == "inspection.scroll" {
+        // The image intentionally consumes drags for pixel panning. Scroll the
+        // inspector using its padding, outside the fixed 320-point canvas.
+        let start = scroll.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: downward ? 0.2 : 0.8))
+        let end = scroll.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: downward ? 0.8 : 0.2))
+        start.press(forDuration: 0.01, thenDragTo: end)
+      } else if downward {
         scroll.swipeDown()
       } else {
         scroll.swipeUp()

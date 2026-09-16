@@ -13,7 +13,9 @@ Use one fixed-size viewport, at most 1,024 × 1,024 RGBA display pixels. The nat
 view is at most 320 × 240 points and derives its integer raster dimensions from
 SwiftUI's display scale. The displayed image uses those dimensions divided by
 that same scale. Zoom means **display pixels per source pixel**; 100% is 1:1,
-not one source pixel per UIKit point. Fit and magnification use deterministic
+not one source pixel per UIKit point. Fit derives its positive scale from the
+actual image dimensions; no fixed zoom floor truncates tall images. Very small
+percentages retain enough significant digits to remain visible. Fit and magnification use deterministic
 nearest-neighbor sampling; pixels beyond source bounds remain transparent.
 Pan uses whole source-pixel origins. At an edge, align the last sampled source
 coordinate so fractional zoom cannot hide the last row or column.

@@ -130,7 +130,7 @@ final class NativeInspectionModel {
 
   func setZoom(_ zoom: Double) {
     guard let viewport, zoom.isFinite else { return }
-    let zoom = min(16, max(1.0 / 65_536, zoom))
+    let zoom = min(16, max(fitZoom(width: viewport.width, height: viewport.height), zoom))
     let centerX = viewport.x + min(Double(sourceWidth) - viewport.x, Double(viewport.width) / viewport.zoom) / 2
     let centerY = viewport.y + min(Double(sourceHeight) - viewport.y, Double(viewport.height) / viewport.zoom) / 2
     update(width: viewport.width, height: viewport.height,
@@ -152,8 +152,8 @@ final class NativeInspectionModel {
   }
 
   private func fitZoom(width: Int, height: Int) -> Double {
-    max(1.0 / 65_536, min(1, Double(width) / Double(max(1, sourceWidth)),
-      Double(height) / Double(max(1, sourceHeight))))
+    min(1, Double(width) / Double(max(1, sourceWidth)),
+      Double(height) / Double(max(1, sourceHeight)))
   }
 
   private func update(width: Int, height: Int, x: Double, y: Double, zoom: Double) {

@@ -92,3 +92,25 @@ are retained by XCTest; this note does not claim manual visual inspection until
 those artifacts are retrieved and reviewed. Physical-device signing/memory,
 VoiceOver speech, third-party Files-provider selection and export are not tested
 by this inspection change.
+
+## Tall-image review follow-up
+
+GitHub review identified a fixed 1/65536 zoom floor that could prevent Fit from
+covering extremely tall, narrow admitted rasters. The viewport now accepts every
+positive finite zoom through 16×; the model derives its zoom-out minimum from the
+actual dimensions. A 1 × 262145 raster with a 2 × 2 viewport reproduces the old
+failure without excessive allocation. The regression covers initial Fit, return
+from 1:1, and further zoom-out clamping. Very small percentages use six significant
+digits so a valid scale does not display as zero. The independent reviewer
+confirmed the geometry/resource fix and reran all 13 focused inspection tests.
+
+## Native interaction correction
+
+[Revised run 35159289876](https://github.com/VASEYDEV/TRAKTION/actions/runs/35159289876)
+passed all six Debug cases (283.948 s) and completed the same full-size phone
+reconstruction in Release. The optimized inspection case reached all joint,
+original-source, rotation and navigation checks, but failed its first down-pan
+assertion: the generic ScrollView swipe was inside the canvas, so it intentionally
+panned pixels to the bottom instead of revealing the control. Test scrolling now
+uses the inspector margin; an explicit image swipe separately asserts that pixels
+pan. Inputs, coordinate assertions and timeouts remain unchanged.

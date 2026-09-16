@@ -144,6 +144,17 @@ xcodebuild test-without-building "${release_args[@]}" \
   -only-testing:TRAKTIONUITests/TRAKTIONLaunchTests/testLongPixelInspectionPanZoomJointSourcesAndReturn \
   -resultBundlePath "$run_dir/TRAKTION-Release.xcresult" | tee "$run_dir/release-tests.log"
 
+# An obsolete -only-testing selector must not turn this gate into a zero-test pass.
+python3 - "$run_dir/release-tests.log" <<'VERIFY_RELEASE'
+import pathlib
+import sys
+
+log = pathlib.Path(sys.argv[1]).read_text()
+required = "Test Case '-[TRAKTIONUITests.TRAKTIONLaunchTests testLongPixelInspectionPanZoomJointSourcesAndReturn]' passed"
+if required not in log:
+    sys.exit("The required optimized phone-size inspection test did not pass.")
+VERIFY_RELEASE
+
 # Export retained synthetic screenshots alongside xcresult for direct visual review.
 xcrun xcresulttool export attachments --path "$run_dir/TRAKTION-Release.xcresult" \
   --output-path "$run_dir/attachments/release"
