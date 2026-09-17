@@ -126,7 +126,7 @@ keeps the previous workspace. Reset/remove only affect the workspace; original
 files remain unchanged. Select **Inspect pixels and joints** on the result for
 1:1 source pixels, pan/zoom and each joint’s original-capture evidence. The
 viewport stays bounded while the full reconstruction remains intact. In a joint,
-choose **Adjust seam**, preview a boundary inside its proven overlap, then apply
+choose **Adjust this seam**, preview a boundary inside its proven overlap, then apply
 or cancel. Undo/redo preserves committed changes across inspector reopening;
 reset or replacement clears this in-memory history. There is no saved-project
 or export workflow yet.

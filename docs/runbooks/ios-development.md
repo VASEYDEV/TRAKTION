@@ -116,7 +116,7 @@ exported attachments are retained in `traktion-ios-verification`.
 
 ## Deliberate seam adjustment
 
-Select a proven joint in the inspector and choose **Adjust seam**. Nudge the
+Select a proven joint in the inspector and choose **Adjust this seam**. Nudge the
 boundary within the displayed permitted overlap, compare the original sources,
 and apply or cancel. Undo/redo restores committed boundaries and pixels;
 closing/reopening the inspector keeps committed history while discarding a draft.
