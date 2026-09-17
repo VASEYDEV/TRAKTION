@@ -41,7 +41,7 @@ The verification sequence is:
    release CLI process, install the app, and copy only capture PNGs into the
    dedicated simulator app container. Source truth/manifests stay outside it.
 5. Launch and run all small-input Debug XCTest scenarios for real import, supplied order,
-   reconstruction/refusals, reset, rotation, larger text (including inspection)
+   reconstruction/refusals, reset, rotation, larger text (including inspection),
    deliberate seam apply/cancel/undo/redo, and actual Files picker cancellation.
 6. Build/install a Release test app and run the same full-size phone inspection
    scenario with production optimization. The `TRAKTION_UI_FIXTURE` bootstrap

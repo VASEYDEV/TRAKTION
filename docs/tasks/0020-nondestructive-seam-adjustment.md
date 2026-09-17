@@ -1,6 +1,6 @@
 # Task: Non-destructive seam adjustment and undo
 
-Status: in progress — implementation and portable verification complete; native CI remains required.
+Status: done — verified in [PR #20](https://github.com/VASEYDEV/TRAKTION/pull/20); PR remains open for review/merge.
 
 ## Goal
 Allow deliberate seam selection inside an already proven overlap, with a visible
@@ -28,11 +28,13 @@ persistence, export, semantic review and production signing/distribution.
 - [x] Undo/redo restore exact plans and pixels, including after several joints.
 - [x] Import/reset/cancellation cannot publish an old edited result.
 - [x] Resource and off-main behavior cover phone-size and long synthetic inputs.
-- [ ] Actual simulator tests cover accessible adjustment controls and undo/redo.
-- [ ] Existing core/PNG/native gates, ADR and independent review pass.
+- [x] Actual simulator tests cover accessible adjustment controls and undo/redo.
+- [x] Existing core/PNG/native gates, ADR and independent review pass.
 
 One writer owns implementation. Independently review source selection, seam
 boundaries, undo history, confidence preservation and resource ownership.
 
 Implementation decision: [ADR-023](../adr/ADR-023-reversible-seam-selection.md).
 Verification: [2026-09-17 note](../notes/2026-09-17-seam-editing.md).
+
+Full implementation verification: [run 35222997795](https://github.com/VASEYDEV/TRAKTION/actions/runs/35222997795) at `1daafd6d013eb4af92d26b2c4061b22e8cb1e1e4`; all five jobs passed. The current PR checks remain required after documentation updates.

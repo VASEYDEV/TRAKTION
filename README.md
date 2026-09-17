@@ -51,11 +51,13 @@ signing, and broader capture modes remain on the [roadmap](docs/ROADMAP.md).
 
 <p align="center">
   <img src="assets/screenshots/reconstruction.png" alt="Verified iOS reconstruction preview and exact joint labels" width="260">
-  <img src="assets/screenshots/joint-original.png" alt="Verified joint inspector showing original capture coordinates and confidence" width="260">
+  <img src="assets/screenshots/joint-original.png" alt="Original capture pixels in the verified native joint inspector" width="260">
+  <img src="assets/screenshots/seam-adjustment.png" alt="Applied seam adjustment with modified result and undo history" width="260">
 </p>
 
-These are unmodified simulator captures from the verified inspection build using
-synthetic documents. They show actual behavior, not a future design mockup.
+These are unmodified simulator captures from the verified editing build using
+synthetic documents: reconstruction, original-source comparison, and reversible
+seam adjustment. They show actual behavior, not a future design mockup.
 [Capture provenance](assets/screenshots/README.md) identifies the tests and commit.
 The established amber logo is retained; production app-icon packaging and visual
 polish remain release work.

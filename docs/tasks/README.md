@@ -16,9 +16,9 @@ unmerged packet is renumbered on port (see task 0009 for the PR #8 example).
 Completed packets below are historical evidence, not queued work. Continue from
 current `main`; never restart a superseded branch.
 
-1. **[0020](0020-nondestructive-seam-adjustment.md)** and
-   **[0021](0021-repository-health-and-product-handoff.md):** seam editing and
-   repository cleanup are in the current integration PR; finish review and CI.
+1. **Review/merge [PR #20](https://github.com/VASEYDEV/TRAKTION/pull/20):**
+   tasks 0020 and 0021 are implemented and verified. The PR is intentionally open;
+   require its current checks before merge, then delete its branch.
 2. **[0022](0022-local-project-persistence.md):** next implementation packet,
    local saved projects. PNG export follows under a separate task.
 3. Physical-device signing/resource verification and production artwork require
@@ -27,7 +27,7 @@ current `main`; never restart a superseded branch.
 
 ## Index
 
-| Task | Title | Milestone | Status | Writer | Landed |
+| Task | Title | Milestone | Status | Writer | Landed / review |
 | --- | --- | --- | --- | --- | --- |
 | [0001](0001-deterministic-foundation.md) | Deterministic Swift foundation | 0–1 | done | Codex | PR #4 |
 | [0002](0002-lab-failure-manifest.md) | Typed failure manifests for `traktion-lab` | 1 | done | Claude | PR #6 |
@@ -48,8 +48,8 @@ current `main`; never restart a superseded branch.
 | [0017](0017-native-png-reconstruction.md) | Native PNG import and supplied-order reconstruction | first native workflow | done | Codex | PR #18 |
 | [0018](0018-project-pr-template.md) | Project-specific pull request template | workflow | done | Codex | PR #17 |
 | [0019](0019-native-pixel-inspection.md) | Native pixel and joint inspection | native inspection | done | Codex | PR #19 |
-| [0020](0020-nondestructive-seam-adjustment.md) | Non-destructive seam adjustment and undo | first editing step | in review | Codex | current PR |
-| [0021](0021-repository-health-and-product-handoff.md) | Repository health and product handoff | workflow/docs | in progress | Codex | current PR |
+| [0020](0020-nondestructive-seam-adjustment.md) | Non-destructive seam adjustment and undo | first editing step | verified | Codex | PR #20 (open) |
+| [0021](0021-repository-health-and-product-handoff.md) | Repository health and product handoff | workflow/docs | verified | Codex | PR #20 (open) |
 | [0022](0022-local-project-persistence.md) | Local project persistence | editor | queued | assign at start | — |
 
 ## Superseded packets and pull requests
