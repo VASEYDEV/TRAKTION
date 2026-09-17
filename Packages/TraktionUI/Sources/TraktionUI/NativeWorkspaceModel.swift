@@ -17,7 +17,8 @@ public final class NativeWorkspaceModel {
   public private(set) var captures: [CaptureAsset] = []
   public private(set) var thumbnails: [CaptureID: RasterImage] = [:]
   public private(set) var result: ReconstructionResult?
-  public private(set) var resultPreview: RasterImage?
+  public var resultPreview: RasterImage? { inspection.editing.preview }
+  public var isModified: Bool { inspection.editing.isModified }
   public private(set) var failure: NativeWorkspaceFailure?
   public private(set) var operation: NativeWorkspaceOperation?
   public private(set) var isCancelling = false
@@ -62,7 +63,7 @@ public final class NativeWorkspaceModel {
     self.inspection = inspection
   }
 
-  public var isBusy: Bool { operation != nil || inspection.isRendering }
+  public var isBusy: Bool { operation != nil || inspection.isRendering || inspection.editing.isRendering }
 
   public var canReconstruct: Bool {
     !isBusy && orderConfirmed && (2...10).contains(captures.count) && result == nil
@@ -72,12 +73,13 @@ public final class NativeWorkspaceModel {
     if isCancelling {
       return "Cancelling. Waiting for image work to finish before another operation."
     }
+    if inspection.editing.isRendering { return "Updating the adjusted result…" }
     if inspection.isRendering { return "Updating pixel inspection…" }
     switch operation {
     case .importing: return "Reading and validating PNG captures…"
     case .reconstructing: return "Reconstructing on this device…"
     case nil:
-      if result != nil { return "Reconstruction complete. Original files are unchanged." }
+      if result != nil { return isModified ? "Seams adjusted. Original files and registration evidence are unchanged." : "Reconstruction complete. Original files are unchanged." }
       if captures.isEmpty { return "Choose 2–10 overlapping PNG captures to begin." }
       if captures.count < 2 { return "At least two captures are needed. Import a new batch." }
       return orderConfirmed
@@ -205,7 +207,7 @@ public final class NativeWorkspaceModel {
   }
 
   public func cancel() {
-    guard let job = activeJob else { return }
+    guard let job = activeJob else { inspection.editing.cancelRendering(); return }
     job.token.cancel()
     isCancelling = true
   }
@@ -270,7 +272,7 @@ public final class NativeWorkspaceModel {
     switch outcome {
     case .success(let batch):
       result = batch.result
-      resultPreview = batch.preview
+      inspection.editing.configure(result: batch.result, captures: captures, preview: batch.preview)
       failure = nil
     case .failure(let error):
       failure = error
@@ -294,7 +296,7 @@ public final class NativeWorkspaceModel {
   private func invalidateReconstruction() {
     inspection.close()
     result = nil
-    resultPreview = nil
+    inspection.editing.reset()
     failure = nil
     orderConfirmed = false
   }

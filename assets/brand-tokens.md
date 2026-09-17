@@ -6,7 +6,7 @@ Brand hierarchy:
   logo is forthcoming and does not exist in this repo yet).
 - **VASEY/AI** — the AI-tooling brand under Vasey Studios. TRAKTION ships under it.
 - **VASEY.AUDIO** (Sean Vasey Productions — music) is a sibling brand; never conflate it
-  with VASEY/AI per `CLAUDE.md` §10.
+  with VASEY/AI. Repository brand facts are summarized in `CLAUDE.md`.
 
 ## Color
 
@@ -30,5 +30,5 @@ wordmark at weight 800 with wide letter-spacing.
 ## Source files
 
 - `traktion-icon.svg` — square badge mark (512 grid). Master for any raster/PWA icon
-  suite per §10; rasterize preserving transparency.
+  suite; preserve the tread-T geometry and transparency.
 - `traktion-logo.svg` — horizontal lockup: badge + wordmark (1024×256 grid).
