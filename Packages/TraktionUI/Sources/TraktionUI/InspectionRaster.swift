@@ -1,5 +1,6 @@
 import Foundation
 import TraktionDomain
+import TraktionCore
 #if canImport(CoreGraphics)
   import CoreGraphics
 #endif
@@ -73,11 +74,27 @@ struct InspectionFrame: Sendable {
   }
 }
 
+enum InspectionPixelSource: Sendable {
+  case raster(RasterImage)
+  case composition(PlannedRasterRenderer)
+}
+
 protocol InspectionRendering: Sendable {
   func render(
     _ source: RasterImage, viewport: InspectionViewport,
     isCancelled: @Sendable () -> Bool
   ) throws -> InspectionFrame
+  func renderComposition(_ source: PlannedRasterRenderer, viewport: InspectionViewport,
+    isCancelled: @Sendable () -> Bool) throws -> InspectionFrame
+}
+
+extension InspectionRendering {
+  func renderComposition(_ source: PlannedRasterRenderer, viewport: InspectionViewport,
+    isCancelled: @Sendable () -> Bool) throws -> InspectionFrame {
+    let raster = try source.render(RasterSamplingRegion(width: viewport.width, height: viewport.height,
+      x: viewport.x, y: viewport.y, scale: viewport.zoom), isCancelled: isCancelled)
+    return try InspectionFrame(viewport: viewport, raster: raster)
+  }
 }
 
 struct InspectionRasterRenderer: InspectionRendering {
@@ -122,21 +139,25 @@ struct InspectionJoint: Sendable {
   let followingOrigin: Int
 
   init(_ diagnosis: JointDiagnosis, result: ReconstructionResult, captures: [CaptureAsset]) throws {
+    try self.init(diagnosis, plan: result.plan, captures: captures)
+  }
+
+  init(_ diagnosis: JointDiagnosis, plan: ReconstructionPlan, captures: [CaptureAsset]) throws {
     guard let preceding = captures.first(where: { $0.id == diagnosis.precedingCaptureID }),
       let following = captures.first(where: { $0.id == diagnosis.followingCaptureID }),
-      let firstIndex = result.plan.placements.firstIndex(where: { $0.captureID == preceding.id }),
-      let secondIndex = result.plan.placements.firstIndex(where: { $0.captureID == following.id })
+      let firstIndex = plan.placements.firstIndex(where: { $0.captureID == preceding.id }),
+      let secondIndex = plan.placements.firstIndex(where: { $0.captureID == following.id })
     else { throw InspectionFailure.invalidJoint }
-    let first = result.plan.placements[firstIndex]
-    let second = result.plan.placements[secondIndex]
+    let first = plan.placements[firstIndex]
+    let second = plan.placements[secondIndex]
     guard
       diagnosis.overlapRows > 0,
       diagnosis.overlapRows <= min(preceding.image.height, following.image.height),
       (0...diagnosis.overlapRows).contains(diagnosis.seamRowInOverlap),
       first.originY >= 0, second.originY >= first.originY,
-      second.originY < result.image.height,
+      second.originY < plan.outputHeight,
       diagnosis.outputSeamRow >= second.originY,
-      diagnosis.outputSeamRow < result.image.height,
+      diagnosis.outputSeamRow < plan.outputHeight,
       diagnosis.outputSeamRow - second.originY == diagnosis.seamRowInOverlap,
       second.originY - first.originY == preceding.image.height - diagnosis.overlapRows
     else { throw InspectionFailure.invalidJoint }

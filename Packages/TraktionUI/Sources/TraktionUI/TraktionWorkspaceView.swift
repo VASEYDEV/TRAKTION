@@ -224,7 +224,8 @@ import TraktionDomain
           Button("Inspect pixels and joints") { model.inspectResult() }
             .disabled(model.isBusy)
             .accessibilityIdentifier("workspace.result.inspect")
-          Text("Preview scaled to fit. Original captures are unchanged.")
+          Text(model.isModified ? "Modified seams. Preview scaled to fit. Original captures are unchanged." : "Automatic seams. Preview scaled to fit. Original captures are unchanged.")
+            .accessibilityIdentifier("workspace.result.editState")
             .font(.caption)
             .foregroundStyle(.secondary)
           ForEach(Array(result.plan.joints.enumerated()), id: \.offset) { index, joint in

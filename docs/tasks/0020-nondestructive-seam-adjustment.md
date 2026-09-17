@@ -1,6 +1,6 @@
 # Task: Non-destructive seam adjustment and undo
 
-Status: queued — next after task 0019.
+Status: in progress — implementation and portable verification complete; native CI remains required.
 
 ## Goal
 Allow deliberate seam selection inside an already proven overlap, with a visible
@@ -22,14 +22,17 @@ Translation correction, gap bridging, automatic ordering, trim/cut, project
 persistence, export, semantic review and production signing/distribution.
 
 ## Acceptance criteria
-- [ ] Each accepted edit matches an independent original-source pixel oracle.
-- [ ] Out-of-overlap/crossing/invalid seams are refused before allocation.
-- [ ] Unchanged or cancelled edits retain the original reconstruction exactly.
-- [ ] Undo/redo restore exact plans and pixels, including after several joints.
-- [ ] Import/reset/cancellation cannot publish an old edited result.
-- [ ] Resource and off-main behavior cover phone-size and long synthetic inputs.
+- [x] Each accepted edit matches an independent original-source pixel oracle.
+- [x] Out-of-overlap/crossing/invalid seams are refused before allocation.
+- [x] Unchanged or cancelled edits retain the original reconstruction exactly.
+- [x] Undo/redo restore exact plans and pixels, including after several joints.
+- [x] Import/reset/cancellation cannot publish an old edited result.
+- [x] Resource and off-main behavior cover phone-size and long synthetic inputs.
 - [ ] Actual simulator tests cover accessible adjustment controls and undo/redo.
 - [ ] Existing core/PNG/native gates, ADR and independent review pass.
 
 One writer owns implementation. Independently review source selection, seam
 boundaries, undo history, confidence preservation and resource ownership.
+
+Implementation decision: [ADR-023](../adr/ADR-023-reversible-seam-selection.md).
+Verification: [2026-09-17 note](../notes/2026-09-17-seam-editing.md).
