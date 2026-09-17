@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   original-source views, stable capture positions, confidence/overlap/seam details,
   accessible controls, and actual phone-size/rotation/large-text simulator evidence.
 - **Repository health documentation** (task 0021): product purpose and honest
-  current/planned feature inventory, verified simulator screenshots, dependency
+  current/planned feature inventory, verified simulator screenshots, labeled product-vision artwork, dependency
   inventory, historical CI failure analysis and a local-project persistence packet.
   Completed bootstrap documents are archived; superseded local checkouts were
   removed only after preservation review. Existing logo masters are retained.

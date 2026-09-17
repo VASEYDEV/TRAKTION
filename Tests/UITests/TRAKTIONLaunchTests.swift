@@ -307,6 +307,23 @@ final class TRAKTIONLaunchTests: XCTestCase {
       XCTAssertTrue(button.isEnabled)
       button.tap()
     }
+    app.buttons["inspection.done"].tap()
+  }
+
+  // Keep viewport and editing accessibility flows independently below the
+  // existing per-case time budget; every original assertion remains exercised.
+  func testLargeTextSeamControlsRemainReachable() {
+    let app = XCUIApplication()
+    XCUIDevice.shared.orientation = .portrait
+    app.launchEnvironment["TRAKTION_UI_FIXTURE"] = "baseline"
+    app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
+    app.launch()
+    waitForImport(in: app, count: 3)
+    confirmOrder(in: app)
+    app.buttons["workspace.reconstruct"].tap()
+    XCTAssertTrue(app.staticTexts["workspace.result.dimensions"].waitForExistence(timeout: 30))
+    openInspection(in: app)
+    let scroll = app.scrollViews["inspection.scroll"]
     let region = app.buttons["inspection.region"]
     reveal(region, in: scroll)
     region.tap()
@@ -418,7 +435,8 @@ final class TRAKTIONLaunchTests: XCTestCase {
 
   private func reveal(_ element: XCUIElement, in scroll: XCUIElement) {
     // A previous action or rotation can retain a position below this element.
-    for _ in 0..<20 where !element.isHittable {
+    for _ in 0..<20 {
+      if element.isHittable { break }
       if scroll.identifier == "inspection.scroll" {
         // The image intentionally consumes drags for pixel panning. Scroll the
         // padding and move the target toward the viewport center. Fixed full

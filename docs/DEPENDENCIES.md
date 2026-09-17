@@ -10,6 +10,7 @@ version is compatible or that simulator verification establishes device readines
 | Native UI | Apple SwiftUI, Observation, Foundation, Dispatch | Native workspace and cancellable worker orchestration |
 | Apple PNG/raster boundary | CoreGraphics, ImageIO, UniformTypeIdentifiers | Platform image decoding and Files import |
 | Linux PNG/raster boundary | Repository-owned pure-Swift PNG codec | Same tested pixel contract without an external codec |
+| OS bindings | Darwin / Glibc | Platform system calls and process diagnostics |
 | Tests | XCTest; deterministic FixtureForge | Source-pixel, golden, lifecycle, resource and native UI evidence |
 | Minimum targets | iOS 17, macOS 14 | Xcode build settings and SwiftPM platform declarations |
 | Linux CI | Ubuntu 24.04, official `swift:6.0-noble` container | Main audit observed Swift 6.0.3 |

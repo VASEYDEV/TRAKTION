@@ -22,6 +22,13 @@ The current app imports PNG screenshots, reconstructs them in a confirmed order,
 
 Full-page capture often fails: content scrolls inside nested frames, headers stay fixed, floating controls cover content, or the source app simply has no full-page capture. Manual stitching is slow because every adjacent capture overlaps and must be aligned and trimmed precisely. TRAKTION's deterministic reconstruction engine does that alignment — and reports what it cannot prove instead of inventing it.
 
+<p align="center">
+  <img src="assets/traktion-product-vision.png" alt="Concept illustration of separate captures aligned into a continuous document, with amber guides" width="840">
+</p>
+
+*Product vision illustration — not an app screenshot or a pixel-accuracy example.
+[Verified native screenshots](#actual-app-screenshots) appear below.*
+
 ## Status
 
 **Experimental native iOS build.** The reconstruction core, PNG import, bounded

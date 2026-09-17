@@ -65,6 +65,8 @@ weakened to obtain passing CI. See the [dependency inventory](../DEPENDENCIES.md
   README version claim, task disposition, and current/planned feature wording.
 - Add unmodified, visually reviewed synthetic simulator screenshots with
   source-run provenance; preserve the established amber tread-T SVG masters.
+  A separately labeled generated concept illustration communicates the product
+  idea without claiming to be native UI or a pixel-accuracy example.
 
 ## Remaining administrative limitation
 
@@ -83,3 +85,38 @@ limitation does not block source development or the open PR.
 
 Final feature, review and CI evidence is recorded below after verification and in
 the open PR. Earlier main results establish the baseline, not the new feature.
+
+### Integrated local verification and cleanup
+
+The integrated release build completed with Swift 6.0.3 using the documented
+process-isolation workaround. The direct XCTest executable passed all **189
+tests**, zero failures, in 41.155 seconds. The compiled release Lab evaluated the
+standard corpus: **45/45 pass**, zero false-safe, false-warning, wrong-failure or
+nondeterministic outcomes. Commands:
+
+```sh
+swift build --build-tests --configuration release --use-integrated-swift-driver -j 2 -Xswiftc -enable-testing
+.build/x86_64-unknown-linux-gnu/release/TRAKTIONPackageTests.xctest
+.build/x86_64-unknown-linux-gnu/release/traktion-lab evaluate --output /tmp/traktion-editing-evaluation.json
+python3 -m unittest discover -s Tests/Repository -v
+bash scripts/check-repository.sh
+bash -n scripts/verify-ios.sh
+git diff --check
+```
+
+Task 0020's local implementation branch was integrated, then all 14 feature-file
+blobs were compared against the integration commit. They matched exactly. Its
+clean temporary worktree and branch were then deleted. Only main and the active
+integration branch remain locally. [PR #20](https://github.com/VASEYDEV/TRAKTION/pull/20)
+contains the work and remains open; no remote feature branch was silently merged.
+Independent documentation review also verified screenshot provenance and active
+relative links; the instructions now match the actual “Adjust this seam” label.
+
+### Current PR native failure and repair
+
+The first integrated [run 35220734815](https://github.com/VASEYDEV/TRAKTION/actions/runs/35220734815)
+passed both core platforms but failed native verification. The expanded XXXL
+scenario exceeded the unchanged per-case execution allowance; a later passing
+line did not make the overall failed run acceptable. Its viewport and seam
+accessibility scenarios are split with every assertion retained. See the
+[seam note](2026-09-17-seam-editing.md) for the exact evidence and next-run result.

@@ -58,3 +58,28 @@ orientation and reopening. The existing large-text inspection case also
 exercises reachable adjustment controls. Named screenshots record applied
 history, a landscape draft and larger-text adjustment controls. No new fixture bootstrap or
 shipping dependency is required.
+
+## First integrated simulator run
+
+[Run 35220734815](https://github.com/VASEYDEV/TRAKTION/actions/runs/35220734815)
+at `48dc450` passed repository/Linux/Apple checks: 189 core tests on each
+platform, both PNG paths and 45/45 evaluations. Both new native editing scenarios
+passed (75.045 seconds for draft/source/rotation and 82.979 seconds for
+apply/cancel/undo/redo/reopening). The run is still a **failed native gate**:
+the expanded XXXL inspection case exceeded XCTest's unchanged two-minute budget,
+then emitted a passing case line after 145.946 seconds. The following test failed
+to terminate that app process; XCTest restarted and retried it. Xcode's nonzero
+exit correctly failed the lane despite those later passing lines.
+
+The XXXL viewport-control flow and joint/seam-control flow are now separate
+cases. All original coordinate, visibility, containment, enabled-state, tap and
+screenshot assertions remain. Each case starts a fresh baseline import; no input,
+assertion, timeout or required gate was weakened. Expected native inventory is
+now **nine Debug cases plus one full-phone Release case**. Fresh simulator
+verification is required before closing the task.
+
+Independent failure review also found redundant accessibility polling in the
+reveal helper: a `for ... where !isHittable` loop still queried all 20 iterations
+after the target was visible. It now breaks as soon as the target is hittable,
+retaining the same 20-drag bound and final existence/hittability assertions.
+This removes repeated snapshots without changing scrolling geometry or coverage.
