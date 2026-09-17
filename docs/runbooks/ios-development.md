@@ -2,8 +2,8 @@
 
 The Xcode target imports 2–10 opaque equal-width PNG captures from Files,
 requires explicit top-to-bottom order confirmation, and shows local supplied-order
-reconstruction or a typed failure. Inspection/editing, persistence, and export
-are subsequent tasks. No production icon or physical-device release is claimed.
+reconstruction or a typed failure, pixel/joint inspection and reversible seam
+adjustment. Persistence and export remain subsequent tasks. No production icon or physical-device release is claimed.
 
 ## Open and run
 1. Use macOS with Xcode 16 or newer and an installed iOS 17+ simulator runtime.
@@ -40,9 +40,9 @@ The verification sequence is:
 4. Generate baseline/duplicate/missing-middle PNG fixtures in a separate
    release CLI process, install the app, and copy only capture PNGs into the
    dedicated simulator app container. Source truth/manifests stay outside it.
-5. Launch and run six Debug XCTest scenarios for real import, supplied order,
+5. Launch and run all small-input Debug XCTest scenarios for real import, supplied order,
    reconstruction/refusals, reset, rotation, larger text (including inspection)
-   and actual Files picker cancellation.
+   deliberate seam apply/cancel/undo/redo, and actual Files picker cancellation.
 6. Build/install a Release test app and run the same full-size phone inspection
    scenario with production optimization. The `TRAKTION_UI_FIXTURE` bootstrap
    is available in Debug or with the explicit `TRAKTION_UI_TESTING` test flag;
@@ -107,9 +107,23 @@ The 1170 × 19020 ten-capture Linux probe measures the same bounded raster rende
 while retaining the full workspace; it is not a device memory claim. Commands
 and scoped evidence: [inspection note](../notes/2026-09-16-native-inspection.md).
 
-Native verification runs six small-input UI cases in Debug and the full phone-size
+Native verification runs all small-input UI cases in Debug and the full phone-size
 inspection case in a Release test build. Both build/install/test invocations must
 pass. The explicit `TRAKTION_UI_TESTING` flag enables synthetic bootstrap in that
 Release test binary only; normal Release builds exclude test input. See the task
 note for the initial unoptimized reconstruction timeout. Both xcresults and
 exported attachments are retained in `traktion-ios-verification`.
+
+## Deliberate seam adjustment
+
+Select a proven joint in the inspector and choose **Adjust seam**. Nudge the
+boundary within the displayed permitted overlap, compare the original sources,
+and apply or cancel. Undo/redo restores committed boundaries and pixels;
+closing/reopening the inspector keeps committed history while discarding a draft.
+Reset, replacement and capture-order changes clear that workspace's edits.
+The preview samples original source strips through the core without retaining a
+second full-size composite. Project saving and edited export are not implemented.
+
+Both native phase logs are checked against the source test inventory after
+Xcode succeeds. A missing or silently unselected test fails the gate. The
+repository lane exercises this guard with Python standard-library tests.

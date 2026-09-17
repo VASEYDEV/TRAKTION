@@ -16,10 +16,14 @@ unmerged packet is renumbered on port (see task 0009 for the PR #8 example).
 Completed packets below are historical evidence, not queued work. Continue from
 current `main`; never restart a superseded branch.
 
-1. **[0020](0020-nondestructive-seam-adjustment.md):** deliberate seam adjustment
-   inside proven overlaps, with apply/cancel and undo/redo. Persistence and export
-   follow in separate packets; physical-device signing requires the actual
-   team/device.
+1. **[0020](0020-nondestructive-seam-adjustment.md)** and
+   **[0021](0021-repository-health-and-product-handoff.md):** seam editing and
+   repository cleanup are in the current integration PR; finish review and CI.
+2. **[0022](0022-local-project-persistence.md):** next implementation packet,
+   local saved projects. PNG export follows under a separate task.
+3. Physical-device signing/resource verification and production artwork require
+   release preparation. GitHub About metadata correction is pending access;
+   details are in the [health note](../notes/2026-09-17-repository-health.md).
 
 ## Index
 
@@ -44,7 +48,9 @@ current `main`; never restart a superseded branch.
 | [0017](0017-native-png-reconstruction.md) | Native PNG import and supplied-order reconstruction | first native workflow | done | Codex | PR #18 |
 | [0018](0018-project-pr-template.md) | Project-specific pull request template | workflow | done | Codex | PR #17 |
 | [0019](0019-native-pixel-inspection.md) | Native pixel and joint inspection | native inspection | done | Codex | PR #19 |
-| [0020](0020-nondestructive-seam-adjustment.md) | Non-destructive seam adjustment and undo | first editing step | queued | assign at start | — |
+| [0020](0020-nondestructive-seam-adjustment.md) | Non-destructive seam adjustment and undo | first editing step | in review | Codex | current PR |
+| [0021](0021-repository-health-and-product-handoff.md) | Repository health and product handoff | workflow/docs | in progress | Codex | current PR |
+| [0022](0022-local-project-persistence.md) | Local project persistence | editor | queued | assign at start | — |
 
 ## Superseded packets and pull requests
 
@@ -62,7 +68,7 @@ current `main`; never restart a superseded branch.
   engine half landed as task 0009, ported onto the merged contract. The
   archived author session left one further reconciliation commit on the
   branch (renumbering to 0008/0009/ADR-015, never verified or opened as a
-  PR); the branch is now fully superseded and can be deleted.
+  PR); the branch was verified superseded and deleted. No implementation remains to port.
 - **PR #2** (`codex/create-initial-structure-for-traktion-project`, closed
   2026-08 unmerged) was an earlier foundation attempt superseded by PR #4
   (task 0001); its branch is gone.
@@ -78,6 +84,6 @@ the Xcode iOS target, shared scheme, simulator installation/UI tests, and
 developer-owned signing configuration. Its CI evidence is distinct from
 core/CLI tests. Task 0017 adds real PNG import, explicit supplied-order reconstruction, and
 result/failure presentation. Task 0019 adds bounded 1:1 pixel/joint inspection
-and original-capture evidence. Editing, project persistence and export still
-require implementation. A simulator
+and original-capture evidence. Task 0020 adds deliberate seam editing and
+reversible in-memory history. Project persistence and export remain queued. A simulator
 pass does not establish physical-device signing or App Store readiness.

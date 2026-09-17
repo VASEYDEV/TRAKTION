@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Reversible seam adjustment** (task 0020, ADR-023): deliberate draft/apply/cancel
+  inside proven overlaps, undo/redo, original/modified status, metadata-only
+  history and bounded rendering from original capture pixels. Saved projects and
+  export remain separate work.
+- **Native pixel and joint inspection** (task 0019, ADR-022): bounded 1:1 pan/zoom,
+  original-source views, stable capture positions, confidence/overlap/seam details,
+  accessible controls, and actual phone-size/rotation/large-text simulator evidence.
+- **Repository health documentation** (task 0021): product purpose and honest
+  current/planned feature inventory, verified simulator screenshots, dependency
+  inventory, historical CI failure analysis and a local-project persistence packet.
+  Completed bootstrap documents are archived; superseded local checkouts were
+  removed only after preservation review. Existing logo masters are retained.
+- **Native test-discovery guard** (task 0021): require every intended Debug/Release
+  test exactly once; reject empty, partial, failed, duplicate and wrong-phase logs.
+  Six regression cases and actual historical logs verify false-green prevention.
+  CI uses explicit read-only permissions and the previously verified action SHAs.
+
 - **Native PNG reconstruction** (task 0017, ADR-021): atomic Files import with
   content/resource preflight, explicit supplied-order confirmation, numbered
   thumbnails and move/remove controls, off-main reconstruction, bounded result

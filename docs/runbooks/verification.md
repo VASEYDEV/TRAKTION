@@ -4,6 +4,7 @@
 
 ```bash
 bash scripts/check-repository.sh
+python3 -m unittest discover -s Tests/Repository -v
 ```
 
 This validates required project files, unfilled placeholders, the compact `CLAUDE.md`
@@ -146,6 +147,12 @@ failure directories only on failure; the evaluation JSON is always retained.
 - `verify / iOS simulator` on `macos-15`, building/installing/launching the
   native app and running its XCTest UI checks;
 - `verification / required`, an `always()` aggregator that fails unless all four pass.
+
+Native Debug and Release phase logs must contain exactly one passing case record
+for every selected source test. `scripts/check-ui-test-results.py` rejects zero,
+missing, failed, duplicate or wrong-phase cases; Xcode exit failures still fail
+the script independently. Extend the inventory when adding another UI test class.
+Action versions and build dependencies are listed in [DEPENDENCIES](../DEPENDENCIES.md).
 
 The iOS lane uses `scripts/verify-ios.sh` and retains `.xcresult` and diagnostic
 logs. It creates and deletes its own simulator. See the [iOS runbook](ios-development.md).

@@ -1,4 +1,4 @@
-# Environment — never commit secrets (CLAUDE.md §5)
+# Environment — never commit secrets (AGENTS.md)
 .env
 .env.*
 !.env.example
@@ -48,3 +48,7 @@ Tests/RealWorldFixtures/Private/
 Tests/RealWorldFixtures/Local/
 Secrets/
 diagnostics/local/
+
+# Python verification helpers
+__pycache__/
+*.py[cod]

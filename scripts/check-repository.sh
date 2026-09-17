@@ -23,7 +23,8 @@ for file in "${required[@]}"; do
   fi
 done
 
-if git grep -n -F '{{' -- . \
+# Placeholder syntax is a text policy; compressed PNG bytes are not templates.
+if git grep -I -n -F '{{' -- . \
   ':(exclude).github/workflows/**' \
   ':(exclude)docs/legal/**' \
   ':(exclude)scripts/check-repository.sh'; then
