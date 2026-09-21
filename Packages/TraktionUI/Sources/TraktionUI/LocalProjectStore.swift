@@ -89,7 +89,6 @@ public struct LocalProjectStore: LocalProjectWorking {
   private let beforeCommit: @Sendable () throws -> Void
   private let afterCommit: @Sendable () -> Void
   private let removeOwned: @Sendable (URL) throws -> Void
-  private let engine: ReconstructionEngine
 
   struct Manifest: Codable, Sendable {
     let captures: [Entry]
@@ -115,7 +114,6 @@ public struct LocalProjectStore: LocalProjectWorking {
     self.limits = limits; self.decode = decode
     self.beforeCommit = beforeCommit; self.afterCommit = afterCommit
     self.removeOwned = removeOwned
-    self.engine = ReconstructionEngine()
   }
 
   public static func filename(_ name: String) throws -> String {
@@ -353,17 +351,14 @@ public struct LocalProjectStore: LocalProjectWorking {
         captures.append(CaptureAsset(id: entry.id, sourceName: entry.name,
           image: raster, originalPNG: try Data(contentsOf: path)))
       }
-      try cancellation.check()
-      let result: ReconstructionResult
-      do { result = try engine.reconstruct(CaptureSequence(captures: captures), axis: .vertical) }
+      let restored: RestoredProjectReconstruction
+      do {
+        restored = try ProjectRestorer().restore(captures: captures,
+          automaticPlan: manifest.automaticPlan, committedPlan: manifest.committedPlan,
+          isCancelled: { cancellation.isCancelled })
+      } catch ProjectRestorationFailure.cancelled { throw LocalProjectFailure.cancelled }
       catch { throw LocalProjectFailure.invalidEvidence }
-      try cancellation.check()
-      guard result.plan == manifest.automaticPlan else { throw LocalProjectFailure.invalidEvidence }
-      let document: SeamEditingDocument
-      do { document = try SeamEditingDocument(originalPlan: result.plan,
-        committedPlan: manifest.committedPlan, captures: captures) }
-      catch { throw LocalProjectFailure.invalidEvidence }
-      return LoadedLocalProject(captures: captures, result: result, document: document)
+      return LoadedLocalProject(captures: captures, result: restored.result, document: restored.document)
     }
   }
 

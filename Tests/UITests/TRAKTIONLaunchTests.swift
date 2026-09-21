@@ -373,6 +373,7 @@ final class TRAKTIONLaunchTests: XCTestCase {
     guard let field = projectNameField(in: app) else { return }
     field.tap()
     field.typeText(name)
+    XCTAssertEqual(field.value as? String, name)
     app.alerts["Save project"].buttons["Choose folder"].firstMatch.tap()
     guard chooseCurrentFilesFolder(in: app) else { return }
     let status = app.staticTexts["workspace.project.status"]
@@ -453,12 +454,27 @@ final class TRAKTIONLaunchTests: XCTestCase {
     save.tap()
     guard let field = projectNameField(in: app) else { return }
     field.tap(); field.typeText("Cancelled project")
+    XCTAssertEqual(field.value as? String, "Cancelled project")
     app.alerts["Save project"].buttons["Choose folder"].firstMatch.tap()
-    let cancel = app.navigationBars.buttons["Cancel"].firstMatch
-    guard cancel.waitForExistence(timeout: 15) else {
+    let folderPicker = app.otherElements["Browse View (Picker)"]
+    let folderOpen = app.navigationBars.buttons["Open"].firstMatch
+    guard folderOpen.waitForExistence(timeout: 15), folderPicker.exists else {
       recordFilesState(app); XCTFail("Save folder picker did not appear"); return
     }
-    cancel.tap()
+    recordFilesState(app)
+    // This folder sheet has Back/More/Open, not a visible Cancel button. Its
+    // accessibility-only Cancel proxy overlaps More. Use the actual modal
+    // dismissal gesture, beginning in the observed blank top-center header.
+    let header = app.navigationBars["FullDocumentManagerViewControllerNavigationBar"]
+    header.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.05))
+      .press(forDuration: 0.1, thenDragTo:
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.95)))
+    let dismissed = [folderPicker, folderOpen].map {
+      XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: $0)
+    }
+    guard XCTWaiter.wait(for: dismissed, timeout: 5) == .completed else {
+      recordFilesState(app); XCTFail("Save folder picker did not dismiss"); return
+    }
     XCTAssertTrue(save.waitForExistence(timeout: 10))
     XCTAssertEqual(dimensions.label, "96 × 384 pixels")
     XCTAssertFalse(app.staticTexts["workspace.project.status"].exists)
@@ -491,6 +507,7 @@ final class TRAKTIONLaunchTests: XCTestCase {
     let name = "Collision original " + String(UUID().uuidString.prefix(8))
     guard let field = projectNameField(in: app) else { return }
     field.tap(); field.typeText(name)
+    XCTAssertEqual(field.value as? String, name)
     app.alerts["Save project"].buttons["Choose folder"].firstMatch.tap()
     guard chooseCurrentFilesFolder(in: app) else { return }
     let status = app.staticTexts["workspace.project.status"]
@@ -540,10 +557,9 @@ final class TRAKTIONLaunchTests: XCTestCase {
     let field = app.alerts["Save project"].textFields.matching(
       NSPredicate(format: "placeholderValue == %@", "Project name")).firstMatch
     let appeared = field.waitForExistence(timeout: 5)
-    // A fresh simulator presents this system keyboard introduction on first use.
-    // Dismiss only the observed introduction, through its real Continue control.
-    let introduction = app.otherElements["UIContinuousPathIntroductionView"]
-    if appeared && introduction.exists { introduction.buttons["Continue"].tap() }
+    // Keep interactions inside this expected alert. Tapping the system keyboard
+    // introduction outside it makes XCTest's default interruption handler cancel
+    // the alert. The focused field accepts typeText; callers assert its value.
     let tree = XCTAttachment(string: app.debugDescription)
     tree.name = "Actual project naming dialog accessibility tree"
     tree.lifetime = .keepAlways

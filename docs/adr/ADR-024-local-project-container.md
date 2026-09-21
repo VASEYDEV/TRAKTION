@@ -24,20 +24,28 @@ not claims about process resident memory or platform decoder internals.
 Opening takes a coordinated read and stages bounded payloads in a private temporary
 directory. Framing, schema, unique IDs, counts, lengths, image metadata/CRC,
 aggregate resource limits and trailing bytes are checked before decoding. The
-shipping reconstruction engine reruns on decoded originals; its automatic plan
-must exactly equal the saved plan. The restored committed plan must retain all
+Core's `ProjectRestorer` reruns the shipping reconstruction engine on decoded
+originals; its automatic plan must exactly equal the saved plan. The restored committed plan must retain all
 placements/evidence and differ only in valid seam positions. Both plans are
 validated together; sequential replay of final seams is prohibited.
+The file adapter owns framing, resource admission and I/O, while this Core
+contract owns evidence acceptance and returns the reconstructed result and
+restored document. UI or future front ends do not duplicate validity policy.
 
 Saving uses an explicit user-selected Files folder and a validated basename with
 `.traktion` extension. A worker creates its own sibling temporary file, streams
-and flushes it, then publishes under a cancellation commit lock. New saves use an atomic
-no-clobber hard link followed by removal of the owned temporary link; explicit
-replacements use same-volume atomic rename. Precommit cancellation/failure preserves an existing destination;
-a successful commit is reported as saved even if cancellation follows it. Existing
-files require explicit replacement choice. An existing target must be a regular, non-symlink file with the recognized
-TRAKTION v1 header before replacement. A PNG merely renamed `.traktion` is
-refused; original source URLs are never reused.
+and flushes it, then publishes under a cancellation commit lock. Every save uses
+an atomic no-clobber hard link followed by removal of the owned temporary link.
+Any occupied destination is refused, including projects, unrelated files,
+directories and symlinks. The user chooses a new filename. Precommit cancellation
+or failure leaves no new destination; a successful commit is reported as saved
+even if cancellation follows it. Original source URLs are never reused.
+
+Review rejected the initial explicit-replacement path: file coordination cannot
+exclude uncoordinated writers, and checking a file before `rename` does not bind
+that rename to the validated object. V1 therefore never overwrites an existing
+directory entry. No check/rename sequence or swap-and-rollback substitutes for
+the atomic no-clobber guarantee.
 
 The workspace serial queue owns persistence operations. Job identity, cancellation
 and draining protect publication; a failed or cancelled open preserves existing
