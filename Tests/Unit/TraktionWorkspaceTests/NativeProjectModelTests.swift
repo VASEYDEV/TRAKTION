@@ -165,7 +165,7 @@ private final class BlockingProjectWorker: LocalProjectWorking, @unchecked Senda
     return loaded // Deliberately ignores cancellation to verify publication guards.
   }
   func save(_ snapshot: LocalProjectSnapshot, folder: URL, name: String,
-    replacing: Bool, cancellation: LocalProjectCancellation) throws -> URL {
+    cancellation: LocalProjectCancellation) throws -> URL {
     throw LocalProjectFailure.fileAccess
   }
 }

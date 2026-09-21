@@ -151,7 +151,7 @@ public final class NativeWorkspaceModel {
     }
   }
 
-  public func saveProject(folder: URL, name: String, replacing: Bool = false) {
+  public func saveProject(folder: URL, name: String) {
     guard canSaveProject, let document = inspection.editing.document else { return }
     let snapshot = LocalProjectSnapshot(captures: captures,
       originalPlan: document.originalPlan, committedPlan: document.plan)
@@ -160,7 +160,7 @@ public final class NativeWorkspaceModel {
     queue.async { [weak self] in
       let outcome: Result<URL, NativeWorkspaceFailure>
       do { outcome = .success(try projects.save(snapshot, folder: folder, name: name,
-        replacing: replacing, cancellation: job.token)) }
+        cancellation: job.token)) }
       catch let error as LocalProjectFailure { outcome = .failure(.project(error)) }
       catch { outcome = .failure(.unexpected) }
       Task { @MainActor [weak self] in

@@ -180,20 +180,24 @@ final class LocalProjectStoreTests: XCTestCase {
     XCTAssertEqual(spy.count, 1)
   }
 
-  func testFailedAndPrecommitCancelledReplacementPreserveDestinationExactly() throws {
+  func testFailedAndPrecommitCancelledCreateLeaveNewDestinationsAbsentAndOtherFilesUnchanged() throws {
     let files = try ProjectTestFiles(); defer { files.remove() }
     let (snapshot, _) = try files.snapshot()
     let url = try LocalProjectStore().save(snapshot, folder: files.folder, name: "Atomic")
     let bytes = try Data(contentsOf: url)
     let token = LocalProjectCancellation()
     let cancelledStore = LocalProjectStore(decode: PNGCodec.decodeOpaqueRGBA8(from:), beforeCommit: { token.cancel() })
-    XCTAssertThrowsError(try cancelledStore.save(snapshot, folder: files.folder, name: "Atomic", replacing: true, cancellation: token)) {
+    XCTAssertThrowsError(try cancelledStore.save(snapshot, folder: files.folder, name: "Cancelled new", cancellation: token)) {
       XCTAssertEqual($0 as? LocalProjectFailure, .cancelled)
     }
     XCTAssertFalse(token.didCommit)
+    XCTAssertFalse(FileManager.default.fileExists(atPath: files.folder.appendingPathComponent("Cancelled new.traktion").path))
     XCTAssertEqual(try Data(contentsOf: url), bytes)
     let failingStore = LocalProjectStore(decode: PNGCodec.decodeOpaqueRGBA8(from:), beforeCommit: { throw LocalProjectFailure.fileAccess })
-    XCTAssertThrowsError(try failingStore.save(snapshot, folder: files.folder, name: "Atomic", replacing: true))
+    XCTAssertThrowsError(try failingStore.save(snapshot, folder: files.folder, name: "Failed new")) {
+      XCTAssertEqual($0 as? LocalProjectFailure, .fileAccess)
+    }
+    XCTAssertFalse(FileManager.default.fileExists(atPath: files.folder.appendingPathComponent("Failed new.traktion").path))
     XCTAssertEqual(try Data(contentsOf: url), bytes)
     XCTAssertFalse(try FileManager.default.contentsOfDirectory(atPath: files.folder.path).contains { $0.hasPrefix(".traktion-save-") })
   }
@@ -209,32 +213,63 @@ final class LocalProjectStoreTests: XCTestCase {
     XCTAssertEqual(try store.open(url).result.plan, snapshot.originalPlan)
     let race = files.folder.appendingPathComponent("Racing.traktion")
     let unrelated = Data("not a project".utf8)
-    let racingStore = LocalProjectStore(decode: PNGCodec.decodeOpaqueRGBA8(from:), beforeCommit: { try unrelated.write(to: race) })
-    XCTAssertThrowsError(try racingStore.save(snapshot, folder: files.folder, name: "Racing")) {
+    let crossedEarlyCheck = ProjectCounter()
+    let racingToken = LocalProjectCancellation()
+    let racingStore = LocalProjectStore(decode: PNGCodec.decodeOpaqueRGBA8(from:), beforeCommit: {
+      crossedEarlyCheck.increment(); try unrelated.write(to: race)
+    })
+    XCTAssertThrowsError(try racingStore.save(snapshot, folder: files.folder, name: "Racing", cancellation: racingToken)) {
       XCTAssertEqual($0 as? LocalProjectFailure, .destinationExists)
     }
+    XCTAssertEqual(crossedEarlyCheck.count, 1)
+    XCTAssertFalse(racingToken.didCommit)
     XCTAssertEqual(try Data(contentsOf: race), unrelated)
+    XCTAssertFalse(try FileManager.default.contentsOfDirectory(atPath: files.folder.path).contains { $0.hasPrefix(".traktion-save-") })
   }
 
-  func testUnsafeReplacementAndNamesNeverOverwriteOriginalOrFollowSymlinks() throws {
+  func testExistingProjectOriginalDirectoryAndSymlinksAreNeverOverwritten() throws {
     let files = try ProjectTestFiles(); defer { files.remove() }
     let (snapshot, _) = try files.snapshot()
-    let target = files.folder.appendingPathComponent("Original.traktion")
-    let original = try Data(contentsOf: files.sources[0]); try original.write(to: target)
-    XCTAssertThrowsError(try LocalProjectStore().save(snapshot, folder: files.folder, name: "Original", replacing: true)) {
-      XCTAssertEqual($0 as? LocalProjectFailure, .unsafeReplacement)
-    }
-    XCTAssertEqual(try Data(contentsOf: target), original)
+    let store = LocalProjectStore()
+    let project = try store.save(snapshot, folder: files.folder, name: "Existing")
+    let projectBytes = try Data(contentsOf: project)
+    let originalURL = files.folder.appendingPathComponent("Original.traktion")
+    let original = try Data(contentsOf: files.sources[0]); try original.write(to: originalURL)
+    let directory = files.folder.appendingPathComponent("Directory.traktion")
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)
+    let sentinel = directory.appendingPathComponent("keep.txt")
+    let sentinelBytes = Data("Preserve directory contents".utf8); try sentinelBytes.write(to: sentinel)
     let link = files.folder.appendingPathComponent("Link.traktion")
-    try FileManager.default.createSymbolicLink(at: link, withDestinationURL: files.folder.appendingPathComponent("absent"))
-    XCTAssertThrowsError(try LocalProjectStore().save(snapshot, folder: files.folder, name: "Link", replacing: true)) {
-      XCTAssertEqual($0 as? LocalProjectFailure, .unsafeReplacement)
+    let dangling = files.folder.appendingPathComponent("Dangling.traktion")
+    let absent = files.folder.appendingPathComponent("absent")
+    try FileManager.default.createSymbolicLink(at: link, withDestinationURL: originalURL)
+    try FileManager.default.createSymbolicLink(at: dangling, withDestinationURL: absent)
+    for name in ["Existing", "Original", "Directory", "Link", "Dangling"] {
+      let token = LocalProjectCancellation()
+      XCTAssertThrowsError(try store.save(snapshot, folder: files.folder, name: name, cancellation: token)) {
+        XCTAssertEqual($0 as? LocalProjectFailure, .destinationExists)
+      }
+      XCTAssertFalse(token.didCommit)
     }
+    XCTAssertEqual(try Data(contentsOf: project), projectBytes)
+    XCTAssertEqual(try Data(contentsOf: originalURL), original)
+    XCTAssertEqual(try Data(contentsOf: sentinel), sentinelBytes)
+    XCTAssertEqual(try FileManager.default.destinationOfSymbolicLink(atPath: link.path), originalURL.path)
+    XCTAssertEqual(try FileManager.default.destinationOfSymbolicLink(atPath: dangling.path), absent.path)
+    XCTAssertFalse(FileManager.default.fileExists(atPath: absent.path))
+    XCTAssertFalse(try FileManager.default.contentsOfDirectory(atPath: files.folder.path).contains { $0.hasPrefix(".traktion-save-") })
+  }
+
+  func testInvalidNamesCannotEscapeDestinationOrTargetPNGFiles() throws {
+    let files = try ProjectTestFiles(); defer { files.remove() }
+    let (snapshot, _) = try files.snapshot()
+    let original = try Data(contentsOf: files.sources[0])
     for name in ["", "../escape", "image.png", "a/b", "a\\b", String(repeating: "x", count: 81)] {
       XCTAssertThrowsError(try LocalProjectStore().save(snapshot, folder: files.folder, name: name)) {
         XCTAssertEqual($0 as? LocalProjectFailure, .invalidName)
       }
     }
+    XCTAssertEqual(try Data(contentsOf: files.sources[0]), original)
   }
 
   func testCleanupFailureIsVisibleBeforeAndAfterCommitAndOnOpen() throws {

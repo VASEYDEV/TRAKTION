@@ -15,7 +15,6 @@ public enum LocalProjectFailure: Error, Equatable, Sendable {
   case invalidName
   case missingOriginals
   case destinationExists
-  case unsafeReplacement
   case resourceLimit
   case cancelled
   case fileAccess
@@ -28,8 +27,7 @@ public enum LocalProjectFailure: Error, Equatable, Sendable {
     case .invalidEvidence: return "The saved reconstruction evidence could not be reproduced from its original captures."
     case .invalidName: return "Use a filename of 1–80 letters, numbers, spaces, hyphens or underscores."
     case .missingOriginals: return "Original PNG bytes are unavailable. Import the captures again before saving."
-    case .destinationExists: return "A project already exists with this name. Choose Replace or another name."
-    case .unsafeReplacement: return "Only an existing TRAKTION project can be replaced. Choose another name."
+    case .destinationExists: return "An item already exists with this name. Choose another name."
     case .resourceLimit: return "The project and current workspace exceed the memory or file-size allowance. Reset the workspace or choose a smaller project."
     case .cancelled: return "Project operation cancelled."
     case .cleanupFailed(let saved): return saved
@@ -77,7 +75,7 @@ public struct LoadedLocalProject: Sendable {
 
 public protocol LocalProjectWorking: Sendable {
   func save(_ snapshot: LocalProjectSnapshot, folder: URL, name: String,
-    replacing: Bool, cancellation: LocalProjectCancellation) throws -> URL
+    cancellation: LocalProjectCancellation) throws -> URL
   func open(_ url: URL, retainedRasterBytes: Int, retainedEncodedBytes: Int,
     cancellation: LocalProjectCancellation) throws -> LoadedLocalProject
 }
@@ -129,7 +127,7 @@ public struct LocalProjectStore: LocalProjectWorking {
   }
 
   public func save(_ snapshot: LocalProjectSnapshot, folder: URL, name: String,
-    replacing: Bool = false, cancellation: LocalProjectCancellation = .init()) throws -> URL {
+    cancellation: LocalProjectCancellation = .init()) throws -> URL {
     do {
       try cancellation.check()
       let filename = try Self.filename(name)
@@ -149,9 +147,9 @@ public struct LocalProjectStore: LocalProjectWorking {
       var coordinationError: NSError?
       var result: Result<URL, Error>?
       NSFileCoordinator(filePresenter: nil).coordinate(writingItemAt: destination,
-        options: .forReplacing, error: &coordinationError) { coordinatedURL in
+        options: [], error: &coordinationError) { coordinatedURL in
         result = Result { try write(snapshot, manifest: manifest, destination: coordinatedURL,
-          replacing: replacing, cancellation: cancellation) }
+          cancellation: cancellation) }
       }
       // Once the coordinated accessor committed, its result is authoritative.
       // Never reinterpret a completed disk change as an unchanged failed save.
@@ -159,7 +157,7 @@ public struct LocalProjectStore: LocalProjectWorking {
       return try result.get()
       #else
       return try write(snapshot, manifest: manifest, destination: destination,
-        replacing: replacing, cancellation: cancellation)
+        cancellation: cancellation)
       #endif
     } catch let failure as LocalProjectFailure { throw failure }
     catch { throw LocalProjectFailure.fileAccess }
@@ -214,9 +212,9 @@ public struct LocalProjectStore: LocalProjectWorking {
   }
 
   private func write(_ snapshot: LocalProjectSnapshot, manifest: Data, destination: URL,
-    replacing: Bool, cancellation: LocalProjectCancellation) throws -> URL {
+    cancellation: LocalProjectCancellation) throws -> URL {
     try cancellation.check()
-    try validateDestination(destination, replacing: replacing)
+    try requireAbsentDestination(destination)
     let temporary = destination.deletingLastPathComponent()
       .appendingPathComponent(".traktion-save-\(UUID().uuidString).tmp")
     #if canImport(Darwin)
@@ -244,17 +242,11 @@ public struct LocalProjectStore: LocalProjectWorking {
       try output.close()
       try beforeCommit()
       try cancellation.commit {
-        // Repeat after writing: a concurrent creator must not be silently replaced.
-        try validateDestination(destination, replacing: replacing)
-        if replacing {
-          guard rename(temporary.path, destination.path) == 0 else { throw LocalProjectFailure.fileAccess }
-        } else {
-          // link publishes the fully flushed inode atomically and cannot clobber
-          // an intervening file. The owned link is removed by withCleanup.
-          guard link(temporary.path, destination.path) == 0 else {
-            if errno == EEXIST { throw LocalProjectFailure.destinationExists }
-            throw LocalProjectFailure.fileAccess
-          }
+        // The atomic no-clobber publication is the authority. A destination
+        // appearing after the early check must be refused by link itself.
+        guard link(temporary.path, destination.path) == 0 else {
+          if errno == EEXIST { throw LocalProjectFailure.destinationExists }
+          throw LocalProjectFailure.fileAccess
         }
       }
       afterCommit()
@@ -262,21 +254,10 @@ public struct LocalProjectStore: LocalProjectWorking {
     }
   }
 
-  private func validateDestination(_ url: URL, replacing: Bool) throws {
+  private func requireAbsentDestination(_ url: URL) throws {
     var info = stat()
-    guard lstat(url.path, &info) == 0 else {
-      if errno == ENOENT { return }
-      throw LocalProjectFailure.fileAccess
-    }
-    guard replacing else { throw LocalProjectFailure.destinationExists }
-    guard info.st_mode & mode_t(S_IFMT) == mode_t(S_IFREG) else {
-      throw LocalProjectFailure.unsafeReplacement
-    }
-    let handle = try FileHandle(forReadingFrom: url)
-    defer { try? handle.close() }
-    guard try handle.read(upToCount: 12) == Self.magic + Self.uint32(1) else {
-      throw LocalProjectFailure.unsafeReplacement
-    }
+    if lstat(url.path, &info) == 0 { throw LocalProjectFailure.destinationExists }
+    guard errno == ENOENT else { throw LocalProjectFailure.fileAccess }
   }
 
   private func read(_ url: URL, retainedRasterBytes: Int, retainedEncodedBytes: Int,

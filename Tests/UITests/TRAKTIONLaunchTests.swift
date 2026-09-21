@@ -480,6 +480,63 @@ final class TRAKTIONLaunchTests: XCTestCase {
     attachScreenshot(app, name: "Corrupt project refusal preserves reconstruction")
   }
 
+  func testExistingProjectNameRefusesOverwriteAndPreservesSavedFile() {
+    let app = launch(scenario: "baseline")
+    confirmOrder(in: app)
+    app.buttons["workspace.reconstruct"].tap()
+    let dimensions = app.staticTexts["workspace.result.dimensions"]
+    XCTAssertTrue(dimensions.waitForExistence(timeout: 30))
+    XCTAssertEqual(dimensions.label, "96 × 384 pixels")
+    let scroll = app.scrollViews["workspace.scroll"]
+    let save = app.buttons["workspace.project.save"]
+    reveal(save, in: scroll); save.tap()
+    let name = "Collision original " + String(UUID().uuidString.prefix(8))
+    let field = app.alerts.textFields["project.name"]
+    XCTAssertTrue(field.waitForExistence(timeout: 5))
+    field.tap(); field.typeText(name)
+    app.alerts.buttons["project.folder"].tap()
+    guard chooseCurrentFilesFolder(in: app) else { return }
+    let status = app.staticTexts["workspace.project.status"]
+    XCTAssertTrue(status.waitForExistence(timeout: 15))
+    XCTAssertTrue(status.label.contains("Saved " + name + ".traktion"))
+
+    // Produce a different valid reconstruction before trying the same filename.
+    let remove = app.buttons["capture.2.remove"]
+    reveal(remove, in: scroll); remove.tap()
+    XCTAssertFalse(app.staticTexts["capture.2.name"].exists)
+    confirmOrder(in: app)
+    app.buttons["workspace.reconstruct"].tap()
+    XCTAssertTrue(dimensions.waitForExistence(timeout: 30))
+    XCTAssertEqual(dimensions.label, "96 × 272 pixels")
+    reveal(save, in: scroll); save.tap()
+    XCTAssertTrue(field.waitForExistence(timeout: 5))
+    XCTAssertEqual(field.value as? String, name)
+    app.alerts.buttons["project.folder"].tap()
+    guard chooseCurrentFilesFolder(in: app) else { return }
+    let failure = app.staticTexts["workspace.failure"]
+    XCTAssertTrue(failure.waitForExistence(timeout: 15))
+    XCTAssertTrue(failure.label.contains("Choose another name"))
+    XCTAssertEqual(dimensions.label, "96 × 272 pixels")
+    XCTAssertFalse(app.staticTexts["capture.2.name"].exists)
+    XCTAssertTrue(save.isEnabled)
+    reveal(failure, in: scroll)
+    attachScreenshot(app, name: "Existing project collision preserves current reconstruction")
+
+    app.terminate()
+    app.launchEnvironment.removeValue(forKey: "TRAKTION_UI_FIXTURE")
+    app.launch()
+    XCTAssertTrue(app.buttons["workspace.project.open"].waitForExistence(timeout: 10))
+    XCTAssertFalse(app.staticTexts["capture.0.name"].exists)
+    app.buttons["workspace.project.open"].tap()
+    guard chooseProjectInFiles(name, app: app) else { return }
+    XCTAssertTrue(app.staticTexts["capture.2.name"].waitForExistence(timeout: 30))
+    XCTAssertFalse(app.staticTexts["workspace.failure"].exists)
+    XCTAssertEqual(dimensions.label, "96 × 384 pixels")
+    XCTAssertEqual(app.staticTexts["capture.2.name"].label, "3. capture-003.png")
+    XCTAssertTrue(status.label.contains("Opened " + name + ".traktion"))
+    attachScreenshot(app, name: "Existing saved project survives refused overwrite")
+  }
+
   private func chooseCurrentFilesFolder(in app: XCUIApplication) -> Bool {
     // The production default directory is this app's local Documents folder.
     // This is the real system folder picker, with no injected URL or test save path.

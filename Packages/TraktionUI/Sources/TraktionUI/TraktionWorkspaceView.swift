@@ -12,7 +12,6 @@ import TraktionDomain
     @State private var picker: Picker = .captures
     @State private var isSaveNamePresented = false
     @State private var projectName = ""
-    @State private var replaceProject = false
     private enum Picker { case captures, project, folder }
     private var documents: URL? {
       FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
@@ -89,7 +88,7 @@ import TraktionDomain
             switch picker {
             case .captures: model.importCaptures(from: urls)
             case .project: model.openProject(first)
-            case .folder: model.saveProject(folder: first, name: projectName, replacing: replaceProject)
+            case .folder: model.saveProject(folder: first, name: projectName)
             }
           case .failure(let error):
             let cocoaError = error as NSError
@@ -112,20 +111,17 @@ import TraktionDomain
       .alert("Save project", isPresented: $isSaveNamePresented) {
         TextField("Project name", text: $projectName)
           .accessibilityIdentifier("project.name")
-        Button("Choose folder") { presentSaveFolder(replacing: false) }
+        Button("Choose folder") { presentSaveFolder() }
           .accessibilityIdentifier("project.folder")
-        Button("Replace existing project", role: .destructive) { presentSaveFolder(replacing: true) }
-          .accessibilityIdentifier("project.replace")
         Button("Cancel", role: .cancel) {}
       } message: {
-        Text("Save original PNG captures, confirmed order and committed seams. Undo history starts fresh when reopened.")
+        Text("Save original PNG captures, confirmed order and committed seams under a new name. Undo history starts fresh when reopened.")
       }
     }
 
-    private func presentSaveFolder(replacing: Bool) {
+    private func presentSaveFolder() {
       do { _ = try LocalProjectStore.filename(projectName) }
       catch { model.reportPickerFailure(LocalProjectFailure.invalidName.message); return }
-      replaceProject = replacing
       picker = .folder
       isImportPresented = true
     }
