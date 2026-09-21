@@ -8,6 +8,7 @@ public protocol NativeWorkspaceWorking: Sendable {
   func importCaptures(
     from urls: [URL],
     retainedRasterBytes: Int,
+    retainedEncodedBytes: Int,
     isCancelled: @Sendable () -> Bool
   ) throws -> [CaptureAsset]
 
@@ -26,10 +27,12 @@ public struct NativeWorkspaceWorker: NativeWorkspaceWorking {
   public func importCaptures(
     from urls: [URL],
     retainedRasterBytes: Int,
+    retainedEncodedBytes: Int,
     isCancelled: @Sendable () -> Bool
   ) throws -> [CaptureAsset] {
     try importer.importCaptures(
-      from: urls, retainedRasterBytes: retainedRasterBytes, isCancelled: isCancelled
+      from: urls, retainedRasterBytes: retainedRasterBytes,
+      retainedEncodedBytes: retainedEncodedBytes, isCancelled: isCancelled
     )
   }
 
@@ -40,18 +43,7 @@ public struct NativeWorkspaceWorker: NativeWorkspaceWorking {
 
 /// The engine has no cooperative cancellation. This token cancels importer
 /// checkpoints and publication; the queue remains occupied until work returns.
-final class NativeWorkspaceCancellation: @unchecked Sendable {
-  private let lock = NSLock()
-  private var cancelled = false
-
-  var isCancelled: Bool {
-    lock.withLock { cancelled }
-  }
-
-  func cancel() {
-    lock.withLock { cancelled = true }
-  }
-}
+typealias NativeWorkspaceCancellation = LocalProjectCancellation
 
 enum NativeRasterPreview {
   static let maximumResultPixels = 1_048_576

@@ -84,13 +84,15 @@ public struct PNGImportService: Sendable {
   public func importCaptures(
     from urls: [URL],
     retainedRasterBytes: Int = 0,
+    retainedEncodedBytes: Int = 0,
     isCancelled: @Sendable () -> Bool = { false }
   ) throws -> [CaptureAsset] {
     try checkCancellation(isCancelled)
     guard (2...10).contains(urls.count) else {
       throw PNGImportFailure.countOutOfRange(urls.count)
     }
-    guard retainedRasterBytes >= 0,
+    guard retainedRasterBytes >= 0, retainedEncodedBytes >= 0,
+      retainedEncodedBytes <= limits.maximumTotalEncodedBytes,
       limits.maximumTotalInputPixels > 0,
       limits.maximumRetainedRasterBytes > 0,
       limits.maximumEncodedBytesPerFile > 0,
@@ -118,6 +120,7 @@ public struct PNGImportService: Sendable {
     do {
       result = .success(try stagedImport(
         urls, directory: directory, retainedRasterBytes: retainedRasterBytes,
+        retainedEncodedBytes: retainedEncodedBytes,
         isCancelled: isCancelled
       ))
     } catch {
@@ -134,11 +137,11 @@ public struct PNGImportService: Sendable {
   }
 
   private func stagedImport(
-    _ urls: [URL], directory: URL, retainedRasterBytes: Int,
+    _ urls: [URL], directory: URL, retainedRasterBytes: Int, retainedEncodedBytes: Int,
     isCancelled: @Sendable () -> Bool
   ) throws -> [CaptureAsset] {
     var staged: [(url: URL, name: String, metadata: PNGMetadata)] = []
-    var totalEncoded = 0
+    var totalEncoded = retainedEncodedBytes
     var totalPixels = 0
     for (index, source) in urls.enumerated() {
       try checkCancellation(isCancelled)
@@ -207,7 +210,8 @@ public struct PNGImportService: Sendable {
         throw PNGImportFailure.codec(.decodeFailed(item.name))
       }
       captures.append(CaptureAsset(
-        id: CaptureID(UUID().uuidString), sourceName: item.name, image: raster
+        id: CaptureID(UUID().uuidString), sourceName: item.name, image: raster,
+        originalPNG: try Data(contentsOf: item.url)
       ))
     }
     return captures

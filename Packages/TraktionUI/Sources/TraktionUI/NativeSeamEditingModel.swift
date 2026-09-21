@@ -62,6 +62,13 @@ final class NativeSeamEditingModel {
     catch { failure = "This reconstruction does not support seam adjustment. Its original result is unchanged." }
   }
 
+  func restore(document: SeamEditingDocument, captures: [CaptureAsset], preview: RasterImage) {
+    reset()
+    self.document = document
+    self.captures = captures
+    self.preview = preview
+  }
+
   func admit(retainedBytes: Int, budget: Int) {
     isAdmitted = retainedBytes >= 0 && budget >= Self.reservedBytes && retainedBytes <= budget - Self.reservedBytes
   }

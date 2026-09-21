@@ -233,7 +233,7 @@ private struct FailingSeamRenderer: SeamPreviewRendering {
 private struct SeamWorkspaceWorker: NativeWorkspaceWorking {
   let captures: [CaptureAsset]
   let result: ReconstructionResult
-  func importCaptures(from urls: [URL], retainedRasterBytes: Int, isCancelled: @Sendable () -> Bool) throws -> [CaptureAsset] { captures }
+  func importCaptures(from urls: [URL], retainedRasterBytes: Int, retainedEncodedBytes: Int, isCancelled: @Sendable () -> Bool) throws -> [CaptureAsset] { captures }
   func reconstruct(_ captures: [CaptureAsset]) throws -> ReconstructionResult { result }
 }
 private final class BlockingSeamRenderer: SeamPreviewRendering, @unchecked Sendable {

@@ -5,6 +5,7 @@ public enum NativeWorkspaceFailure: Error, Equatable, Sendable {
   case importFailure(PNGImportFailure)
   case reconstruction(ReconstructionFailure)
   case selection(String)
+  case project(LocalProjectFailure)
   case unexpected
 
   public func message(captures: [CaptureAsset]) -> String {
@@ -22,6 +23,8 @@ public enum NativeWorkspaceFailure: Error, Equatable, Sendable {
       return "Import failed. Your current captures were kept. \(error)"
     case .selection(let detail):
       return "Could not open the selection. \(detail)"
+    case .project(let error):
+      return error.message
     case .unexpected:
       return "The operation could not finish. Your original files are unchanged."
     case .reconstruction(let error):
