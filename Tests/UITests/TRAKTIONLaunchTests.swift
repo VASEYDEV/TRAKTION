@@ -370,11 +370,10 @@ final class TRAKTIONLaunchTests: XCTestCase {
     XCTAssertTrue(save.isEnabled)
     save.tap()
     let name = "Native roundtrip " + String(UUID().uuidString.prefix(8))
-    let field = app.alerts.textFields["project.name"]
-    XCTAssertTrue(field.waitForExistence(timeout: 5))
+    guard let field = projectNameField(in: app) else { return }
     field.tap()
     field.typeText(name)
-    app.alerts.buttons["project.folder"].tap()
+    app.alerts["Save project"].buttons["Choose folder"].firstMatch.tap()
     guard chooseCurrentFilesFolder(in: app) else { return }
     let status = app.staticTexts["workspace.project.status"]
     XCTAssertTrue(status.waitForExistence(timeout: 15))
@@ -447,15 +446,14 @@ final class TRAKTIONLaunchTests: XCTestCase {
     let scroll = app.scrollViews["workspace.scroll"]
     let save = app.buttons["workspace.project.save"]
     reveal(save, in: scroll); save.tap()
-    XCTAssertTrue(app.alerts.textFields["project.name"].waitForExistence(timeout: 5))
+    guard projectNameField(in: app) != nil else { return }
     app.alerts.buttons["Cancel"].tap()
     XCTAssertEqual(dimensions.label, "96 × 384 pixels")
     XCTAssertFalse(app.staticTexts["workspace.project.status"].exists)
     save.tap()
-    let field = app.alerts.textFields["project.name"]
-    XCTAssertTrue(field.waitForExistence(timeout: 5))
+    guard let field = projectNameField(in: app) else { return }
     field.tap(); field.typeText("Cancelled project")
-    app.alerts.buttons["project.folder"].tap()
+    app.alerts["Save project"].buttons["Choose folder"].firstMatch.tap()
     let cancel = app.navigationBars.buttons["Cancel"].firstMatch
     guard cancel.waitForExistence(timeout: 15) else {
       recordFilesState(app); XCTFail("Save folder picker did not appear"); return
@@ -491,10 +489,9 @@ final class TRAKTIONLaunchTests: XCTestCase {
     let save = app.buttons["workspace.project.save"]
     reveal(save, in: scroll); save.tap()
     let name = "Collision original " + String(UUID().uuidString.prefix(8))
-    let field = app.alerts.textFields["project.name"]
-    XCTAssertTrue(field.waitForExistence(timeout: 5))
+    guard let field = projectNameField(in: app) else { return }
     field.tap(); field.typeText(name)
-    app.alerts.buttons["project.folder"].tap()
+    app.alerts["Save project"].buttons["Choose folder"].firstMatch.tap()
     guard chooseCurrentFilesFolder(in: app) else { return }
     let status = app.staticTexts["workspace.project.status"]
     XCTAssertTrue(status.waitForExistence(timeout: 15))
@@ -511,7 +508,7 @@ final class TRAKTIONLaunchTests: XCTestCase {
     reveal(save, in: scroll); save.tap()
     XCTAssertTrue(field.waitForExistence(timeout: 5))
     XCTAssertEqual(field.value as? String, name)
-    app.alerts.buttons["project.folder"].tap()
+    app.alerts["Save project"].buttons["Choose folder"].firstMatch.tap()
     guard chooseCurrentFilesFolder(in: app) else { return }
     let failure = app.staticTexts["workspace.failure"]
     XCTAssertTrue(failure.waitForExistence(timeout: 15))
@@ -535,6 +532,25 @@ final class TRAKTIONLaunchTests: XCTestCase {
     XCTAssertEqual(app.staticTexts["capture.2.name"].label, "3. capture-003.png")
     XCTAssertTrue(status.label.contains("Opened " + name + ".traktion"))
     attachScreenshot(app, name: "Existing saved project survives refused overwrite")
+  }
+
+  private func projectNameField(in app: XCUIApplication) -> XCUIElement? {
+    // UIKit's SwiftUI alert bridge exposes the placeholder, but does not carry
+    // the TextField accessibility identifier through to the native alert.
+    let field = app.alerts["Save project"].textFields.matching(
+      NSPredicate(format: "placeholderValue == %@", "Project name")).firstMatch
+    let appeared = field.waitForExistence(timeout: 5)
+    // A fresh simulator presents this system keyboard introduction on first use.
+    // Dismiss only the observed introduction, through its real Continue control.
+    let introduction = app.otherElements["UIContinuousPathIntroductionView"]
+    if appeared && introduction.exists { introduction.buttons["Continue"].tap() }
+    let tree = XCTAttachment(string: app.debugDescription)
+    tree.name = "Actual project naming dialog accessibility tree"
+    tree.lifetime = .keepAlways
+    add(tree)
+    attachScreenshot(app, name: "Actual project naming dialog")
+    guard appeared else { XCTFail("Project naming field was absent from the native dialog"); return nil }
+    return field
   }
 
   private func chooseCurrentFilesFolder(in app: XCUIApplication) -> Bool {
