@@ -36,7 +36,8 @@ pixel/joint inspection, reversible seam editor, and local project save/open are 
 The app is not yet a distribution-ready product: export, device
 signing, and broader capture modes remain on the [roadmap](docs/ROADMAP.md).
 [Task packets](docs/tasks/README.md) record acceptance evidence and the next work;
-[repository health](docs/notes/2026-09-17-repository-health.md) records the CI audit.
+[testing readiness and integration](docs/notes/2026-09-21-integration-and-testing.md)
+records the current handoff and remaining release work.
 
 | Available in the current build | Scope |
 | --- | --- |

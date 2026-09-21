@@ -16,18 +16,19 @@ unmerged packet is renumbered on port (see task 0009 for the PR #8 example).
 Completed packets below are historical evidence, not queued work. Check current
 `main` and the explicit dependencies below; never restart a superseded branch.
 
-1. **[PR #21](https://github.com/VASEYDEV/TRAKTION/pull/21), task
-   [0022](0022-local-project-persistence.md):** local projects are implemented and verified;
-   final pushed-head checks remain the merge gate. This PR targets the still-open PR #20 branch.
-   Tasks 0020/0021 remain verified in PR #20; main remains `c279264`.
-   Automatic approval review blocked merging PR #20 under the earlier leave-open
-   request. Explicit merge authorization is needed before merging it, retargeting
-   the dependent PR and removing completed branches.
-2. **[0023](0023-bounded-png-export.md):** next implementation packet,
+1. **[0023](0023-bounded-png-export.md):** next implementation packet,
    bounded export of the committed result to PNG.
-3. Physical-device signing/resource verification and production artwork require
-   release preparation. GitHub About metadata correction is pending access;
-   details are in the [health note](../notes/2026-09-17-repository-health.md).
+2. Physical-device signing/resource verification and production artwork require
+   release preparation. The [current handoff](../notes/2026-09-21-integration-and-testing.md)
+   separates simulator testing, a signed device alpha, and TestFlight readiness.
+3. Repository-settings follow-ups: correct About metadata and the active ruleset's
+   literal `Default` branch target. No settings or access controls were changed
+   during reconciliation; all five CI jobs are explicitly required for integration.
+
+Task 0024 reconciles PR #20 and dependent PR #21 under Sean's September 21
+merge/cleanup authorization. That instruction supersedes the earlier leave-open
+request recorded in historical notes. PR #21's merge record and final verification
+section are the integration evidence; develop subsequent work from current main.
 
 ## Index
 
@@ -52,10 +53,11 @@ Completed packets below are historical evidence, not queued work. Check current
 | [0017](0017-native-png-reconstruction.md) | Native PNG import and supplied-order reconstruction | first native workflow | done | Codex | PR #18 |
 | [0018](0018-project-pr-template.md) | Project-specific pull request template | workflow | done | Codex | PR #17 |
 | [0019](0019-native-pixel-inspection.md) | Native pixel and joint inspection | native inspection | done | Codex | PR #19 |
-| [0020](0020-nondestructive-seam-adjustment.md) | Non-destructive seam adjustment and undo | first editing step | verified | Codex | PR #20 (open) |
-| [0021](0021-repository-health-and-product-handoff.md) | Repository health and product handoff | workflow/docs | verified | Codex | PR #20 (open) |
-| [0022](0022-local-project-persistence.md) | Local project persistence | editor | verified | Codex | PR #21 (stacked on #20) |
+| [0020](0020-nondestructive-seam-adjustment.md) | Non-destructive seam adjustment and undo | first editing step | done | Codex | PR #20 |
+| [0021](0021-repository-health-and-product-handoff.md) | Repository health and product handoff | workflow/docs | done | Codex | PR #20 |
+| [0022](0022-local-project-persistence.md) | Local project persistence | editor | done | Codex | PR #21 |
 | [0023](0023-bounded-png-export.md) | Bounded committed-result PNG export | export | queued | assign at start | — |
+| [0024](0024-stack-integration-and-testing-handoff.md) | Stack integration and testing handoff | workflow/docs | verified handoff; final integration evidence in PR | Codex | PR #21 |
 
 ## Superseded packets and pull requests
 

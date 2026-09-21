@@ -7,7 +7,7 @@
 | 0 — Foundation | complete | PR #4, PR #5 |
 | 1 — Exact static reconstruction | passed with measured platform evidence | corpus categories (0011), failure artifacts (0012), and gap regression repair (0014) landed; memory/throughput instrumentation (0013) verified on Linux and macOS in PR #16 |
 | 2 — Sequence intelligence | in progress | exact ordering core (task 0007), tooling (task 0008), near-exact recovery (task 0009), repeated-chrome guard (0010), and bounded directional ambiguity guard (0014) landed; broader duplicates, missing-coverage evidence, and confidence workflows remain open |
-| Native iOS app | reversible editor and local projects verified | task 0019 / PR #19 established bounded inspection; PR #20 adds seam editing; task 0022 / PR #21 adds real Files save/open. PR #21 is stacked on open #20; main remains `c279264`. Physical-device signing remains separate |
+| Native iOS app | simulator-verified editor and local projects | task 0019 / PR #19 established bounded inspection; PR #20 adds seam editing; task 0022 / PR #21 adds real Files save/open. The dependency stack is reconciled in task 0024. PNG export and physical-device verification remain separate |
 | 3 — Non-destructive editor | in progress | bounded inspector (0019), seam adjustment (0020) and local project implementation (0022); further correction remains |
 | 4–7 | not started | Product backlog below |
 
@@ -39,16 +39,19 @@ Horizontal reconstruction, web capture, share extension, PDF, JPEG/HEIC, split e
 
 ## Next execution order
 
-1. Integrate verified local projects in PR #21 after its final-head checks,
-   stacked on open PR #20.
-   Automatic approval review blocked merging #20 under the prior leave-open
-   request; obtain explicit merge authorization before integrating these PRs.
-   Require current checks, retarget the dependent work and remove branches only
-   after their changes are preserved on main.
-2. Implement [0023](tasks/0023-bounded-png-export.md): bounded PNG export of the
+1. Implement [0023](tasks/0023-bounded-png-export.md): bounded PNG export of the
    committed result, then further correction tools.
-3. Verify physical-device signing and resource behavior with the actual developer
-   team/device before distribution. Finish production icon packaging and visual polish.
+2. Establish a signed device build using the actual developer team, then verify
+   real captures, resource behavior, Files save/reopen, accessibility and lifecycle
+   behavior. Simulator checks already support developer testing of current features.
+3. Finish production icon packaging, release configuration and distribution
+   provisioning before a TestFlight build. Broader capture modes are later scope.
+
+The [September 21 handoff](notes/2026-09-21-integration-and-testing.md) records
+the #20 squash / #21 rebase-and-squash sequence, current test evidence, manual
+testing checklist and repository-settings follow-ups. Sean explicitly authorized
+integration and completed-branch deletion on September 21; earlier leave-open
+instructions in historical session notes are superseded.
 
 The original task-0014 gap regression remains preserved and repaired; broader
 one-direction near-exact ambiguity is still an explicit limit (ADR-018).

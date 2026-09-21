@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Integration and testing handoff** (task 0024): reconcile the #20/#21 stack
+  with a squash followed by a content-preserving rebase and squash, refresh the
+  roadmap/task index, and distinguish simulator verification from signed-device
+  and TestFlight readiness. Bounded PNG export remains the next implementation.
 - **Local project persistence** (task 0022, ADR-024): save exact original PNG
   bytes, capture identity/order, automatic evidence and committed seams in one
   bounded `.traktion` file. Real Files save/open, create-only saves and explicit

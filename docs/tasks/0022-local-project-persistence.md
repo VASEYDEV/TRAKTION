@@ -1,7 +1,7 @@
 # Task: Local project persistence
 
-Status: implementation verified in PR #21 — stacked on the open repository-health PR.
-Final pushed-head checks remain the PR merge gate.
+Status: implementation verified in PR #21, rebased onto main after the PR #20 squash.
+Final integration verification and the merge record are maintained in PR #21.
 Writer: persistence_implementation; root owns integration, branch `codex/local-project-persistence`.
 
 Contract: [ADR 024](../adr/ADR-024-local-project-container.md).
