@@ -353,6 +353,10 @@ final class TRAKTIONLaunchTests: XCTestCase {
     let inspection = app.scrollViews["inspection.scroll"]
     app.buttons["inspection.region"].tap()
     app.buttons["inspection.region.joint.0"].tap()
+    XCTAssertTrue(app.staticTexts["inspection.joint.seam"].label.contains("output row 136; overlap row 24"))
+    let automaticSeam = app.staticTexts["inspection.joint.automaticSeam"].label
+    XCTAssertEqual(automaticSeam,
+      "Automatic seam: overlap row 24. Registration confidence is unchanged by manual selection.")
     for id in ["inspection.edit.begin", "inspection.edit.down", "inspection.edit.apply"] {
       let button = app.buttons[id]
       reveal(button, in: inspection)
@@ -406,7 +410,7 @@ final class TRAKTIONLaunchTests: XCTestCase {
     app.buttons["inspection.region"].tap()
     app.buttons["inspection.region.joint.0"].tap()
     XCTAssertTrue(app.staticTexts["inspection.joint.seam"].label.contains("output row 137; overlap row 25"))
-    XCTAssertTrue(app.staticTexts["inspection.joint.automaticSeam"].label.contains("136"))
+    XCTAssertEqual(app.staticTexts["inspection.joint.automaticSeam"].label, automaticSeam)
     XCTAssertTrue(app.staticTexts["inspection.joint.confidence"].label.contains("Exact"))
     attachScreenshot(app, name: "Reopened project original evidence and committed seam")
     app.buttons["inspection.done"].tap()
@@ -428,9 +432,7 @@ final class TRAKTIONLaunchTests: XCTestCase {
     XCTAssertFalse(app.buttons["workspace.project.save"].isEnabled)
     let open = app.buttons["workspace.project.open"]
     reveal(open, in: scroll); open.tap()
-    let cancel = app.navigationBars.buttons["Cancel"].firstMatch
-    guard cancel.waitForExistence(timeout: 15) else { recordFilesState(app); XCTFail("Project Files picker was not presented"); return }
-    cancel.tap()
+    guard dismissFilesSheet(in: app, confirmingFolder: false) else { return }
     XCTAssertTrue(open.waitForExistence(timeout: 10))
     XCTAssertEqual(app.staticTexts["capture.0.name"].label, "1. capture-001.png")
     XCTAssertFalse(app.staticTexts["workspace.failure"].exists)
@@ -456,25 +458,7 @@ final class TRAKTIONLaunchTests: XCTestCase {
     field.tap(); field.typeText("Cancelled project")
     XCTAssertEqual(field.value as? String, "Cancelled project")
     app.alerts["Save project"].buttons["Choose folder"].firstMatch.tap()
-    let folderPicker = app.otherElements["Browse View (Picker)"]
-    let folderOpen = app.navigationBars.buttons["Open"].firstMatch
-    guard folderOpen.waitForExistence(timeout: 15), folderPicker.exists else {
-      recordFilesState(app); XCTFail("Save folder picker did not appear"); return
-    }
-    recordFilesState(app)
-    // This folder sheet has Back/More/Open, not a visible Cancel button. Its
-    // accessibility-only Cancel proxy overlaps More. Use the actual modal
-    // dismissal gesture, beginning in the observed blank top-center header.
-    let header = app.navigationBars["FullDocumentManagerViewControllerNavigationBar"]
-    header.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.05))
-      .press(forDuration: 0.1, thenDragTo:
-        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.95)))
-    let dismissed = [folderPicker, folderOpen].map {
-      XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: $0)
-    }
-    guard XCTWaiter.wait(for: dismissed, timeout: 5) == .completed else {
-      recordFilesState(app); XCTFail("Save folder picker did not dismiss"); return
-    }
+    guard dismissFilesSheet(in: app, confirmingFolder: true) else { return }
     XCTAssertTrue(save.waitForExistence(timeout: 10))
     XCTAssertEqual(dimensions.label, "96 × 384 pixels")
     XCTAssertFalse(app.staticTexts["workspace.project.status"].exists)
@@ -578,6 +562,30 @@ final class TRAKTIONLaunchTests: XCTestCase {
     }
     recordFilesState(app)
     open.tap()
+    return true
+  }
+
+  private func dismissFilesSheet(in app: XCUIApplication, confirmingFolder: Bool) -> Bool {
+    let picker = app.otherElements["Browse View (Picker)"]
+    let header = app.navigationBars["FullDocumentManagerViewControllerNavigationBar"]
+    let open = app.navigationBars.buttons["Open"].firstMatch
+    guard picker.waitForExistence(timeout: 15), header.exists,
+      !confirmingFolder || (open.exists && open.isEnabled) else {
+      recordFilesState(app); XCTFail("Expected Files picker did not appear"); return false
+    }
+    recordFilesState(app)
+    // Both observed nested pickers are modal sheets. Folder mode's Cancel
+    // proxy overlaps More; XXXL open mode's visible Cancel did not resolve by
+    // identifier. Use the verified user gesture from the blank header area.
+    header.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.05))
+      .press(forDuration: 0.1, thenDragTo:
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.95)))
+    let dismissed = [picker, header, open].map {
+      XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: $0)
+    }
+    guard XCTWaiter.wait(for: dismissed, timeout: 5) == .completed else {
+      recordFilesState(app); XCTFail("Files sheet did not dismiss"); return false
+    }
     return true
   }
 

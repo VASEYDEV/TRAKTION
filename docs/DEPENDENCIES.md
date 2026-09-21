@@ -40,10 +40,12 @@ and their fixes are recorded in the [health note](notes/2026-09-17-repository-he
 
 Local projects add Foundation security-scoped URL access and `NSFileCoordinator`
 at the Files boundary, plus the existing Darwin/Glibc bindings for exclusive temp
-creation and atomic no-clobber `link`. The framed container
+creation, private staging-directory creation and atomic no-clobber `link`. The framed container
 uses standard-library/Foundation encoding and streaming file handles. It adds no
 archive framework, external package, network client or model dependency. This is
 a scoped implementation update, not a new audit of all upstream versions.
+Saving stages outside the chosen folder and requires same-filesystem hard-link
+support; unsupported locations fail closed without an external file-copy library.
 
 ## CI action runtime update — 2026-09-21
 

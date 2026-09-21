@@ -227,6 +227,97 @@ final class LocalProjectStoreTests: XCTestCase {
     XCTAssertFalse(try FileManager.default.contentsOfDirectory(atPath: files.folder.path).contains { $0.hasPrefix(".traktion-save-") })
   }
 
+  func testChosenFolderWriterCannotSubstituteSavedSourceAndCleanupLeavesItsDecoy() throws {
+    let files = try ProjectTestFiles(); defer { files.remove() }
+    let (snapshot, _) = try files.snapshot()
+    let unrelated = Data("Unrelated bytes placed by a chosen-folder writer".utf8)
+    let attackedPaths = ProjectPaths()
+    let cleanedPaths = ProjectPaths()
+    let store = LocalProjectStore(decode: PNGCodec.decodeOpaqueRGBA8(from:), beforeCommit: {
+      let siblings = try FileManager.default.contentsOfDirectory(at: files.folder,
+        includingPropertiesForKeys: nil).filter {
+          $0.lastPathComponent.hasPrefix(".traktion-save-") && $0.pathExtension == "tmp"
+        }
+      // Old code exposed its flushed source here: remove and replace that path.
+      // With private staging, leave a lookalike decoy that cleanup must not touch.
+      let targets = siblings.isEmpty
+        ? [files.folder.appendingPathComponent(".traktion-save-unrelated.tmp")] : siblings
+      for target in targets {
+        if FileManager.default.fileExists(atPath: target.path) {
+          try FileManager.default.removeItem(at: target)
+        }
+        try unrelated.write(to: target)
+        attackedPaths.append(target)
+      }
+    }, removeOwned: { directory in
+      let attributes = try FileManager.default.attributesOfItem(atPath: directory.path)
+      XCTAssertEqual(attributes[.type] as? FileAttributeType, .typeDirectory)
+      XCTAssertEqual((attributes[.posixPermissions] as? NSNumber)?.intValue, 0o700)
+      XCTAssertFalse(directory.resolvingSymlinksInPath().pathComponents.starts(
+        with: files.folder.resolvingSymlinksInPath().pathComponents))
+      let payload = directory.appendingPathComponent("project.tmp")
+      let payloadAttributes = try FileManager.default.attributesOfItem(atPath: payload.path)
+      XCTAssertEqual((payloadAttributes[.posixPermissions] as? NSNumber)?.intValue, 0o600)
+      cleanedPaths.append(directory)
+      try FileManager.default.removeItem(at: directory)
+    })
+    let url = try store.save(snapshot, folder: files.folder, name: "Private source")
+    let opened = try LocalProjectStore().open(url)
+    XCTAssertEqual(opened.captures.map(\.originalPNG), snapshot.captures.map(\.originalPNG))
+    XCTAssertEqual(opened.result.plan, snapshot.originalPlan)
+    XCTAssertEqual(attackedPaths.values.count, 1)
+    for decoy in attackedPaths.values { XCTAssertEqual(try Data(contentsOf: decoy), unrelated) }
+    XCTAssertEqual(cleanedPaths.values.count, 1)
+    for directory in cleanedPaths.values { XCTAssertFalse(FileManager.default.fileExists(atPath: directory.path)) }
+  }
+
+  func testSelectedFolderCannotContainPrivateStagingParent() throws {
+    let files = try ProjectTestFiles(); defer { files.remove() }
+    let (snapshot, _) = try files.snapshot()
+    let temporary = FileManager.default.temporaryDirectory
+    let name = "Refused private parent " + UUID().uuidString
+    let token = LocalProjectCancellation()
+    XCTAssertThrowsError(try LocalProjectStore().save(snapshot, folder: temporary,
+      name: name, cancellation: token)) {
+      XCTAssertEqual($0 as? LocalProjectFailure, .unsupportedLocation)
+    }
+    XCTAssertFalse(token.didCommit)
+    XCTAssertFalse(FileManager.default.fileExists(atPath: temporary.appendingPathComponent(name + ".traktion").path))
+  }
+
+  #if os(Linux)
+  func testActualCrossFilesystemPublicationRefusesWithoutCopyFallbackOrPartialDestination() throws {
+    let files = try ProjectTestFiles(); defer { files.remove() }
+    let (snapshot, _) = try files.snapshot()
+    // Ubuntu CI supplies /dev/shm on tmpfs, distinct from the private /tmp volume.
+    // Exercise the real EXDEV syscall result; no mocked publisher or skipped case.
+    let folder = URL(fileURLWithPath: "/dev/shm").appendingPathComponent("traktion-project-cross-device-" + UUID().uuidString)
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: false,
+      attributes: [.posixPermissions: 0o700])
+    defer { try? FileManager.default.removeItem(at: folder) }
+    let sentinel = folder.appendingPathComponent("keep.txt")
+    let bytes = Data("Keep existing destination-folder data".utf8); try bytes.write(to: sentinel)
+    let reachedCommit = ProjectCounter()
+    let cleanedPaths = ProjectPaths()
+    let store = LocalProjectStore(decode: PNGCodec.decodeOpaqueRGBA8(from:), beforeCommit: {
+      reachedCommit.increment()
+    }, removeOwned: { directory in
+      cleanedPaths.append(directory)
+      try FileManager.default.removeItem(at: directory)
+    })
+    let token = LocalProjectCancellation()
+    XCTAssertThrowsError(try store.save(snapshot, folder: folder, name: "Cross device", cancellation: token)) {
+      XCTAssertEqual($0 as? LocalProjectFailure, .unsupportedLocation)
+    }
+    XCTAssertEqual(reachedCommit.count, 1)
+    XCTAssertFalse(token.didCommit)
+    XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: folder.path), ["keep.txt"])
+    XCTAssertEqual(try Data(contentsOf: sentinel), bytes)
+    XCTAssertEqual(cleanedPaths.values.count, 1)
+    for directory in cleanedPaths.values { XCTAssertFalse(FileManager.default.fileExists(atPath: directory.path)) }
+  }
+  #endif
+
   func testExistingProjectOriginalDirectoryAndSymlinksAreNeverOverwritten() throws {
     let files = try ProjectTestFiles(); defer { files.remove() }
     let (snapshot, _) = try files.snapshot()

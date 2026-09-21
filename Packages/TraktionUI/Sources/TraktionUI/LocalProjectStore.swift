@@ -15,6 +15,7 @@ public enum LocalProjectFailure: Error, Equatable, Sendable {
   case invalidName
   case missingOriginals
   case destinationExists
+  case unsupportedLocation
   case resourceLimit
   case cancelled
   case fileAccess
@@ -28,6 +29,7 @@ public enum LocalProjectFailure: Error, Equatable, Sendable {
     case .invalidName: return "Use a filename of 1–80 letters, numbers, spaces, hyphens or underscores."
     case .missingOriginals: return "Original PNG bytes are unavailable. Import the captures again before saving."
     case .destinationExists: return "An item already exists with this name. Choose another name."
+    case .unsupportedLocation: return "This location cannot safely save a project. Choose the local TRAKTION folder or another supported folder on this device."
     case .resourceLimit: return "The project and current workspace exceed the memory or file-size allowance. Reset the workspace or choose a smaller project."
     case .cancelled: return "Project operation cancelled."
     case .cleanupFailed(let saved): return saved
@@ -213,15 +215,24 @@ public struct LocalProjectStore: LocalProjectWorking {
     cancellation: LocalProjectCancellation) throws -> URL {
     try cancellation.check()
     try requireAbsentDestination(destination)
-    let temporary = destination.deletingLastPathComponent()
-      .appendingPathComponent(".traktion-save-\(UUID().uuidString).tmp")
-    #if canImport(Darwin)
-    let descriptor = Darwin.open(temporary.path, O_WRONLY | O_CREAT | O_EXCL, mode_t(0o600))
-    #else
-    let descriptor = Glibc.open(temporary.path, O_WRONLY | O_CREAT | O_EXCL, mode_t(0o600))
-    #endif
-    guard descriptor >= 0 else { throw LocalProjectFailure.fileAccess }
-    return try withCleanup(temporary, cancellation: cancellation) {
+    // A writer with access to the chosen folder must never be able to replace
+    // the source pathname between flushing it and publishing its hard link.
+    let privateParent = FileManager.default.temporaryDirectory.resolvingSymlinksInPath()
+    let selectedFolder = destination.deletingLastPathComponent().resolvingSymlinksInPath()
+    guard !privateParent.pathComponents.starts(with: selectedFolder.pathComponents) else {
+      throw LocalProjectFailure.unsupportedLocation
+    }
+    let stage = privateParent.appendingPathComponent("traktion-save-\(UUID().uuidString)", isDirectory: true)
+    // mkdir is exclusive: an existing directory must never become ours to clean.
+    guard mkdir(stage.path, mode_t(0o700)) == 0 else { throw LocalProjectFailure.fileAccess }
+    return try withCleanup(stage, cancellation: cancellation) {
+      let temporary = stage.appendingPathComponent("project.tmp")
+      #if canImport(Darwin)
+      let descriptor = Darwin.open(temporary.path, O_WRONLY | O_CREAT | O_EXCL, mode_t(0o600))
+      #else
+      let descriptor = Glibc.open(temporary.path, O_WRONLY | O_CREAT | O_EXCL, mode_t(0o600))
+      #endif
+      guard descriptor >= 0 else { throw LocalProjectFailure.fileAccess }
       let output = FileHandle(fileDescriptor: descriptor, closeOnDealloc: true)
       defer { try? output.close() }
       try output.write(contentsOf: Self.magic + Self.uint32(1) + Self.uint32(UInt32(manifest.count)))
@@ -243,7 +254,11 @@ public struct LocalProjectStore: LocalProjectWorking {
         // The atomic no-clobber publication is the authority. A destination
         // appearing after the early check must be refused by link itself.
         guard link(temporary.path, destination.path) == 0 else {
-          if errno == EEXIST { throw LocalProjectFailure.destinationExists }
+          let failure = errno
+          if failure == EEXIST { throw LocalProjectFailure.destinationExists }
+          if failure == EXDEV || failure == ENOTSUP || failure == EOPNOTSUPP {
+            throw LocalProjectFailure.unsupportedLocation
+          }
           throw LocalProjectFailure.fileAccess
         }
       }
