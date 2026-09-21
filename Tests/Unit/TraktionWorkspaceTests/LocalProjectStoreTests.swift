@@ -70,6 +70,110 @@ final class LocalProjectStoreTests: XCTestCase {
     }
   }
 
+  func testMissingProjectAndUnavailableStagingAreAccessFailuresWithoutChangingSources() throws {
+    let files = try ProjectTestFiles(); defer { files.remove() }
+    let (snapshot, _) = try files.snapshot()
+    let url = try LocalProjectStore().save(snapshot, folder: files.folder, name: "Access failures")
+    let originalProject = try Data(contentsOf: url)
+    let originalPNG = try Data(contentsOf: files.sources[0])
+    XCTAssertThrowsError(try LocalProjectStore().open(files.folder.appendingPathComponent("missing.traktion"))) {
+      XCTAssertEqual($0 as? LocalProjectFailure, .fileAccess)
+    }
+    let decoded = ProjectCounter()
+    let cleaned = ProjectCounter()
+    // A real file cannot contain a staging directory: Foundation must report
+    // an OS write/access failure before decoding, without deleting that file.
+    let store = LocalProjectStore(decode: { url in
+      decoded.increment(); return try PNGCodec.decodeOpaqueRGBA8(from: url)
+    }, removeOwned: { _ in cleaned.increment() }, openStagingParent: files.sources[0])
+    XCTAssertThrowsError(try store.open(url)) {
+      XCTAssertEqual($0 as? LocalProjectFailure, .fileAccess)
+    }
+    XCTAssertEqual(decoded.count, 0)
+    XCTAssertEqual(cleaned.count, 0)
+    XCTAssertEqual(try Data(contentsOf: files.sources[0]), originalPNG)
+    XCTAssertEqual(try Data(contentsOf: url), originalProject)
+  }
+
+  func testDecoderSourceDisappearanceKeepsCodecMetadataAndFoundationAccessFailuresDistinct() throws {
+    let files = try ProjectTestFiles(); defer { files.remove() }
+    let (snapshot, _) = try files.snapshot()
+    let url = try LocalProjectStore().save(snapshot, folder: files.folder, name: "Disappearing staged source")
+    let originalProject = try Data(contentsOf: url)
+    let decoders: [@Sendable (URL) throws -> RasterImage] = [
+      { path in
+        try FileManager.default.removeItem(at: path)
+        return try PNGCodec.decodeOpaqueRGBA8(from: path) // PNGCodecError.fileNotFound
+      },
+      { path in
+        try FileManager.default.removeItem(at: path)
+        _ = try PNGMetadata.inspect(from: path) // PNGImportFailure.fileAccess
+        return try PNGCodec.decodeOpaqueRGBA8(from: path)
+      },
+      { path in
+        try FileManager.default.removeItem(at: path)
+        _ = try Data(contentsOf: path) // Foundation file-read error
+        return try PNGCodec.decodeOpaqueRGBA8(from: path)
+      },
+    ]
+    for decode in decoders {
+      let cleanups = ProjectCounter()
+      let store = LocalProjectStore(decode: decode, removeOwned: { directory in
+        cleanups.increment(); try FileManager.default.removeItem(at: directory)
+      })
+      XCTAssertThrowsError(try store.open(url)) {
+        XCTAssertEqual($0 as? LocalProjectFailure, .fileAccess)
+      }
+      XCTAssertEqual(cleanups.count, 1)
+      XCTAssertEqual(try Data(contentsOf: url), originalProject)
+    }
+  }
+
+  func testMalformedJSONAndPNGCRCRemainCorruptionBeforeDecode() throws {
+    let files = try ProjectTestFiles(); defer { files.remove() }
+    let (snapshot, _) = try files.snapshot()
+    let url = try LocalProjectStore().save(snapshot, folder: files.folder, name: "Content failures")
+    let original = try Data(contentsOf: url)
+    let decoded = ProjectCounter()
+    let store = LocalProjectStore(decode: { path in
+      decoded.increment(); return try PNGCodec.decodeOpaqueRGBA8(from: path)
+    })
+    for json in ["{!", "{}", "null", "{\"captures\":true}"] {
+      let bytes = Data(json.utf8)
+      try (LocalProjectStore.magic + LocalProjectStore.uint32(1)
+        + LocalProjectStore.uint32(UInt32(bytes.count)) + bytes).write(to: url)
+      XCTAssertThrowsError(try store.open(url)) {
+        XCTAssertEqual($0 as? LocalProjectFailure, .invalidContainer)
+      }
+    }
+    var corruptPNG = original; corruptPNG[corruptPNG.count - 1] ^= 1
+    try corruptPNG.write(to: url)
+    XCTAssertThrowsError(try store.open(url)) {
+      XCTAssertEqual($0 as? LocalProjectFailure, .invalidContainer)
+    }
+    XCTAssertEqual(decoded.count, 0)
+  }
+
+  func testDecoderContentResourceAndCancellationFailuresKeepTheirCategories() throws {
+    let files = try ProjectTestFiles(); defer { files.remove() }
+    let (snapshot, _) = try files.snapshot()
+    let url = try LocalProjectStore().save(snapshot, folder: files.folder, name: "Decoder categories")
+    let categories: [(any Error, LocalProjectFailure)] = [
+      (PNGCodecError.decodeFailed("capture.png"), .invalidContainer),
+      (PNGCodecError.unsupportedFormat("capture.png"), .invalidContainer),
+      (PNGCodecError.unsupportedTransparency("capture.png"), .invalidContainer),
+      (PNGCodecError.resourceLimitExceeded("capture.png"), .resourceLimit),
+      (PNGImportFailure.codec(.resourceLimitExceeded("capture.png")), .resourceLimit),
+      (PNGImportFailure.cancelled, .cancelled),
+    ]
+    for (error, expected) in categories {
+      let store = LocalProjectStore(decode: { _ in throw error })
+      XCTAssertThrowsError(try store.open(url)) {
+        XCTAssertEqual($0 as? LocalProjectFailure, expected)
+      }
+    }
+  }
+
   func testMissingDuplicateIDsUnsafeNamesAndInvalidPlanMetadataAreRejected() throws {
     let files = try ProjectTestFiles(); defer { files.remove() }
     let (snapshot, _) = try files.snapshot()

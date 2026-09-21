@@ -91,6 +91,7 @@ public struct LocalProjectStore: LocalProjectWorking {
   private let beforeCommit: @Sendable () throws -> Void
   private let afterCommit: @Sendable () -> Void
   private let removeOwned: @Sendable (URL) throws -> Void
+  private let openStagingParent: URL
 
   struct Manifest: Codable, Sendable {
     let captures: [Entry]
@@ -112,10 +113,12 @@ public struct LocalProjectStore: LocalProjectWorking {
     decode: @escaping @Sendable (URL) throws -> RasterImage,
     beforeCommit: @escaping @Sendable () throws -> Void = {},
     afterCommit: @escaping @Sendable () -> Void = {},
-    removeOwned: @escaping @Sendable (URL) throws -> Void = { try FileManager.default.removeItem(at: $0) }) {
+    removeOwned: @escaping @Sendable (URL) throws -> Void = { try FileManager.default.removeItem(at: $0) },
+    openStagingParent: URL = FileManager.default.temporaryDirectory) {
     self.limits = limits; self.decode = decode
     self.beforeCommit = beforeCommit; self.afterCommit = afterCommit
     self.removeOwned = removeOwned
+    self.openStagingParent = openStagingParent
   }
 
   public static func filename(_ name: String) throws -> String {
@@ -185,11 +188,33 @@ public struct LocalProjectStore: LocalProjectWorking {
         retainedEncodedBytes: retainedEncodedBytes, cancellation: cancellation)
       #endif
     } catch let failure as LocalProjectFailure { throw failure }
+    catch is DecodingError { throw LocalProjectFailure.invalidContainer }
     catch let failure as PNGImportFailure {
-      if failure == .cancelled { throw LocalProjectFailure.cancelled }
-      if case .resourceLimitExceeded = failure { throw LocalProjectFailure.resourceLimit }
-      throw LocalProjectFailure.invalidContainer
-    } catch { throw LocalProjectFailure.invalidContainer }
+      switch failure {
+      case .fileAccess: throw LocalProjectFailure.fileAccess
+      case .cancelled: throw LocalProjectFailure.cancelled
+      case .resourceLimitExceeded: throw LocalProjectFailure.resourceLimit
+      case .codec(let codec): throw projectFailure(for: codec)
+      case .cleanupFailed: throw LocalProjectFailure.cleanupFailed(saved: false)
+      case .countOutOfRange, .invalidFile, .incompatibleWidth:
+        throw LocalProjectFailure.invalidContainer
+      }
+    } catch let failure as PNGCodecError { throw projectFailure(for: failure) }
+    catch {
+      // Filesystem/provider/staging failures must not accuse valid saved data of
+      // corruption. Content refusal is explicit above or in framing validation.
+      throw LocalProjectFailure.fileAccess
+    }
+  }
+
+  private func projectFailure(for codec: PNGCodecError) -> LocalProjectFailure {
+    switch codec {
+    case .fileNotFound, .outputExists, .encodeFailed, .unsupportedPlatform:
+      return .fileAccess
+    case .resourceLimitExceeded: return .resourceLimit
+    case .unsupportedFormat, .unsupportedTransparency, .decodeFailed:
+      return .invalidContainer
+    }
   }
 
   private func validateSnapshot(_ snapshot: LocalProjectSnapshot) throws {
@@ -311,7 +336,7 @@ public struct LocalProjectStore: LocalProjectWorking {
     guard UInt64(payloadBytes) + UInt64(manifestLength + 16) == totalSize else {
       throw LocalProjectFailure.invalidContainer
     }
-    let stage = FileManager.default.temporaryDirectory.appendingPathComponent("traktion-project-\(UUID().uuidString)")
+    let stage = openStagingParent.appendingPathComponent("traktion-project-\(UUID().uuidString)")
     try FileManager.default.createDirectory(at: stage, withIntermediateDirectories: false,
       attributes: [.posixPermissions: 0o700])
     return try withCleanup(stage, cancellation: cancellation) {

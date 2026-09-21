@@ -383,7 +383,6 @@ final class TRAKTIONLaunchTests: XCTestCase {
     let status = app.staticTexts["workspace.project.status"]
     XCTAssertTrue(status.waitForExistence(timeout: 15))
     XCTAssertTrue(status.label.contains("Saved " + name + ".traktion"))
-    attachScreenshot(app, name: "Local project saved with committed seam")
 
     app.terminate()
     app.launchEnvironment.removeValue(forKey: "TRAKTION_UI_FIXTURE")
@@ -544,12 +543,15 @@ final class TRAKTIONLaunchTests: XCTestCase {
     // Keep interactions inside this expected alert. Tapping the system keyboard
     // introduction outside it makes XCTest's default interruption handler cancel
     // the alert. The focused field accepts typeText; callers assert its value.
-    let tree = XCTAttachment(string: app.debugDescription)
-    tree.name = "Actual project naming dialog accessibility tree"
-    tree.lifetime = .keepAlways
-    add(tree)
-    attachScreenshot(app, name: "Actual project naming dialog")
-    guard appeared else { XCTFail("Project naming field was absent from the native dialog"); return nil }
+    guard appeared else {
+      let tree = XCTAttachment(string: app.debugDescription)
+      tree.name = "Actual project naming dialog accessibility tree"
+      tree.lifetime = .keepAlways
+      add(tree)
+      attachScreenshot(app, name: "Actual project naming dialog")
+      XCTFail("Project naming field was absent from the native dialog")
+      return nil
+    }
     return field
   }
 
@@ -560,7 +562,6 @@ final class TRAKTIONLaunchTests: XCTestCase {
     guard open.waitForExistence(timeout: 15), open.isEnabled else {
       recordFilesState(app); XCTFail("Files did not offer the local folder confirmation"); return false
     }
-    recordFilesState(app)
     open.tap()
     return true
   }
@@ -573,7 +574,6 @@ final class TRAKTIONLaunchTests: XCTestCase {
       !confirmingFolder || (open.exists && open.isEnabled) else {
       recordFilesState(app); XCTFail("Expected Files picker did not appear"); return false
     }
-    recordFilesState(app)
     // Both observed nested pickers are modal sheets. Folder mode's Cancel
     // proxy overlaps More; XXXL open mode's visible Cancel did not resolve by
     // identifier. Use the verified user gesture from the blank header area.
@@ -595,7 +595,6 @@ final class TRAKTIONLaunchTests: XCTestCase {
     guard file.waitForExistence(timeout: 15) || text.exists else {
       recordFilesState(app); XCTFail("Saved project was absent from the actual Files picker"); return false
     }
-    recordFilesState(app)
     if file.exists { file.tap() } else { text.tap() }
     let confirm = app.navigationBars.buttons["Open"].firstMatch
     if confirm.exists && confirm.isHittable { confirm.tap() }
