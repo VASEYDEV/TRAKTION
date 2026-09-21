@@ -134,7 +134,9 @@ below; edited export remains a separate task.
 
 After reconstruction, close the inspector and choose **Save project**. Enter a
 name of 1–80 letters, numbers, spaces, hyphens or underscores; `.traktion` is
-added automatically. Choose **Choose folder**, then confirm the destination in
+added automatically. Some Unicode characters require a shorter name to fit the
+filesystem filename limit; the app asks for a valid name before attempting a save.
+Choose **Choose folder**, then confirm the destination in
 the real Files folder picker. **On My iPhone → TRAKTION** uses local storage.
 Each save creates a new file. If any item already uses the selected name, choose
 another unused name; existing projects, unrelated files and symlinks stay untouched.

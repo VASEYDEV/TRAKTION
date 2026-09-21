@@ -54,6 +54,44 @@ final class LocalProjectStoreTests: XCTestCase {
     XCTAssertEqual(result.pixels, oracle(captures, boundaries: [8, 10], origins: [0, 2, 4], width: 4, height: 12))
   }
 
+  func testUnicodeProjectNamesRespectCompleteFilenameByteLimit() throws {
+    let files = try ProjectTestFiles(); defer { files.remove() }
+    let (snapshot, _) = try files.snapshot()
+    // Deseret letters are alphanumeric, one Character and four UTF-8 bytes.
+    let letter = "\u{10400}"
+    let boundary = String(repeating: letter, count: 61) + "ab"
+    let oversized = [boundary + "c", String(repeating: letter, count: 80)]
+    XCTAssertEqual((boundary + ".traktion").utf8.count, 255)
+    XCTAssertEqual((oversized[0] + ".traktion").utf8.count, 256)
+    XCTAssertEqual((oversized[1] + ".traktion").utf8.count, 329)
+    let committed = ProjectCounter()
+    let cleaned = ProjectCounter()
+    let store = LocalProjectStore(decode: PNGCodec.decodeOpaqueRGBA8(from:),
+      beforeCommit: { committed.increment() }, removeOwned: { directory in
+        cleaned.increment(); try FileManager.default.removeItem(at: directory)
+      })
+    let existing = try FileManager.default.contentsOfDirectory(atPath: files.folder.path).sorted()
+    for name in oversized {
+      XCTAssertLessThanOrEqual(name.count, 80)
+      let cancellation = LocalProjectCancellation()
+      XCTAssertThrowsError(try store.save(snapshot, folder: files.folder, name: name,
+        cancellation: cancellation)) {
+        XCTAssertEqual($0 as? LocalProjectFailure, .invalidName)
+      }
+      XCTAssertFalse(cancellation.didCommit)
+    }
+    XCTAssertEqual(committed.count, 0)
+    XCTAssertEqual(cleaned.count, 0)
+    XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: files.folder.path).sorted(), existing)
+    let saved = try store.save(snapshot, folder: files.folder, name: boundary)
+    XCTAssertEqual(saved.lastPathComponent, boundary + ".traktion")
+    let reopened = try store.open(saved)
+    XCTAssertEqual(reopened.captures.map(\.originalPNG), snapshot.captures.map(\.originalPNG))
+    XCTAssertEqual(reopened.document.plan, snapshot.committedPlan)
+    XCTAssertEqual(try LocalProjectStore.filename("  " + String(repeating: "x", count: 80) + "  "),
+      String(repeating: "x", count: 80) + ".traktion")
+  }
+
   func testUnknownVersionTruncationTrailingBytesAndCorruptPNGAreRejected() throws {
     let files = try ProjectTestFiles(); defer { files.remove() }
     let (snapshot, _) = try files.snapshot()

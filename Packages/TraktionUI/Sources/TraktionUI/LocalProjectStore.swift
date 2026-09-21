@@ -26,7 +26,7 @@ public enum LocalProjectFailure: Error, Equatable, Sendable {
     case .unsupportedVersion: return "This project uses an unsupported format version."
     case .invalidContainer: return "The project is incomplete, corrupt, or contains invalid captures."
     case .invalidEvidence: return "The saved reconstruction evidence could not be reproduced from its original captures."
-    case .invalidName: return "Use a filename of 1–80 letters, numbers, spaces, hyphens or underscores."
+    case .invalidName: return "Use 1–80 letters, numbers, spaces, hyphens or underscores. Some characters require a shorter name."
     case .missingOriginals: return "Original PNG bytes are unavailable. Import the captures again before saving."
     case .destinationExists: return "An item already exists with this name. Choose another name."
     case .unsupportedLocation: return "This location cannot safely save a project. Choose the local TRAKTION folder or another supported folder on this device."
@@ -126,7 +126,11 @@ public struct LocalProjectStore: LocalProjectWorking {
     guard (1...80).contains(stem.count), stem.unicodeScalars.allSatisfy({
       CharacterSet.alphanumerics.contains($0) || $0 == " " || $0 == "-" || $0 == "_"
     }) else { throw LocalProjectFailure.invalidName }
-    return stem + ".traktion"
+    let filename = stem + ".traktion"
+    // Keep the complete component portable to filesystems with a 255-byte limit.
+    // Character count alone admits longer names containing non-BMP letters.
+    guard filename.utf8.count <= 255 else { throw LocalProjectFailure.invalidName }
+    return filename
   }
 
   public func save(_ snapshot: LocalProjectSnapshot, folder: URL, name: String,

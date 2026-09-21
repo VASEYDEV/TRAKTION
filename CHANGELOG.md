@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Reject project names whose complete filename exceeds 255 UTF-8 bytes before
+  filesystem access. Long Unicode names now report a name-validation failure;
+  a regression covers real save/reopen at 255 bytes and refusal at 256/329 bytes.
+
 ### Added
 
 - **Integration and testing handoff** (task 0024): reconcile the #20/#21 stack

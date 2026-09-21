@@ -33,7 +33,10 @@ contract owns evidence acceptance and returns the reconstructed result and
 restored document. UI or future front ends do not duplicate validity policy.
 
 Saving uses an explicit user-selected Files folder and a validated basename with
-`.traktion` extension. A worker exclusively creates a private `0700` staging
+`.traktion` extension. The trimmed stem must contain 1–80 permitted characters,
+and the complete filename including the extension must fit within 255 UTF-8 bytes.
+This portable component limit is checked before filesystem access; long Unicode
+names return `invalidName`, not a misleading access failure. A worker exclusively creates a private `0700` staging
 directory in app-controlled temporary storage, outside Documents and the selected
 folder, then streams and flushes an exclusive `0600` file inside it. Publication
 runs under a cancellation commit lock. Every save uses an atomic no-clobber hard

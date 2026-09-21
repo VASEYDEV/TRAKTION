@@ -13,7 +13,9 @@ completed branches, and leave an accurate next task and testing handoff.
 - Squash #20, rebase only #21's seven persistence commits onto that result,
   then squash #21 after its updated verification passes.
 - Verify unchanged feature content with tree equality and `git range-diff`.
-- Update status, roadmap and testing evidence without changing app behavior.
+- Update status, roadmap and testing evidence.
+- Resolve the late review finding that Unicode names can exceed the filesystem
+  component limit: reject before I/O and prove the accepted boundary roundtrip.
 - Delete completed remote branches only after preserving their work on main.
 
 ## Acceptance criteria
@@ -23,6 +25,8 @@ completed branches, and leave an accurate next task and testing handoff.
 - [x] #20 is squash-merged; the seven rebased #21 patches and full tree are unchanged.
 - [x] Current features, next export task, release gaps and manual checks are documented.
 - [x] Repository policy, native-result guard regressions and whitespace checks pass.
+- [x] A regression reproduces the long-Unicode-name error, then proves typed
+  refusal at 256/329 bytes and real save/reopen at the 255-byte boundary.
 
 The remaining external completion gates are the current #21 head's five CI jobs,
 its squash-merge record, main-tree equality and removal of both completed remote

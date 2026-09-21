@@ -35,9 +35,10 @@ the approval rejection recorded in historical notes.
    patches unchanged; the resulting `9260bef` tree exactly equals original #21
    head `f3559a7e3a82f43cc72840b4d7229603ef903284` (tree
    `fcc04a6d6b1ebbf6e6b6f91178fbfc38e9e026f1`).
-3. Add only the current integration/testing documentation, retarget #21 to main,
-   publish after confirming the remote still has its expected original head, and require all five
-   jobs on that current head before its squash merge.
+3. Add the current integration/testing documentation, retarget #21 to main,
+   publish after confirming the remote still has its expected original head, and
+   require all five jobs on the current head before its squash merge. A late
+   name-validation finding, described below, is fixed before final integration.
 4. Verify the merged main tree equals the tested #21 tree. Delete both completed
    remote branches only after this comparison; keep main as the sole long-lived
    branch. Preserve the merged PRs, ADRs, fixtures and historical evidence.
@@ -62,6 +63,29 @@ UI-owned restoration policy, I/O error classification, and native timeout/restar
 detection. No timeout budget or assertion was relaxed for this integration.
 
 ## Testing readiness and remaining work
+
+### Late premerge review finding
+
+The rebased head `af5202f` passed all five jobs in
+[run 35575985648](https://github.com/VASEYDEV/TRAKTION/actions/runs/35575985648):
+220 Linux / 219 Apple cases, both 45-case evaluations, 13 Debug native cases in
+533.481 seconds and one Release case in 58.660 seconds. The final review-thread
+check then found a seventh finding: 80 valid Deseret letters produce a 329-byte
+filename after the extension, exceeding the portable filesystem component limit.
+
+A new regression reproduced two incorrect `fileAccess` results at 256 and 329
+bytes before the fix. Filename validation now enforces at most 255 UTF-8 bytes
+including `.traktion`, with `invalidName` returned before any filesystem work.
+The test also saves and reopens a real 255-byte filename, checks original bytes
+and committed evidence, and preserves the existing 80-character ASCII limit.
+The ADR and user guidance are updated. Final-current-head results are recorded
+in PR #21; the successful run above predates this small validation fix. The local
+Swift 6.0.3 Release rebuild passed in 16.73 seconds and all 221 XCTest cases passed
+in 23.147 seconds, including the new regression; repository policy, eight guard
+regressions and whitespace checks also passed. Apple inventory is 220 because
+the real cross-filesystem regression is Linux-only.
+
+### Release stages
 
 | Stage | Current position | Remaining requirement |
 | --- | --- | --- |
