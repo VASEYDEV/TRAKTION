@@ -29,7 +29,7 @@
         let scenarios = ["baseline": 3, "duplicate-capture": 4, "missing-middle": 2, "inspection-long": 3]
         guard let scenario = ProcessInfo.processInfo.environment["TRAKTION_UI_FIXTURE"],
           let count = scenarios[scenario],
-          let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
+          let documents = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
             .first
         else { return }
         let directory = documents.appendingPathComponent("UIFixtures", isDirectory: true)

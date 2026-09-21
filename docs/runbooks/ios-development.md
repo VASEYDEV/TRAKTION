@@ -3,7 +3,8 @@
 The Xcode target imports 2–10 opaque equal-width PNG captures from Files,
 requires explicit top-to-bottom order confirmation, and shows local supplied-order
 reconstruction or a typed failure, pixel/joint inspection and reversible seam
-adjustment. Persistence and export remain subsequent tasks. No production icon or physical-device release is claimed.
+adjustment, plus local project save/open. Export remains a subsequent task.
+No production icon or physical-device release is claimed.
 
 ## Open and run
 1. Use macOS with Xcode 16 or newer and an installed iOS 17+ simulator runtime.
@@ -38,11 +39,15 @@ The verification sequence is:
 3. Run `xcodebuild build-for-testing` with the shared scheme and
    `CODE_SIGNING_ALLOWED=NO` for this simulator invocation.
 4. Generate baseline/duplicate/missing-middle PNG fixtures in a separate
-   release CLI process, install the app, and copy only capture PNGs into the
-   dedicated simulator app container. Source truth/manifests stay outside it.
+   release CLI process, install the app, and copy capture PNGs into private
+   `Library/Application Support/UIFixtures` in the dedicated simulator. Source
+   truth/manifests stay outside it. The script also seeds one deliberately corrupt
+   synthetic project in Documents for the real Files refusal test.
 5. Launch and run all small-input Debug XCTest scenarios for real import, supplied order,
    reconstruction/refusals, reset, rotation, larger text (including inspection),
-   deliberate seam apply/cancel/undo/redo, and actual Files picker cancellation.
+   deliberate seam apply/cancel/undo/redo, real Files project save/reopen after
+   app termination, save/open cancellation, corrupt-project refusal and
+   same-name refusal preserving both the changed workspace and original saved file.
 6. Build/install a Release test app and run the same full-size phone inspection
    scenario with production optimization. The `TRAKTION_UI_FIXTURE` bootstrap
    is available in Debug or with the explicit `TRAKTION_UI_TESTING` test flag;
@@ -122,8 +127,49 @@ and apply or cancel. Undo/redo restores committed boundaries and pixels;
 closing/reopening the inspector keeps committed history while discarding a draft.
 Reset, replacement and capture-order changes clear that workspace's edits.
 The preview samples original source strips through the core without retaining a
-second full-size composite. Project saving and edited export are not implemented.
+second full-size composite. Project saving preserves committed seams as described
+below; edited export remains a separate task.
+
+## Local projects
+
+After reconstruction, close the inspector and choose **Save project**. Enter a
+name of 1–80 letters, numbers, spaces, hyphens or underscores; `.traktion` is
+added automatically. Some Unicode characters require a shorter name to fit the
+filesystem filename limit; the app asks for a valid name before attempting a save.
+Choose **Choose folder**, then confirm the destination in
+the real Files folder picker. **On My iPhone → TRAKTION** uses local storage.
+Each save creates a new file. If any item already uses the selected name, choose
+another unused name; existing projects, unrelated files and symlinks stay untouched.
+
+Choose **Open project** and select a `.traktion` file in Files. The app validates
+the original PNGs and reproduces the saved automatic evidence before replacing
+the workspace. Names/order, committed seam positions and modified status return;
+undo/redo starts with the new session. A failed or cancelled open keeps existing
+captures and committed edits. Uncommitted inspector drafts cannot be saved.
+
+Cancelling the name or Files dialog leaves the workspace unchanged. On iOS
+versions without a visible folder-picker Cancel button, swipe the folder sheet
+down to dismiss it. During a worker operation, **Cancel** waits for the worker
+to drain. Cancellation before
+save publication leaves no new destination; a completed atomic save is
+reported as saved even if cancellation follows it. Cleanup errors remain visible,
+including the distinct case where the project saved but private staging remains.
+
+Projects contain original PNG bytes and metadata. The app makes no network
+request, but a selected Files provider may synchronize its storage. Providers
+without same-filesystem hard-link support are refused; choose the local TRAKTION
+folder if the destination is unsupported. Private staging stays outside the
+selected folder so another folder writer cannot substitute the save source. Third-party
+provider compatibility and physical-device behavior are not established by CI.
+The app exports its project UTI for in-app selection; external Files tap-to-launch
+handling is not registered. The macOS SwiftPM preview uses a data-file picker and
+validates the selected file's project signature.
+
+[ADR-024](../adr/ADR-024-local-project-container.md) defines format compatibility,
+the separate encoded/raster limits and large-project admission evidence. Resetting
+a large current workspace may be necessary before opening another large project.
 
 Both native phase logs are checked against the source test inventory after
-Xcode succeeds. A missing or silently unselected test fails the gate. The
-repository lane exercises this guard with Python standard-library tests.
+Xcode succeeds. Missing, silently unselected, failed or repeated cases fail the
+gate, as do timeout/restart markers followed by passing records. The repository
+lane exercises this guard with Python standard-library tests.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Require every selected native XCTest to have exactly one passing record."""
+"""Require every selected native XCTest to pass once without interruption."""
 
 import argparse
 from collections import Counter
@@ -8,6 +8,10 @@ import re
 import sys
 
 PHONE_TEST = "testLongPixelInspectionPanZoomJointSourcesAndReturn"
+INTERRUPTION_MARKERS = (
+    "exceeded execution time allowance",
+    "Restarting after unexpected exit, crash, or test timeout",
+)
 
 
 def verify(source: str, log: str, phase: str) -> int:
@@ -17,6 +21,9 @@ def verify(source: str, log: str, phase: str) -> int:
     expected = {PHONE_TEST} if phase == "release" else set(names) - {PHONE_TEST}
     if not expected:
         raise ValueError("The selected native phase must contain tests.")
+    interruptions = [marker for marker in INTERRUPTION_MARKERS if marker in log]
+    if interruptions:
+        raise ValueError(f"Native {phase} execution was interrupted: {', '.join(interruptions)}")
     records = re.findall(
         r"Test Case '-\[TRAKTIONUITests\.TRAKTIONLaunchTests (test\w+)\]' (passed|failed)\b", log
     )

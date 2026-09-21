@@ -1,6 +1,6 @@
 # Task: Repository health and product handoff
 
-Status: done — verified in [PR #20](https://github.com/VASEYDEV/TRAKTION/pull/20); PR remains open for review/merge.
+Status: done — verified and squash-merged in [PR #20](https://github.com/VASEYDEV/TRAKTION/pull/20).
 
 ## Goal
 Reconcile all open PRs, branches and old checkouts; preserve useful work; leave
@@ -24,8 +24,8 @@ accurate product documentation, visuals, dependency/CI evidence and a clean open
 - [x] Dependency inventory, changelog, roadmap and active todo list agree.
 - [x] All changes are committed and pushed in an open PR; verified implementation evidence is linked and current-head CI remains a merge requirement.
 
-Existing remote PRs may be squash-merged after review. New work remains in an
-open PR as requested. Historical ADRs, task packets and measured reports remain
-evidence rather than active work.
+The original leave-open request was superseded by Sean's explicit September 21
+merge/cleanup authorization. Task 0024 records the integration handoff.
+Historical ADRs, task packets and measured reports remain evidence rather than active work.
 
 Full implementation verification: [run 35222997795](https://github.com/VASEYDEV/TRAKTION/actions/runs/35222997795) at `1daafd6d013eb4af92d26b2c4061b22e8cb1e1e4`; all five jobs passed. The current PR checks remain required after documentation updates.

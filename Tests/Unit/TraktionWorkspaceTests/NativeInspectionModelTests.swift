@@ -256,7 +256,7 @@ private final class BlockingInspectionRenderer: InspectionRendering, @unchecked 
 private struct InspectionWorkspaceWorker: NativeWorkspaceWorking {
   let fixture: SyntheticFixture
   init() throws { fixture = try SyntheticFixtureFactory.baseline() }
-  func importCaptures(from urls: [URL], retainedRasterBytes: Int, isCancelled: @Sendable () -> Bool) throws -> [CaptureAsset] { fixture.captures }
+  func importCaptures(from urls: [URL], retainedRasterBytes: Int, retainedEncodedBytes: Int, isCancelled: @Sendable () -> Bool) throws -> [CaptureAsset] { fixture.captures }
   func reconstruct(_ captures: [CaptureAsset]) throws -> ReconstructionResult {
     try ReconstructionEngine().reconstruct(CaptureSequence(captures: captures), axis: .vertical)
   }

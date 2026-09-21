@@ -344,6 +344,271 @@ final class TRAKTIONLaunchTests: XCTestCase {
     app.buttons["inspection.done"].tap()
   }
 
+  func testEditedProjectSavesThroughFilesAndReopensAfterEmptyLaunch() {
+    let app = launch(scenario: "baseline")
+    confirmOrder(in: app)
+    app.buttons["workspace.reconstruct"].tap()
+    XCTAssertTrue(app.staticTexts["workspace.result.dimensions"].waitForExistence(timeout: 30))
+    openInspection(in: app)
+    let inspection = app.scrollViews["inspection.scroll"]
+    app.buttons["inspection.region"].tap()
+    app.buttons["inspection.region.joint.0"].tap()
+    XCTAssertTrue(app.staticTexts["inspection.joint.seam"].label.contains("output row 136; overlap row 24"))
+    let automaticSeam = app.staticTexts["inspection.joint.automaticSeam"].label
+    XCTAssertEqual(automaticSeam,
+      "Automatic seam: overlap row 24. Registration confidence is unchanged by manual selection.")
+    for id in ["inspection.edit.begin", "inspection.edit.down", "inspection.edit.apply"] {
+      let button = app.buttons[id]
+      reveal(button, in: inspection)
+      let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == true"), object: button)
+      XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 10), .completed)
+      button.tap()
+    }
+    let changed = app.staticTexts["inspection.edit.state"]
+    XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(
+      predicate: NSPredicate(format: "label == 'Modified seams'"), object: changed)], timeout: 10), .completed)
+    XCTAssertTrue(app.staticTexts["inspection.joint.seam"].label.contains("output row 137; overlap row 25"))
+    app.buttons["inspection.done"].tap()
+    let save = app.buttons["workspace.project.save"]
+    reveal(save, in: app.scrollViews["workspace.scroll"])
+    XCTAssertTrue(save.isEnabled)
+    save.tap()
+    let name = "Native roundtrip " + String(UUID().uuidString.prefix(8))
+    guard let field = projectNameField(in: app) else { return }
+    field.tap()
+    field.typeText(name)
+    XCTAssertEqual(field.value as? String, name)
+    app.alerts["Save project"].buttons["Choose folder"].firstMatch.tap()
+    guard chooseCurrentFilesFolder(in: app) else { return }
+    let status = app.staticTexts["workspace.project.status"]
+    XCTAssertTrue(status.waitForExistence(timeout: 15))
+    XCTAssertTrue(status.label.contains("Saved " + name + ".traktion"))
+
+    app.terminate()
+    app.launchEnvironment.removeValue(forKey: "TRAKTION_UI_FIXTURE")
+    app.launch()
+    XCTAssertTrue(app.buttons["workspace.project.open"].waitForExistence(timeout: 10))
+    XCTAssertFalse(app.staticTexts["capture.0.name"].exists)
+    XCTAssertFalse(app.buttons["workspace.project.save"].isEnabled)
+    app.buttons["workspace.project.open"].tap()
+    guard chooseProjectInFiles(name, app: app) else { return }
+    XCTAssertTrue(app.staticTexts["capture.2.name"].waitForExistence(timeout: 30))
+    XCTAssertFalse(app.staticTexts["workspace.failure"].exists)
+    XCTAssertTrue(status.label.contains("Opened " + name + ".traktion"))
+    for index in 0..<3 {
+      XCTAssertEqual(app.staticTexts["capture.\(index).name"].label,
+        String(format: "%d. capture-%03d.png", index + 1, index + 1))
+    }
+    XCTAssertEqual(app.staticTexts["workspace.result.dimensions"].label, "96 × 384 pixels")
+    XCTAssertTrue(app.staticTexts["workspace.result.editState"].label.contains("Modified seams"))
+    openInspection(in: app)
+    XCTAssertTrue(app.buttons["inspection.edit.undo"].exists)
+    XCTAssertTrue(app.buttons["inspection.edit.redo"].exists)
+    XCTAssertFalse(app.buttons["inspection.edit.undo"].isEnabled)
+    XCTAssertFalse(app.buttons["inspection.edit.redo"].isEnabled)
+    app.buttons["inspection.region"].tap()
+    app.buttons["inspection.region.joint.0"].tap()
+    XCTAssertTrue(app.staticTexts["inspection.joint.seam"].label.contains("output row 137; overlap row 25"))
+    XCTAssertEqual(app.staticTexts["inspection.joint.automaticSeam"].label, automaticSeam)
+    XCTAssertTrue(app.staticTexts["inspection.joint.confidence"].label.contains("Exact"))
+    attachScreenshot(app, name: "Reopened project original evidence and committed seam")
+    app.buttons["inspection.done"].tap()
+  }
+
+  func testProjectPickerCancellationAndLargeTextControlsPreserveWorkspace() {
+    let app = XCUIApplication()
+    XCUIDevice.shared.orientation = .portrait
+    app.launchEnvironment["TRAKTION_UI_FIXTURE"] = "baseline"
+    app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
+    app.launch()
+    waitForImport(in: app, count: 3)
+    let scroll = app.scrollViews["workspace.scroll"]
+    for id in ["workspace.project.open", "workspace.project.save"] {
+      let button = app.buttons[id]
+      reveal(button, in: scroll)
+      assertHorizontallyContained(button, in: app)
+    }
+    XCTAssertFalse(app.buttons["workspace.project.save"].isEnabled)
+    let open = app.buttons["workspace.project.open"]
+    reveal(open, in: scroll); open.tap()
+    guard dismissFilesSheet(in: app, confirmingFolder: false) else { return }
+    XCTAssertTrue(open.waitForExistence(timeout: 10))
+    XCTAssertEqual(app.staticTexts["capture.0.name"].label, "1. capture-001.png")
+    XCTAssertFalse(app.staticTexts["workspace.failure"].exists)
+    XCTAssertFalse(app.staticTexts["workspace.project.status"].exists)
+    attachScreenshot(app, name: "Accessible project controls after Files cancellation")
+  }
+
+  func testSaveCancellationAndCorruptFilesProjectKeepReconstruction() {
+    let app = launch(scenario: "baseline")
+    confirmOrder(in: app)
+    app.buttons["workspace.reconstruct"].tap()
+    let dimensions = app.staticTexts["workspace.result.dimensions"]
+    XCTAssertTrue(dimensions.waitForExistence(timeout: 30))
+    let scroll = app.scrollViews["workspace.scroll"]
+    let save = app.buttons["workspace.project.save"]
+    reveal(save, in: scroll); save.tap()
+    guard projectNameField(in: app) != nil else { return }
+    app.alerts.buttons["Cancel"].tap()
+    XCTAssertEqual(dimensions.label, "96 × 384 pixels")
+    XCTAssertFalse(app.staticTexts["workspace.project.status"].exists)
+    save.tap()
+    guard let field = projectNameField(in: app) else { return }
+    field.tap(); field.typeText("Cancelled project")
+    XCTAssertEqual(field.value as? String, "Cancelled project")
+    app.alerts["Save project"].buttons["Choose folder"].firstMatch.tap()
+    guard dismissFilesSheet(in: app, confirmingFolder: true) else { return }
+    XCTAssertTrue(save.waitForExistence(timeout: 10))
+    XCTAssertEqual(dimensions.label, "96 × 384 pixels")
+    XCTAssertFalse(app.staticTexts["workspace.project.status"].exists)
+    XCTAssertFalse(app.staticTexts["workspace.failure"].exists)
+    let open = app.buttons["workspace.project.open"]
+    reveal(open, in: scroll); open.tap()
+    guard chooseProjectInFiles("Corrupt native fixture", app: app) else { return }
+    let failure = app.staticTexts["workspace.failure"]
+    XCTAssertTrue(failure.waitForExistence(timeout: 15))
+    XCTAssertTrue(failure.label.contains("corrupt"))
+    XCTAssertEqual(dimensions.label, "96 × 384 pixels")
+    XCTAssertEqual(app.staticTexts["capture.0.name"].label, "1. capture-001.png")
+    XCTAssertEqual(app.staticTexts["capture.2.name"].label, "3. capture-003.png")
+    XCTAssertTrue(app.staticTexts["workspace.result.editState"].label.contains("Automatic seams"))
+    XCTAssertTrue(save.isEnabled)
+    reveal(failure, in: scroll)
+    attachScreenshot(app, name: "Corrupt project refusal preserves reconstruction")
+  }
+
+  func testExistingProjectNameRefusesOverwriteAndPreservesSavedFile() {
+    let app = launch(scenario: "baseline")
+    confirmOrder(in: app)
+    app.buttons["workspace.reconstruct"].tap()
+    let dimensions = app.staticTexts["workspace.result.dimensions"]
+    XCTAssertTrue(dimensions.waitForExistence(timeout: 30))
+    XCTAssertEqual(dimensions.label, "96 × 384 pixels")
+    let scroll = app.scrollViews["workspace.scroll"]
+    let save = app.buttons["workspace.project.save"]
+    reveal(save, in: scroll); save.tap()
+    let name = "Collision original " + String(UUID().uuidString.prefix(8))
+    guard let field = projectNameField(in: app) else { return }
+    field.tap(); field.typeText(name)
+    XCTAssertEqual(field.value as? String, name)
+    app.alerts["Save project"].buttons["Choose folder"].firstMatch.tap()
+    guard chooseCurrentFilesFolder(in: app) else { return }
+    let status = app.staticTexts["workspace.project.status"]
+    XCTAssertTrue(status.waitForExistence(timeout: 15))
+    XCTAssertTrue(status.label.contains("Saved " + name + ".traktion"))
+
+    // Produce a different valid reconstruction before trying the same filename.
+    let remove = app.buttons["capture.2.remove"]
+    reveal(remove, in: scroll); remove.tap()
+    XCTAssertFalse(app.staticTexts["capture.2.name"].exists)
+    confirmOrder(in: app)
+    app.buttons["workspace.reconstruct"].tap()
+    XCTAssertTrue(dimensions.waitForExistence(timeout: 30))
+    XCTAssertEqual(dimensions.label, "96 × 272 pixels")
+    reveal(save, in: scroll); save.tap()
+    XCTAssertTrue(field.waitForExistence(timeout: 5))
+    XCTAssertEqual(field.value as? String, name)
+    app.alerts["Save project"].buttons["Choose folder"].firstMatch.tap()
+    guard chooseCurrentFilesFolder(in: app) else { return }
+    let failure = app.staticTexts["workspace.failure"]
+    XCTAssertTrue(failure.waitForExistence(timeout: 15))
+    XCTAssertTrue(failure.label.contains("Choose another name"))
+    XCTAssertEqual(dimensions.label, "96 × 272 pixels")
+    XCTAssertFalse(app.staticTexts["capture.2.name"].exists)
+    XCTAssertTrue(save.isEnabled)
+    reveal(failure, in: scroll)
+    attachScreenshot(app, name: "Existing project collision preserves current reconstruction")
+
+    app.terminate()
+    app.launchEnvironment.removeValue(forKey: "TRAKTION_UI_FIXTURE")
+    app.launch()
+    XCTAssertTrue(app.buttons["workspace.project.open"].waitForExistence(timeout: 10))
+    XCTAssertFalse(app.staticTexts["capture.0.name"].exists)
+    app.buttons["workspace.project.open"].tap()
+    guard chooseProjectInFiles(name, app: app) else { return }
+    XCTAssertTrue(app.staticTexts["capture.2.name"].waitForExistence(timeout: 30))
+    XCTAssertFalse(app.staticTexts["workspace.failure"].exists)
+    XCTAssertEqual(dimensions.label, "96 × 384 pixels")
+    XCTAssertEqual(app.staticTexts["capture.2.name"].label, "3. capture-003.png")
+    XCTAssertTrue(status.label.contains("Opened " + name + ".traktion"))
+    attachScreenshot(app, name: "Existing saved project survives refused overwrite")
+  }
+
+  private func projectNameField(in app: XCUIApplication) -> XCUIElement? {
+    // UIKit's SwiftUI alert bridge exposes the placeholder, but does not carry
+    // the TextField accessibility identifier through to the native alert.
+    let field = app.alerts["Save project"].textFields.matching(
+      NSPredicate(format: "placeholderValue == %@", "Project name")).firstMatch
+    let appeared = field.waitForExistence(timeout: 5)
+    // Keep interactions inside this expected alert. Tapping the system keyboard
+    // introduction outside it makes XCTest's default interruption handler cancel
+    // the alert. The focused field accepts typeText; callers assert its value.
+    guard appeared else {
+      let tree = XCTAttachment(string: app.debugDescription)
+      tree.name = "Actual project naming dialog accessibility tree"
+      tree.lifetime = .keepAlways
+      add(tree)
+      attachScreenshot(app, name: "Actual project naming dialog")
+      XCTFail("Project naming field was absent from the native dialog")
+      return nil
+    }
+    return field
+  }
+
+  private func chooseCurrentFilesFolder(in app: XCUIApplication) -> Bool {
+    // The production default directory is this app's local Documents folder.
+    // This is the real system folder picker, with no injected URL or test save path.
+    let open = app.navigationBars.buttons["Open"].firstMatch
+    guard open.waitForExistence(timeout: 15), open.isEnabled else {
+      recordFilesState(app); XCTFail("Files did not offer the local folder confirmation"); return false
+    }
+    open.tap()
+    return true
+  }
+
+  private func dismissFilesSheet(in app: XCUIApplication, confirmingFolder: Bool) -> Bool {
+    let picker = app.otherElements["Browse View (Picker)"]
+    let header = app.navigationBars["FullDocumentManagerViewControllerNavigationBar"]
+    let open = app.navigationBars.buttons["Open"].firstMatch
+    guard picker.waitForExistence(timeout: 15), header.exists,
+      !confirmingFolder || (open.exists && open.isEnabled) else {
+      recordFilesState(app); XCTFail("Expected Files picker did not appear"); return false
+    }
+    // Both observed nested pickers are modal sheets. Folder mode's Cancel
+    // proxy overlaps More; XXXL open mode's visible Cancel did not resolve by
+    // identifier. Use the verified user gesture from the blank header area.
+    header.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.05))
+      .press(forDuration: 0.1, thenDragTo:
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.95)))
+    let dismissed = [picker, header, open].map {
+      XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: $0)
+    }
+    guard XCTWaiter.wait(for: dismissed, timeout: 5) == .completed else {
+      recordFilesState(app); XCTFail("Files sheet did not dismiss"); return false
+    }
+    return true
+  }
+
+  private func chooseProjectInFiles(_ name: String, app: XCUIApplication) -> Bool {
+    let file = app.cells.matching(NSPredicate(format: "label BEGINSWITH %@", name)).firstMatch
+    let text = app.staticTexts.matching(NSPredicate(format: "label == %@ OR label == %@", name, name + ".traktion")).firstMatch
+    guard file.waitForExistence(timeout: 15) || text.exists else {
+      recordFilesState(app); XCTFail("Saved project was absent from the actual Files picker"); return false
+    }
+    if file.exists { file.tap() } else { text.tap() }
+    let confirm = app.navigationBars.buttons["Open"].firstMatch
+    if confirm.exists && confirm.isHittable { confirm.tap() }
+    return true
+  }
+
+  private func recordFilesState(_ app: XCUIApplication) {
+    let tree = XCTAttachment(string: app.debugDescription)
+    tree.name = "Actual Files picker accessibility tree"
+    tree.lifetime = .keepAlways
+    add(tree)
+    attachScreenshot(app, name: "Actual Files picker")
+  }
+
   private func openInspection(in app: XCUIApplication) {
     let inspect = app.buttons["workspace.result.inspect"]
     reveal(inspect, in: app.scrollViews["workspace.scroll"])

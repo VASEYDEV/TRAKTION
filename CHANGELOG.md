@@ -7,12 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Reject project names whose complete filename exceeds 255 UTF-8 bytes before
+  filesystem access. Long Unicode names now report a name-validation failure;
+  a regression covers real save/reopen at 255 bytes and refusal at 256/329 bytes.
+
 ### Added
 
+- **Integration and testing handoff** (task 0024): reconcile the #20/#21 stack
+  with a squash followed by a content-preserving rebase and squash, refresh the
+  roadmap/task index, and distinguish simulator verification from signed-device
+  and TestFlight readiness. Bounded PNG export remains the next implementation.
+- **Local project persistence** (task 0022, ADR-024): save exact original PNG
+  bytes, capture identity/order, automatic evidence and committed seams in one
+  bounded `.traktion` file. Real Files save/open, create-only saves and explicit
+  filename-collision refusal,
+  atomic publication, distinct corruption/access/resource failures and cancellation protect
+  existing work. Reopening reproduces the evidence and starts fresh undo/redo
+  history; PNG export remains a separate task.
 - **Reversible seam adjustment** (task 0020, ADR-023): deliberate draft/apply/cancel
   inside proven overlaps, undo/redo, original/modified status, metadata-only
-  history and bounded rendering from original capture pixels. Saved projects and
-  export remain separate work.
+  history and bounded rendering from original capture pixels. Task 0022 adds
+  saved projects; export remains separate work.
 - **Native pixel and joint inspection** (task 0019, ADR-022): bounded 1:1 pan/zoom,
   original-source views, stable capture positions, confidence/overlap/seam details,
   accessible controls, and actual phone-size/rotation/large-text simulator evidence.
@@ -21,10 +38,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   inventory, historical CI failure analysis and a local-project persistence packet.
   Completed bootstrap documents are archived; superseded local checkouts were
   removed only after preservation review. Existing logo masters are retained.
-- **Native test-discovery guard** (task 0021): require every intended Debug/Release
+- **Native test-discovery guard** (tasks 0021/0022): require every intended Debug/Release
   test exactly once; reject empty, partial, failed, duplicate and wrong-phase logs.
-  Six regression cases and actual historical logs verify false-green prevention.
-  CI uses explicit read-only permissions and the previously verified action SHAs.
+  Eight regression cases and actual historical logs verify false-green prevention,
+  including timeout/restart logs that later report passing results.
+  CI uses explicit read-only permissions and exact action SHAs. The September 21
+  follow-up updates checkout/artifact actions to v7.0.1 on Node 24 and pins all
+  Ubuntu jobs to 24.04 without changing required verification lanes.
 
 - **Native PNG reconstruction** (task 0017, ADR-021): atomic Files import with
   content/resource preflight, explicit supplied-order confirmation, numbered

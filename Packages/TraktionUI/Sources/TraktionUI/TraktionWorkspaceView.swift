@@ -9,6 +9,25 @@ import TraktionDomain
   public struct TraktionWorkspaceView: View {
     @State private var model: NativeWorkspaceModel
     @State private var isImportPresented = false
+    @State private var picker: Picker = .captures
+    @State private var isSaveNamePresented = false
+    @State private var projectName = ""
+    private enum Picker { case captures, project, folder }
+    private var documents: URL? {
+      FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+    }
+    private var pickerTypes: [UTType] {
+      switch picker {
+      case .captures: return [.png]
+      case .project:
+        #if os(iOS)
+        return [UTType(exportedAs: "dev.vasey.traktion.project", conformingTo: .data)]
+        #else
+        return [.data] // SwiftPM previews have no exported-type Info.plist bundle.
+        #endif
+      case .folder: return [.folder]
+      }
+    }
 
     public init(model: NativeWorkspaceModel = NativeWorkspaceModel()) {
       _model = State(initialValue: model)
@@ -20,6 +39,7 @@ import TraktionDomain
           VStack(alignment: .leading, spacing: 20) {
             heading
             importControls
+            projectControls
             operationStatus
 
             if let message = model.failureMessage {
@@ -59,12 +79,17 @@ import TraktionDomain
       }
       .fileImporter(
         isPresented: $isImportPresented,
-        allowedContentTypes: [.png],
-        allowsMultipleSelection: true,
+        allowedContentTypes: pickerTypes,
+        allowsMultipleSelection: picker == .captures,
         onCompletion: { selection in
           switch selection {
           case .success(let urls):
-            if !urls.isEmpty { model.importCaptures(from: urls) }
+            guard let first = urls.first else { return }
+            switch picker {
+            case .captures: model.importCaptures(from: urls)
+            case .project: model.openProject(first)
+            case .folder: model.saveProject(folder: first, name: projectName)
+            }
           case .failure(let error):
             let cocoaError = error as NSError
             if cocoaError.domain != NSCocoaErrorDomain || cocoaError.code != NSUserCancelledError {
@@ -76,6 +101,44 @@ import TraktionDomain
           // Dismissing Files must leave the current workspace and worker untouched.
         }
       )
+      .fileDialogDefaultDirectory(documents)
+      .task {
+        if let documents {
+          do { try FileManager.default.createDirectory(at: documents, withIntermediateDirectories: true) }
+          catch { model.reportPickerFailure("The local project folder could not be prepared.") }
+        }
+      }
+      .alert("Save project", isPresented: $isSaveNamePresented) {
+        TextField("Project name", text: $projectName)
+          .accessibilityIdentifier("project.name")
+        Button("Choose folder") { presentSaveFolder() }
+          .accessibilityIdentifier("project.folder")
+        Button("Cancel", role: .cancel) {}
+      } message: {
+        Text("Save original PNG captures, confirmed order and committed seams under a new name. Undo history starts fresh when reopened.")
+      }
+    }
+
+    private func presentSaveFolder() {
+      do { _ = try LocalProjectStore.filename(projectName) }
+      catch { model.reportPickerFailure(LocalProjectFailure.invalidName.message); return }
+      picker = .folder
+      isImportPresented = true
+    }
+
+    private var projectControls: some View {
+      VStack(alignment: .leading, spacing: 12) {
+        Button("Open project") { picker = .project; isImportPresented = true }
+          .disabled(model.isBusy)
+          .accessibilityIdentifier("workspace.project.open")
+        Button("Save project") { isSaveNamePresented = true }
+          .disabled(!model.canSaveProject)
+          .accessibilityIdentifier("workspace.project.save")
+        if let message = model.projectMessage {
+          Text(message).font(.callout).foregroundStyle(.secondary)
+            .accessibilityIdentifier("workspace.project.status")
+        }
+      }
     }
 
     private var heading: some View {
@@ -94,6 +157,7 @@ import TraktionDomain
     private var importControls: some View {
       VStack(alignment: .leading, spacing: 12) {
         Button(model.captures.isEmpty ? "Import PNG captures" : "Replace PNG captures") {
+          picker = .captures
           isImportPresented = true
         }
         .buttonStyle(.borderedProminent)

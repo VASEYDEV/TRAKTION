@@ -1,6 +1,6 @@
 # Task: Non-destructive seam adjustment and undo
 
-Status: done — verified in [PR #20](https://github.com/VASEYDEV/TRAKTION/pull/20); PR remains open for review/merge.
+Status: done — verified and squash-merged in [PR #20](https://github.com/VASEYDEV/TRAKTION/pull/20).
 
 ## Goal
 Allow deliberate seam selection inside an already proven overlap, with a visible

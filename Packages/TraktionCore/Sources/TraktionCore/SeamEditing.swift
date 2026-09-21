@@ -16,6 +16,31 @@ public struct SeamEditingDocument: Sendable {
     self.plan = plan
   }
 
+  /// Restores final seams directly, preserving evidence without inventing replay order.
+  /// Undo/redo history intentionally starts empty for the reopened session.
+  public init(originalPlan: ReconstructionPlan, committedPlan: ReconstructionPlan,
+    captures: [CaptureAsset]) throws {
+    _ = try PlannedRasterRenderer(plan: originalPlan, captures: captures)
+    _ = try PlannedRasterRenderer(plan: committedPlan, captures: captures)
+    guard originalPlan.axis == committedPlan.axis,
+      originalPlan.outputWidth == committedPlan.outputWidth,
+      originalPlan.outputHeight == committedPlan.outputHeight,
+      originalPlan.placements == committedPlan.placements,
+      originalPlan.joints.count == committedPlan.joints.count else {
+      throw SeamEditingFailure.invalidPlan
+    }
+    for (original, committed) in zip(originalPlan.joints, committedPlan.joints) {
+      guard original.precedingCaptureID == committed.precedingCaptureID,
+        original.followingCaptureID == committed.followingCaptureID,
+        original.overlapRows == committed.overlapRows,
+        original.normalizedMeanAbsoluteError == committed.normalizedMeanAbsoluteError,
+        original.changedPixelFraction == committed.changedPixelFraction,
+        original.confidence == committed.confidence else { throw SeamEditingFailure.invalidPlan }
+    }
+    self.originalPlan = originalPlan
+    self.plan = committedPlan
+  }
+
   public func allowedRange(for index: Int) throws -> ClosedRange<Int> {
     guard plan.joints.indices.contains(index) else { throw SeamEditingFailure.invalidJoint }
     let joint = plan.joints[index]

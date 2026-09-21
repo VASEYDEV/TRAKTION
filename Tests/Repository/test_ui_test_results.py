@@ -38,6 +38,33 @@ class NativeTestInventoryTests(unittest.TestCase):
             with self.subTest(extra=extra), self.assertRaises(ValueError):
                 module.verify(SOURCE, good + extra, "debug")
 
+    def test_timeout_cannot_be_hidden_by_complete_passing_inventory(self):
+        for phase, names in [("debug", ["testImport", "testEditing"]), ("release", [module.PHONE_TEST])]:
+            timeout = (
+                f"Test Case '-[TRAKTIONUITests.TRAKTIONLaunchTests {names[0]}]' "
+                "exceeded execution time allowance of 2 minutes. The test may have hung; "
+                "check Xcode's test report for additional diagnostics.\n"
+            )
+            good = "".join(record(name) for name in names)
+            for log in [timeout + good, good + timeout]:
+                with self.subTest(phase=phase, log=log), self.assertRaisesRegex(
+                    ValueError, "exceeded execution time allowance"
+                ):
+                    module.verify(SOURCE, log, phase)
+
+    def test_runner_restart_cannot_be_hidden_by_complete_passing_inventory(self):
+        restart = (
+            "Restarting after unexpected exit, crash, or test timeout; "
+            "summary will include totals from previous launches.\n"
+        )
+        for phase, names in [("debug", ["testImport", "testEditing"]), ("release", [module.PHONE_TEST])]:
+            good = "".join(record(name) for name in names)
+            for log in [restart + good, good + restart]:
+                with self.subTest(phase=phase, log=log), self.assertRaisesRegex(
+                    ValueError, "Restarting after unexpected exit"
+                ):
+                    module.verify(SOURCE, log, phase)
+
     def test_invalid_source_inventory_and_stale_phone_selector_fail(self):
         for source in ["", SOURCE + "\nfunc testImport() {}", SOURCE.replace(module.PHONE_TEST, "testRenamedPhone")]:
             with self.subTest(source=source), self.assertRaises(ValueError):

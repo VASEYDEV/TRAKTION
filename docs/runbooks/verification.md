@@ -112,6 +112,39 @@ Download `traktion-evaluation-report` or `traktion-evaluation-report-apple`.
 
 Successful completion ends with `GATE: PASS (repository · Swift build/tests · Apple PNG smoke)`.
 
+## Local project verification
+
+The portable suite includes project byte preservation after external source
+deletion, exact/strong evidence and edited-pixel round trips, malformed framing,
+unknown versions, forged plans, resource rejection before decode, atomic write
+failure, cancellation on both sides of publication, refusal of existing projects,
+unrelated files, directories and symlinks, concurrent destination creation, and
+visible cleanup failures. Workspace tests cover
+failed opening, cancelled/reset work and stale completion without losing the
+current reconstruction. Reopened undo/redo starts empty.
+Direct Core restoration tests also reject matching evidence forged in both
+saved plans, prove committed pixels from independently selected original rows,
+and cover cancellation before replay and before evidence acceptance.
+Opening regressions distinguish actual missing-file, staging and known decoder
+I/O failures from malformed JSON/PNG content without losing original data or
+cleanup evidence. Length-boundary regressions distinguish malformed nonpositive
+lengths from oversized declarations before decoding and prove inclusive-cap
+acceptance with unchanged bytes and pixels. The portable counts differ by one: Linux additionally exercises
+actual cross-filesystem publication refusal using `/dev/shm`.
+
+The large-project boundary test uses ten CRC-valid 1170 × 2532 metadata payloads
+and a decoder spy to prove admission before allocation: 249,397,888 reserved
+owned raster bytes, with exactly 19,037,568 bytes remaining for an old workspace.
+It is a checked admission test, not a process-memory or physical-device measurement.
+
+Native tests use actual Files dialogs to save a committed seam, terminate the app,
+relaunch without fixture input and reopen the project. Separate scenarios cover
+XXXL controls, cancellation, corrupt project selection and same-name refusal
+while preserving both the current workspace and saved file. Screenshot attachments
+and failure-only picker accessibility trees support diagnosis. Report executed native results
+and actual visual inspection separately; authored tests alone are not evidence
+that a platform's picker worked. Third-party storage providers remain unverified.
+
 ## Synthetic failure evidence
 
 ```bash
@@ -150,7 +183,8 @@ failure directories only on failure; the evaluation JSON is always retained.
 
 Native Debug and Release phase logs must contain exactly one passing case record
 for every selected source test. `scripts/check-ui-test-results.py` rejects zero,
-missing, failed, duplicate or wrong-phase cases; Xcode exit failures still fail
+missing, failed, duplicate or wrong-phase cases, plus timeout/restart markers
+even alongside a complete passing inventory. Xcode exit failures still fail
 the script independently. Extend the inventory when adding another UI test class.
 Action versions and build dependencies are listed in [DEPENDENCIES](../DEPENDENCIES.md).
 

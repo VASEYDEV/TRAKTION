@@ -276,7 +276,8 @@ private final class ControlledWorkspaceWorker: NativeWorkspaceWorking, @unchecke
   }
 
   func importCaptures(
-    from urls: [URL], retainedRasterBytes: Int, isCancelled: @Sendable () -> Bool
+    from urls: [URL], retainedRasterBytes: Int,
+    retainedEncodedBytes: Int, isCancelled: @Sendable () -> Bool
   ) throws -> [CaptureAsset] {
     condition.lock()
     defer { condition.unlock() }

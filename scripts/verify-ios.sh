@@ -104,7 +104,7 @@ for scenario in baseline duplicate-capture missing-middle; do
   "$fixture_bin" generate --scenario "$scenario" \
     --width 96 --viewport 160 --captures 3 --overlap 48 --seed 51 \
     --output-dir "$fixture_root/$scenario"
-  destination="$app_data/Documents/UIFixtures/$scenario"
+  destination="$app_data/Library/Application Support/UIFixtures/$scenario"
   mkdir -p "$destination"
   cp "$fixture_root/$scenario"/capture-*.png "$destination/"
 done
@@ -112,8 +112,17 @@ done
 "$fixture_bin" generate --scenario baseline \
   --width 1170 --viewport 2532 --captures 3 --overlap 700 --seed 51 \
   --output-dir "$fixture_root/inspection-long"
-mkdir -p "$app_data/Documents/UIFixtures/inspection-long"
-cp "$fixture_root/inspection-long"/capture-*.png "$app_data/Documents/UIFixtures/inspection-long/"
+mkdir -p "$app_data/Library/Application Support/UIFixtures/inspection-long"
+cp "$fixture_root/inspection-long"/capture-*.png "$app_data/Library/Application Support/UIFixtures/inspection-long/"
+
+# A deliberately corrupt synthetic document exercises the real project picker
+# failure path. It is not injected through the app's fixture bootstrap.
+mkdir -p "$app_data/Documents"
+python3 - "$app_data/Documents/Corrupt native fixture.traktion" <<'PYFIXTURE'
+from pathlib import Path
+import sys
+Path(sys.argv[1]).write_bytes(b"TRAKTION" + (1).to_bytes(4, "big") + (2).to_bytes(4, "big") + b"{}")
+PYFIXTURE
 
 xcrun simctl launch --terminate-running-process "$simulator_id" "$bundle_id" | tee "$run_dir/launch.log"
 

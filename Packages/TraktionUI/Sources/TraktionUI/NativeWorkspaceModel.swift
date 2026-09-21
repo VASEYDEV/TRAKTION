@@ -1,12 +1,15 @@
 import Dispatch
 import Foundation
 import Observation
+import TraktionCore
 import TraktionDomain
 import TraktionVision
 
 public enum NativeWorkspaceOperation: Equatable, Sendable {
   case importing
   case reconstructing
+  case openingProject
+  case savingProject
 }
 
 @MainActor
@@ -19,12 +22,14 @@ public final class NativeWorkspaceModel {
   public private(set) var result: ReconstructionResult?
   public var resultPreview: RasterImage? { inspection.editing.preview }
   public var isModified: Bool { inspection.editing.isModified }
+  public private(set) var projectMessage: String?
   public private(set) var failure: NativeWorkspaceFailure?
   public private(set) var operation: NativeWorkspaceOperation?
   public private(set) var isCancelling = false
   public private(set) var orderConfirmed = false
 
   @ObservationIgnored private let worker: any NativeWorkspaceWorking
+  @ObservationIgnored private let projects: any LocalProjectWorking
   @ObservationIgnored private let limits: PNGImportLimits
   @ObservationIgnored private let queue = DispatchQueue(
     label: "dev.vasey.traktion.workspace", qos: .userInitiated
@@ -50,20 +55,28 @@ public final class NativeWorkspaceModel {
 
   public init(
     worker: (any NativeWorkspaceWorking)? = nil,
-    limits: PNGImportLimits = PNGImportLimits()
+    limits: PNGImportLimits = PNGImportLimits(),
+    projects: (any LocalProjectWorking)? = nil
   ) {
     self.worker = worker ?? NativeWorkspaceWorker(limits: limits)
+    self.projects = projects ?? LocalProjectStore(limits: limits)
     self.limits = limits
     self.inspection = NativeInspectionModel()
   }
 
   init(worker: any NativeWorkspaceWorking, inspection: NativeInspectionModel) {
     self.worker = worker
+    self.projects = LocalProjectStore()
     self.limits = PNGImportLimits()
     self.inspection = inspection
   }
 
   public var isBusy: Bool { operation != nil || inspection.isRendering || inspection.editing.isRendering }
+
+  public var canSaveProject: Bool {
+    !isBusy && result != nil && inspection.editing.document != nil
+      && inspection.editing.draft == nil && captures.allSatisfy { $0.originalPNG != nil }
+  }
 
   public var canReconstruct: Bool {
     !isBusy && orderConfirmed && (2...10).contains(captures.count) && result == nil
@@ -78,6 +91,8 @@ public final class NativeWorkspaceModel {
     switch operation {
     case .importing: return "Reading and validating PNG captures…"
     case .reconstructing: return "Reconstructing on this device…"
+    case .openingProject: return "Validating and reopening the local project…"
+    case .savingProject: return "Saving original captures and committed seams…"
     case nil:
       if result != nil { return isModified ? "Seams adjusted. Original files and registration evidence are unchanged." : "Reconstruction complete. Original files are unchanged." }
       if captures.isEmpty { return "Choose 2–10 overlapping PNG captures to begin." }
@@ -100,6 +115,7 @@ public final class NativeWorkspaceModel {
       failure = .importFailure(.resourceLimitExceeded("The current workspace is too large. Reset it before importing another batch."))
       return
     }
+    let retainedEncoded = captures.reduce(0) { $0 + ($1.originalPNG?.count ?? 0) }
     let rasterBudget = limits.maximumRetainedRasterBytes
     let job = begin(.importing)
     let worker = self.worker
@@ -107,7 +123,7 @@ public final class NativeWorkspaceModel {
       let outcome: Result<ImportedBatch, NativeWorkspaceFailure>
       do {
         let assets = try worker.importCaptures(
-          from: urls, retainedRasterBytes: retainedBytes,
+          from: urls, retainedRasterBytes: retainedBytes, retainedEncodedBytes: retainedEncoded,
           isCancelled: { job.token.isCancelled }
         )
         guard !job.token.isCancelled else { throw PNGImportFailure.cancelled }
@@ -131,6 +147,86 @@ public final class NativeWorkspaceModel {
       }
       Task { @MainActor [weak self] in
         self?.finishImport(id: job.id, outcome: outcome)
+      }
+    }
+  }
+
+  public func saveProject(folder: URL, name: String) {
+    guard canSaveProject, let document = inspection.editing.document else { return }
+    let snapshot = LocalProjectSnapshot(captures: captures,
+      originalPlan: document.originalPlan, committedPlan: document.plan)
+    let projects = self.projects
+    let job = begin(.savingProject)
+    queue.async { [weak self] in
+      let outcome: Result<URL, NativeWorkspaceFailure>
+      do { outcome = .success(try projects.save(snapshot, folder: folder, name: name,
+        cancellation: job.token)) }
+      catch let error as LocalProjectFailure { outcome = .failure(.project(error)) }
+      catch { outcome = .failure(.unexpected) }
+      Task { @MainActor [weak self] in
+        guard let self, self.activeJob?.id == job.id else { return }
+        // A committed save is a real disk change even if reset followed it.
+        let committed = job.token.didCommit
+        guard self.finishJob(id: job.id) || committed else {
+          if case .failure(.project(.cleanupFailed(let saved))) = outcome {
+            self.failure = .project(.cleanupFailed(saved: saved))
+          }
+          return
+        }
+        switch outcome {
+        case .success(let url): self.projectMessage = "Saved \(url.lastPathComponent)."
+        case .failure(let error): self.failure = error
+        }
+      }
+    }
+  }
+
+  public func openProject(_ url: URL) {
+    guard !isBusy else { return }
+    inspection.close()
+    let retained: Int
+    do { retained = try ownedRasterBytes() }
+    catch { failure = .project(.resourceLimit); return }
+    let encoded = captures.reduce(0) { $0 + ($1.originalPNG?.count ?? 0) }
+    let projects = self.projects
+    let job = begin(.openingProject)
+    queue.async { [weak self] in
+      let outcome: Result<(LoadedLocalProject, [CaptureID: RasterImage], RasterImage), NativeWorkspaceFailure>
+      do {
+        let loaded = try projects.open(url, retainedRasterBytes: retained,
+          retainedEncodedBytes: encoded, cancellation: job.token)
+        try job.token.check()
+        var thumbnails: [CaptureID: RasterImage] = [:]
+        for capture in loaded.captures {
+          thumbnails[capture.id] = try NativeRasterPreview.make(capture.image,
+            maximumDimension: NativeRasterPreview.thumbnailDimension,
+            maximumPixels: NativeRasterPreview.thumbnailDimension * NativeRasterPreview.thumbnailDimension,
+            isCancelled: { job.token.isCancelled })
+        }
+        let preview = try SeamPreviewRenderer().render(plan: loaded.document.plan,
+          captures: loaded.captures, isCancelled: { job.token.isCancelled })
+        outcome = .success((loaded, thumbnails, preview))
+      } catch let error as LocalProjectFailure { outcome = .failure(.project(error)) }
+      catch { outcome = .failure(.unexpected) }
+      Task { @MainActor [weak self] in
+        guard let self, self.activeJob?.id == job.id else { return }
+        guard self.finishJob(id: job.id) else {
+          if case .failure(.project(.cleanupFailed(let saved))) = outcome {
+            self.failure = .project(.cleanupFailed(saved: saved))
+          }
+          return
+        }
+        switch outcome {
+        case .success(let (loaded, thumbnails, preview)):
+          self.captures = loaded.captures
+          self.thumbnails = thumbnails
+          self.result = loaded.result
+          self.inspection.editing.restore(document: loaded.document, captures: loaded.captures, preview: preview)
+          self.orderConfirmed = true
+          self.failure = nil
+          self.projectMessage = "Opened \(url.lastPathComponent). Undo history starts with this session."
+        case .failure(let error): self.failure = error
+        }
       }
     }
   }
@@ -219,6 +315,7 @@ public final class NativeWorkspaceModel {
     }
     captures = []
     thumbnails = [:]
+    projectMessage = nil
     invalidateReconstruction()
   }
 
@@ -240,6 +337,7 @@ public final class NativeWorkspaceModel {
     self.operation = operation
     isCancelling = false
     failure = nil
+    projectMessage = nil
     return job
   }
 
