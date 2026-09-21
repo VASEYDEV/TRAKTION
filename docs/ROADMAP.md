@@ -1,14 +1,14 @@
 # TRAKTION Roadmap
 
-## Status (2026-09-17)
+## Status (2026-09-21)
 
 | Milestone | State | Evidence |
 | --- | --- | --- |
 | 0 — Foundation | complete | PR #4, PR #5 |
 | 1 — Exact static reconstruction | passed with measured platform evidence | corpus categories (0011), failure artifacts (0012), and gap regression repair (0014) landed; memory/throughput instrumentation (0013) verified on Linux and macOS in PR #16 |
 | 2 — Sequence intelligence | in progress | exact ordering core (task 0007), tooling (task 0008), near-exact recovery (task 0009), repeated-chrome guard (0010), and bounded directional ambiguity guard (0014) landed; broader duplicates, missing-coverage evidence, and confidence workflows remain open |
-| Native iOS app | first reversible editor verified; PR open | task 0019 / PR #19 established import/reconstruction and bounded inspection; task 0020 / PR #20 adds seam apply/cancel/undo/redo; nine Debug + one Release simulator cases verified; physical-device signing remains separate |
-| 3 — Non-destructive editor | started | bounded inspector (0019), deliberate seam adjustment (0020); saved projects and further correction remain |
+| Native iOS app | reversible editor and local projects verified | task 0019 / PR #19 established bounded inspection; PR #20 adds seam editing; task 0022 / PR #21 adds real Files save/open. PR #21 is stacked on open #20; main remains `c279264`. Physical-device signing remains separate |
+| 3 — Non-destructive editor | in progress | bounded inspector (0019), seam adjustment (0020) and local project implementation (0022); further correction remains |
 | 4–7 | not started | Product backlog below |
 
 Task packets and their status live in `docs/tasks/README.md`.
@@ -39,13 +39,15 @@ Horizontal reconstruction, web capture, share extension, PDF, JPEG/HEIC, split e
 
 ## Next execution order
 
-1. Review/merge verified tasks [0020](tasks/0020-nondestructive-seam-adjustment.md)
-   and [0021](tasks/0021-repository-health-and-product-handoff.md) in open PR #20,
-   requiring its current CI checks; remove its branch after merge.
-2. Implement [0022](tasks/0022-local-project-persistence.md): versioned, local saved
-   projects with original captures and validated edit plans.
-3. Define bounded PNG export under its own packet, then further correction tools.
-4. Verify physical-device signing and resource behavior with the actual developer
+1. Integrate verified local projects in PR #21 after its final-head checks,
+   stacked on open PR #20.
+   Automatic approval review blocked merging #20 under the prior leave-open
+   request; obtain explicit merge authorization before integrating these PRs.
+   Require current checks, retarget the dependent work and remove branches only
+   after their changes are preserved on main.
+2. Implement [0023](tasks/0023-bounded-png-export.md): bounded PNG export of the
+   committed result, then further correction tools.
+3. Verify physical-device signing and resource behavior with the actual developer
    team/device before distribution. Finish production icon packaging and visual polish.
 
 The original task-0014 gap regression remains preserved and repaired; broader

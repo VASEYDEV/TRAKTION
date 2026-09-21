@@ -13,14 +13,18 @@ unmerged packet is renumbered on port (see task 0009 for the PR #8 example).
 
 ## Active work
 
-Completed packets below are historical evidence, not queued work. Continue from
-current `main`; never restart a superseded branch.
+Completed packets below are historical evidence, not queued work. Check current
+`main` and the explicit dependencies below; never restart a superseded branch.
 
-1. **Review/merge [PR #20](https://github.com/VASEYDEV/TRAKTION/pull/20):**
-   tasks 0020 and 0021 are implemented and verified. The PR is intentionally open;
-   require its current checks before merge, then delete its branch.
-2. **[0022](0022-local-project-persistence.md):** next implementation packet,
-   local saved projects. PNG export follows under a separate task.
+1. **[PR #21](https://github.com/VASEYDEV/TRAKTION/pull/21), task
+   [0022](0022-local-project-persistence.md):** local projects are implemented and verified;
+   final pushed-head checks remain the merge gate. This PR targets the still-open PR #20 branch.
+   Tasks 0020/0021 remain verified in PR #20; main remains `c279264`.
+   Automatic approval review blocked merging PR #20 under the earlier leave-open
+   request. Explicit merge authorization is needed before merging it, retargeting
+   the dependent PR and removing completed branches.
+2. **[0023](0023-bounded-png-export.md):** next implementation packet,
+   bounded export of the committed result to PNG.
 3. Physical-device signing/resource verification and production artwork require
    release preparation. GitHub About metadata correction is pending access;
    details are in the [health note](../notes/2026-09-17-repository-health.md).
@@ -50,7 +54,8 @@ current `main`; never restart a superseded branch.
 | [0019](0019-native-pixel-inspection.md) | Native pixel and joint inspection | native inspection | done | Codex | PR #19 |
 | [0020](0020-nondestructive-seam-adjustment.md) | Non-destructive seam adjustment and undo | first editing step | verified | Codex | PR #20 (open) |
 | [0021](0021-repository-health-and-product-handoff.md) | Repository health and product handoff | workflow/docs | verified | Codex | PR #20 (open) |
-| [0022](0022-local-project-persistence.md) | Local project persistence | editor | queued | assign at start | — |
+| [0022](0022-local-project-persistence.md) | Local project persistence | editor | verified | Codex | PR #21 (stacked on #20) |
+| [0023](0023-bounded-png-export.md) | Bounded committed-result PNG export | export | queued | assign at start | — |
 
 ## Superseded packets and pull requests
 
@@ -85,5 +90,6 @@ developer-owned signing configuration. Its CI evidence is distinct from
 core/CLI tests. Task 0017 adds real PNG import, explicit supplied-order reconstruction, and
 result/failure presentation. Task 0019 adds bounded 1:1 pixel/joint inspection
 and original-capture evidence. Task 0020 adds deliberate seam editing and
-reversible in-memory history. Project persistence and export remain queued. A simulator
+reversible in-memory history. Task 0022 implements local saved projects; PNG export
+is queued as task 0023. A simulator
 pass does not establish physical-device signing or App Store readiness.

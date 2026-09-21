@@ -12,3 +12,4 @@ Notes hold context, observations, and open questions. They are not the system of
 - [2026-09-16 native inspection](2026-09-16-native-inspection.md): bounded pixel/joint viewport, independent review, resource measurements and native verification.
 - [2026-09-17 repository health](2026-09-17-repository-health.md): branch reconciliation, dependency inventory, CI failure causes and remaining work.
 - [2026-09-17 seam editing](2026-09-17-seam-editing.md): reversible seam plans, bounded original-pixel rendering and verification.
+- [2026-09-21 local projects](2026-09-21-local-projects.md): original-byte persistence, atomic Files saves, evidence validation and continuation status.

@@ -4,10 +4,14 @@
 
 The editor stores operations, not destructive bitmap copies. Original assets remain immutable references.
 
-## Core edit operations
+## Implemented operations
 
-- reorder capture
-- adjust joint
+Capture reordering, seam selection inside proven overlap, draft apply/cancel,
+and undo/redo are implemented. History uses validated plan snapshots, while
+original captures remain immutable. Local save/open is described below.
+
+## Broader planned operations
+
 - choose preferred source in overlap
 - cut internal range
 - restore cut range
@@ -19,12 +23,20 @@ The editor stores operations, not destructive bitmap copies. Original assets rem
 
 ## Manual alignment
 
-Manual mode must support ghost overlay, difference map, edge map, high-resolution loupe, one-pixel nudge, larger nudge steps, snap to strongest nearby registration, and restore automatic solution.
+The first editor supports bounded pixel/joint inspection and seam nudges inside
+proven overlap. Ghost overlay, difference/edge maps, a loupe, magnetic snapping
+and broader alignment correction remain planned.
 
 ## Cuts
 
-Internal cuts close the removed gap without modifying source files. A cut is reversible until the user exports and separately deletes originals.
+Planned internal cuts close the removed gap without modifying source files. Cuts
+must remain reversible until export and separate explicit source deletion.
 
 ## Project persistence
 
-A project stores source references, source fingerprints, reconstruction plan, confidence/warnings, edit-command history, export settings, and optional cached proxies. Do not require the final flattened composite to resume a project.
+Version 1 stores exact original PNG bytes, capture IDs/order/names, the automatic
+reconstruction evidence and the final committed seam plan. Opening reruns the
+shipping engine to validate the evidence, restores original/modified state and
+starts empty undo/redo history. Inspector drafts are not saved. No source paths,
+cached proxies, flattened bitmap, export settings or command history are required.
+See [ADR-024](adr/ADR-024-local-project-container.md) for the wire contract and limits.

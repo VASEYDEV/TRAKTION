@@ -4,12 +4,12 @@
 | --- | --- |
 | `App/TRAKTION.xcodeproj` | Native iOS app and XCTest UI targets, shared `TRAKTION` scheme |
 | `App/TRAKTION/Sources` | SwiftUI entry point shared by Xcode and the SwiftPM macOS preview |
-| `App/TRAKTION/Config` | Common build settings; developer signing overrides are ignored by git |
+| `App/TRAKTION/Config` | Common build settings and project-file type declaration; developer signing overrides are ignored by git |
 | `Package.swift` | Local Swift package products, tools, and portable test targets |
 | `Packages/TraktionDomain` | Raster/capture values and typed reconstruction contracts |
 | `Packages/TraktionCore` | Deterministic reconstruction, registration, ordering, and diagnostics |
 | `Packages/TraktionVision` | Apple ImageIO, portable PNG codec, and atomic PNG preflight/import |
-| `Packages/TraktionUI` | MainActor workspace/inspection/edit state, bounded raster workers, and shared SwiftUI workflow |
+| `Packages/TraktionUI` | Workspace/inspection/edit state, bounded raster workers, local project file IO, and shared SwiftUI workflow |
 | `Packages/TraktionAI` | Optional semantic-reviewer interface; no active model dependency |
 | `Tools/TraktionLab` | Diagnostic CLI, evaluation, failure artifacts, memory/throughput reports |
 | `Tools/FixtureForge` | Deterministic synthetic fixtures and genuine source truth |
@@ -17,13 +17,13 @@
 | `Tests/Repository` | Python standard-library checks for native test discovery |
 | `assets/screenshots` | Unmodified synthetic simulator screenshots and provenance |
 | `docs/archive/foundation-kit-v1` | Completed bootstrap-kit provenance; not active setup instructions |
-| `Tests/UITests` | Native import/order/result/refusal/reset, picker cancellation, pixel/joint inspection, rotation, and text-size checks |
+| `Tests/UITests` | Native import/order/result/refusal/reset, seam editing, real Files project save/open/cancellation, inspection, rotation, and text-size checks |
 | `Tests/SyntheticFixtures`, `Tests/RealWorldFixtures` | Fixture metadata and private-capture boundary |
 | `scripts` | Repository, Swift, PNG smoke, and native simulator verification |
 
 The native target links the repository's local package. There is no external
 package download or Xcode project generator. The native workflow includes pixel/joint inspection and deliberate seam editing.
-Persistence and export remain future native workflows.
+It also saves and reopens local projects through Files; export remains future work.
 
 The Lab remains the executable reconstruction and diagnostic path:
 

@@ -95,6 +95,44 @@ final class LocalProjectStoreTests: XCTestCase {
     XCTAssertEqual(try Data(contentsOf: url), originalProject)
   }
 
+  func testManifestLengthBoundariesRejectBeforeDecodeAndAcceptInclusiveCap() throws {
+    let files = try ProjectTestFiles(); defer { files.remove() }
+    let (snapshot, expected) = try files.snapshot()
+    let url = try LocalProjectStore().save(snapshot, folder: files.folder, name: "Manifest boundaries")
+    let original = try Data(contentsOf: url)
+    let decoded = ProjectCounter()
+    let store = LocalProjectStore(decode: { path in
+      decoded.increment(); return try PNGCodec.decodeOpaqueRGBA8(from: path)
+    })
+    let declarations: [(UInt32, LocalProjectFailure)] = [
+      (0, .invalidContainer),
+      (UInt32(LocalProjectStore.maximumManifestBytes + 1), .resourceLimit),
+      (.max, .resourceLimit),
+    ]
+    // Header-only containers prove refusal before reading an unbounded body.
+    for (length, failure) in declarations {
+      try (LocalProjectStore.magic + LocalProjectStore.uint32(1)
+        + LocalProjectStore.uint32(length)).write(to: url)
+      XCTAssertThrowsError(try store.open(url)) {
+        XCTAssertEqual($0 as? LocalProjectFailure, failure)
+      }
+      XCTAssertEqual(decoded.count, 0)
+    }
+    // Valid JSON whitespace fills exactly the inclusive cap without changing
+    // evidence or PNG payloads, proving that the boundary remains admissible.
+    let originalLength = LocalProjectStore.integer(original, offset: 12)
+    let manifest = original.subdata(in: 16..<16 + originalLength)
+      + Data(repeating: 0x20, count: LocalProjectStore.maximumManifestBytes - originalLength)
+    let atCap = LocalProjectStore.magic + LocalProjectStore.uint32(1)
+      + LocalProjectStore.uint32(UInt32(manifest.count)) + manifest
+      + original.suffix(from: 16 + originalLength)
+    try atCap.write(to: url)
+    let opened = try store.open(url)
+    XCTAssertEqual(opened.result, expected)
+    XCTAssertEqual(opened.captures.map(\.originalPNG), snapshot.captures.map(\.originalPNG))
+    XCTAssertEqual(decoded.count, snapshot.captures.count)
+  }
+
   func testDecoderSourceDisappearanceKeepsCodecMetadataAndFoundationAccessFailuresDistinct() throws {
     let files = try ProjectTestFiles(); defer { files.remove() }
     let (snapshot, _) = try files.snapshot()
@@ -127,6 +165,44 @@ final class LocalProjectStoreTests: XCTestCase {
       XCTAssertEqual(cleanups.count, 1)
       XCTAssertEqual(try Data(contentsOf: url), originalProject)
     }
+  }
+
+  func testCaptureLengthBoundariesRejectBeforeDecodeAndAcceptInclusiveCap() throws {
+    let files = try ProjectTestFiles(); defer { files.remove() }
+    let (snapshot, expected) = try files.snapshot()
+    let url = try LocalProjectStore().save(snapshot, folder: files.folder, name: "Capture length boundaries")
+    let original = try Data(contentsOf: url)
+    let decoded = ProjectCounter()
+    let decode: @Sendable (URL) throws -> RasterImage = { path in
+      decoded.increment(); return try PNGCodec.decodeOpaqueRGBA8(from: path)
+    }
+    let store = LocalProjectStore(decode: decode)
+    let declarations: [(Int, LocalProjectFailure)] = [
+      (-1, .invalidContainer),
+      (0, .invalidContainer),
+      (PNGImportLimits().maximumEncodedBytesPerFile + 1, .resourceLimit),
+    ]
+    for (length, failure) in declarations {
+      let modified = try modifyingManifest(original) { manifest in
+        var captures = manifest["captures"] as! [[String: Any]]
+        captures[0]["byteCount"] = length
+        manifest["captures"] = captures
+      }
+      try modified.write(to: url)
+      XCTAssertThrowsError(try store.open(url)) {
+        XCTAssertEqual($0 as? LocalProjectFailure, failure)
+      }
+      XCTAssertEqual(decoded.count, 0)
+    }
+    // Use the largest actual PNG as the configured limit to prove inclusive
+    // acceptance without allocating a maximum-size production capture.
+    let maximumBytes = try XCTUnwrap(snapshot.captures.compactMap { $0.originalPNG?.count }.max())
+    let capped = LocalProjectStore(limits: PNGImportLimits(maximumEncodedBytesPerFile: maximumBytes), decode: decode)
+    try original.write(to: url)
+    let opened = try capped.open(url)
+    XCTAssertEqual(opened.result, expected)
+    XCTAssertEqual(opened.captures.map(\.originalPNG), snapshot.captures.map(\.originalPNG))
+    XCTAssertEqual(decoded.count, snapshot.captures.count)
   }
 
   func testMalformedJSONAndPNGCRCRemainCorruptionBeforeDecode() throws {

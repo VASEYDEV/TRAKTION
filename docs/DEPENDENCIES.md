@@ -63,6 +63,9 @@ jobs, satisfies Node 24's minimum 2.327.1 and checkout's conditional 2.329.0
 requirement for authenticated Git in Docker actions. Checkout's temporary
 credential storage and upload's default zipped archives, wildcard paths,
 compression, hidden-file exclusion and unique names fit the existing workflow.
-This source/runner review establishes compatibility expectations; all lanes and
-retained artifacts must still be checked on the updated workflow head. Final
-verification belongs in PR #21.
+The updated pins executed successfully in all lanes in
+[run 35569321865](https://github.com/VASEYDEV/TRAKTION/actions/runs/35569321865)
+at `5821eac`: all five jobs passed, both evaluation reports and native evidence
+were retained, and completed logs contained no Node 20 deprecation warnings.
+Every later pushed head still requires the full gate; final verification belongs
+in PR #21.

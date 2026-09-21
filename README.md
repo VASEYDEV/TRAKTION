@@ -18,7 +18,7 @@
 
 TRAKTION is a native, offline-first utility for turning **overlapping screenshots into one continuous image you can inspect and correct**. Its purpose is to recover the content you captured, preserve the original evidence, and make every join understandable.
 
-The current app imports PNG screenshots, reconstructs them in a confirmed order, and exposes the source pixels behind each seam. The longer-term product adds saved projects, export, scroll-recording reconstruction, and web capture. Those later capabilities are planned, not available in this build.
+The current app imports PNG screenshots, reconstructs them in a confirmed order, exposes the source pixels behind each seam, and saves originals and committed edits in local projects. The longer-term product adds export, scroll-recording reconstruction, and web capture. Those later capabilities are planned, not available in this build.
 
 Full-page capture often fails: content scrolls inside nested frames, headers stay fixed, floating controls cover content, or the source app simply has no full-page capture. Manual stitching is slow because every adjacent capture overlaps and must be aligned and trimmed precisely. TRAKTION's deterministic reconstruction engine does that alignment — and reports what it cannot prove instead of inventing it.
 
@@ -32,8 +32,8 @@ Full-page capture often fails: content scrolls inside nested frames, headers sta
 ## Status
 
 **Experimental native iOS build.** The reconstruction core, PNG import, bounded
-pixel/joint inspection, and first reversible seam editor are implemented.
-The app is not yet a distribution-ready product: saved projects, export, device
+pixel/joint inspection, reversible seam editor, and local project save/open are implemented.
+The app is not yet a distribution-ready product: export, device
 signing, and broader capture modes remain on the [roadmap](docs/ROADMAP.md).
 [Task packets](docs/tasks/README.md) record acceptance evidence and the next work;
 [repository health](docs/notes/2026-09-17-repository-health.md) records the CI audit.
@@ -44,21 +44,26 @@ signing, and broader capture modes remain on the [roadmap](docs/ROADMAP.md).
 | Deterministic reconstruction | 2–10 opaque, equal-width PNGs; vertical static content; exact/accepted near-exact translational overlap |
 | Pixel and joint inspection | Bounded pan/zoom, 1:1 pixels, original-capture views, seam coordinates and confidence |
 | Deliberate seam adjustment | Move inside an already proven overlap; preview, apply/cancel, undo/redo; original captures and registration evidence retained |
+| Local projects | Save exact original PNGs, confirmed order and committed seams in one `.traktion` file; reopen through Files with evidence validation and a fresh undo history |
 | Ordering tools | Exact and near-exact order recovery in the core and Lab; missing/ambiguous evidence is refused |
 | Reproducible diagnostics | Composite/manifest/joint diagnostics, synthetic failure bundles, 45-case evaluation corpus and memory/throughput reports |
 
 ### Actual app screenshots
 
 <p align="center">
-  <img src="assets/screenshots/reconstruction.png" alt="Verified iOS reconstruction preview and exact joint labels" width="260">
-  <img src="assets/screenshots/joint-original.png" alt="Original capture pixels in the verified native joint inspector" width="260">
-  <img src="assets/screenshots/seam-adjustment.png" alt="Applied seam adjustment with modified result and undo history" width="260">
+  <img src="assets/screenshots/reconstruction.png" alt="Verified iOS reconstruction preview and exact joint labels" width="300">
+  <img src="assets/screenshots/joint-original.png" alt="Original capture pixels in the verified native joint inspector" width="300">
+</p>
+<p align="center">
+  <img src="assets/screenshots/seam-adjustment.png" alt="Applied seam adjustment with modified result and undo history" width="300">
+  <img src="assets/screenshots/local-project.png" alt="Reopened local project with original captures and real save/open controls" width="300">
 </p>
 
-These are unmodified simulator captures from the verified editing build using
-synthetic documents: reconstruction, original-source comparison, and reversible
-seam adjustment. They show actual behavior, not a future design mockup.
-[Capture provenance](assets/screenshots/README.md) identifies the tests and commit.
+These are unmodified simulator captures from verified editing and persistence
+builds using synthetic documents: reconstruction, original-source comparison,
+reversible seam adjustment, and a reopened local project. They show actual behavior, not a future design mockup.
+[Capture provenance](assets/screenshots/README.md) identifies each test and commit,
+including a [reopened committed seam](assets/screenshots/local-project-seam.png).
 The established amber logo is retained; production app-icon packaging and visual
 polish remain release work.
 
@@ -66,7 +71,6 @@ polish remain release work.
 
 | Planned feature | Purpose |
 | --- | --- |
-| Saved local projects | Reopen originals, confirmed order and deliberate edits without losing source integrity |
 | PNG export, then broader formats | Publish the exact edited result with clear uncertainty handling; later PDF/JPEG/HEIC and split export |
 | More correction tools | Trim/cut, translation correction, difference/edge views, pixel loupe and snapping |
 | Fixed viewport recovery | Detect sticky headers, footers and floating controls; recover from genuine alternate-source pixels |
@@ -137,8 +141,19 @@ files remain unchanged. Select **Inspect pixels and joints** on the result for
 viewport stays bounded while the full reconstruction remains intact. In a joint,
 choose **Adjust this seam**, preview a boundary inside its proven overlap, then apply
 or cancel. Undo/redo preserves committed changes across inspector reopening;
-reset or replacement clears this in-memory history. There is no saved-project
-or export workflow yet.
+reset or replacement clears this in-memory history.
+
+Choose **Save project**, enter a name, then **Choose folder** in Files. Use
+**On My iPhone → TRAKTION** for local storage. Each save needs an unused name;
+existing files are never overwritten. **Open project** restores
+the original captures, confirmed order, automatic evidence and committed seams;
+undo/redo starts fresh after reopening. Failed or cancelled opening keeps the
+current workspace. Saving excludes uncommitted inspector drafts. There is no
+export workflow yet. [Project format and limits](docs/adr/ADR-024-local-project-container.md)
+and [save/open instructions](docs/runbooks/ios-development.md#local-projects)
+describe compatibility and cancellation behavior.
+Some external locations cannot support safe saves; choose the local TRAKTION
+folder if a destination is refused.
 See [ADR-021](docs/adr/ADR-021-native-png-workspace.md) for input and resource limits.
 
 Captures whose order is unknown can be ordered from byte-exact evidence (`--order exact`) or from uniquely registered near-exact overlaps (`--order near-exact`); missing or ambiguous ordering evidence is a typed failure:

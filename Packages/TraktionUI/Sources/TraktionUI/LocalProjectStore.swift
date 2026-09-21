@@ -316,7 +316,8 @@ public struct LocalProjectStore: LocalProjectWorking {
     let version = Self.integer(header, offset: 8)
     guard version == 1 else { throw LocalProjectFailure.unsupportedVersion(version) }
     let manifestLength = Self.integer(header, offset: 12)
-    guard (1...Self.maximumManifestBytes).contains(manifestLength) else { throw LocalProjectFailure.resourceLimit }
+    guard manifestLength > 0 else { throw LocalProjectFailure.invalidContainer }
+    guard manifestLength <= Self.maximumManifestBytes else { throw LocalProjectFailure.resourceLimit }
     let manifest = try JSONDecoder().decode(Manifest.self, from: exact(input, count: manifestLength))
     guard (2...10).contains(manifest.captures.count),
       Set(manifest.captures.map(\.id)).count == manifest.captures.count,
@@ -327,7 +328,8 @@ public struct LocalProjectStore: LocalProjectWorking {
     var payloadBytes = 0
     for entry in manifest.captures {
       try validateIdentity(id: entry.id, name: entry.name)
-      guard entry.byteCount > 0, entry.byteCount <= limits.maximumEncodedBytesPerFile else {
+      guard entry.byteCount > 0 else { throw LocalProjectFailure.invalidContainer }
+      guard entry.byteCount <= limits.maximumEncodedBytesPerFile else {
         throw LocalProjectFailure.resourceLimit
       }
       encoded = try adding(encoded, entry.byteCount, maximum: limits.maximumTotalEncodedBytes)
