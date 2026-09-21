@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/traktion-icon.svg" alt="TRAKTION logo — an amber badge with a white letter T marked with tire-tread notches" width="128">
+  <img src="assets/traktion-logo.svg" alt="TRAKTION — amber tread-T badge and wordmark" width="480">
 </p>
 
 <h1 align="center">TRAKTION</h1>
@@ -8,31 +8,75 @@
 
 <p align="center">
   <a href="https://github.com/vaseydev/traktion/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/vaseydev/traktion/ci.yml?branch=main&label=gate" alt="CI gate status"></a>
-  <img src="https://img.shields.io/badge/version-0.4.0--dev-blue" alt="Version 0.4.0 development">
+  <img src="https://img.shields.io/badge/Swift-6-orange" alt="Swift 6">
+  <img src="https://img.shields.io/badge/iOS-17%2B-blue" alt="iOS 17 or newer">
   <img src="https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-crimson" alt="License: PolyForm Noncommercial 1.0.0">
   <img src="https://img.shields.io/badge/status-experimental-orange" alt="Status: experimental">
 </p>
 
 ## What is TRAKTION?
 
-TRAKTION is a precision reconstruction utility that turns overlapping screenshots, scroll captures, screen-recording frames, and related visual fragments into **one continuous, editable image** — restoring content captured in pieces back into the continuous form in which it originally existed.
+TRAKTION is a native, offline-first utility for turning **overlapping screenshots into one continuous image you can inspect and correct**. Its purpose is to recover the content you captured, preserve the original evidence, and make every join understandable.
+
+The current app imports PNG screenshots, reconstructs them in a confirmed order, and exposes the source pixels behind each seam. The longer-term product adds saved projects, export, scroll-recording reconstruction, and web capture. Those later capabilities are planned, not available in this build.
 
 Full-page capture often fails: content scrolls inside nested frames, headers stay fixed, floating controls cover content, or the source app simply has no full-page capture. Manual stitching is slow because every adjacent capture overlaps and must be aligned and trimmed precisely. TRAKTION's deterministic reconstruction engine does that alignment — and reports what it cannot prove instead of inventing it.
 
+<p align="center">
+  <img src="assets/traktion-product-vision.png" alt="Concept illustration of separate captures aligned into a continuous document, with amber guides" width="840">
+</p>
+
+*Product vision illustration — not an app screenshot or a pixel-accuracy example.
+[Verified native screenshots](#actual-app-screenshots) appear below.*
+
 ## Status
 
-**Milestone 1 has measured evidence; Milestone 2 and native app development are in progress.** The deterministic reconstruction core, synthetic fixture generator, diagnostic CLI, golden tests, cross-platform PNG adapters, evaluation harness, native PNG reconstruction workflow, and bounded pixel/joint inspection are implemented. Tasks 0012–0014 address the diagnostic and memory evidence identified by the [2026-09-03 milestone audit](docs/audits/2026-09-03-milestone-1.md). The Xcode iOS target has a required simulator workflow gate; device signing, editing, persistence, and export remain separate work. Every tracked task and its verification status is in the [task index](docs/tasks/README.md).
+**Experimental native iOS build.** The reconstruction core, PNG import, bounded
+pixel/joint inspection, and first reversible seam editor are implemented.
+The app is not yet a distribution-ready product: saved projects, export, device
+signing, and broader capture modes remain on the [roadmap](docs/ROADMAP.md).
+[Task packets](docs/tasks/README.md) record acceptance evidence and the next work;
+[repository health](docs/notes/2026-09-17-repository-health.md) records the CI audit.
 
-| Current capability | State |
+| Available in the current build | Scope |
 | --- | --- |
-| Supplied-order vertical reconstruction | Implemented for 2–10 opaque, equal-width PNG captures |
-| Automatic sequence ordering | Exact (`--order exact`, ADR-014) and near-exact (`--order near-exact`, ADR-015) recovery in the core and the Lab; both reject missing or ambiguous ordering evidence; near-exact pixel similarity alone does not prove documentary continuity |
-| Exact suffix/prefix overlap and seam plan | Implemented with ambiguity rejection |
-| Decoded-pixel golden comparison | Implemented for deterministic synthetic fixtures |
-| Machine-readable evaluation gate | Implemented for the standard 45-case corpus, including ordering metrics and diagnostic memory/throughput baselines |
-| Composite, manifest, and joint diagnostics | Implemented in `traktion-lab`; evaluation/golden failure bundles are retained in CI |
-| Horizontal, sticky UI, video, web capture | Later milestones; fail or remain disabled. Identical top-and-bottom chrome is rejected by task 0010; general fixed-element recovery remains unimplemented |
-| Native application | Native Files PNG import, numbered move/remove controls, explicit order confirmation, local reconstruction preview, joint confidence, typed failures (task 0017), and read-only 1:1 pixel/joint inspection with original-source views (task 0019). Editor, persistence, export, and device signing remain |
+| Native PNG workspace | Files import, numbered move/remove controls, explicit order confirmation, atomic replacement and typed failure states |
+| Deterministic reconstruction | 2–10 opaque, equal-width PNGs; vertical static content; exact/accepted near-exact translational overlap |
+| Pixel and joint inspection | Bounded pan/zoom, 1:1 pixels, original-capture views, seam coordinates and confidence |
+| Deliberate seam adjustment | Move inside an already proven overlap; preview, apply/cancel, undo/redo; original captures and registration evidence retained |
+| Ordering tools | Exact and near-exact order recovery in the core and Lab; missing/ambiguous evidence is refused |
+| Reproducible diagnostics | Composite/manifest/joint diagnostics, synthetic failure bundles, 45-case evaluation corpus and memory/throughput reports |
+
+### Actual app screenshots
+
+<p align="center">
+  <img src="assets/screenshots/reconstruction.png" alt="Verified iOS reconstruction preview and exact joint labels" width="260">
+  <img src="assets/screenshots/joint-original.png" alt="Original capture pixels in the verified native joint inspector" width="260">
+  <img src="assets/screenshots/seam-adjustment.png" alt="Applied seam adjustment with modified result and undo history" width="260">
+</p>
+
+These are unmodified simulator captures from the verified editing build using
+synthetic documents: reconstruction, original-source comparison, and reversible
+seam adjustment. They show actual behavior, not a future design mockup.
+[Capture provenance](assets/screenshots/README.md) identifies the tests and commit.
+The established amber logo is retained; production app-icon packaging and visual
+polish remain release work.
+
+### What comes next
+
+| Planned feature | Purpose |
+| --- | --- |
+| Saved local projects | Reopen originals, confirmed order and deliberate edits without losing source integrity |
+| PNG export, then broader formats | Publish the exact edited result with clear uncertainty handling; later PDF/JPEG/HEIC and split export |
+| More correction tools | Trim/cut, translation correction, difference/edge views, pixel loupe and snapping |
+| Fixed viewport recovery | Detect sticky headers, footers and floating controls; recover from genuine alternate-source pixels |
+| Scroll Recording and Web Capture | Reconstruct from selected frames and capture difficult scrollable documents |
+| Horizontal reconstruction and sharing | Wider capture workflows and a share extension |
+| Optional semantic review | One provider behind an interface; recommendations require deterministic validation and never author pixels |
+
+Near-exact similarity alone does not prove documentary continuity. Identical
+repeated top/bottom chrome is rejected; general sticky-element recovery and the
+broader one-direction ambiguity problem remain explicit limits (ADR-018).
 
 ## Design invariants
 
@@ -58,6 +102,7 @@ The platform-neutral core uses Swift 6. PNG I/O uses Apple ImageIO on macOS and 
 git clone https://github.com/vaseydev/traktion.git
 cd traktion
 bash scripts/check-repository.sh  # repository policy on any host
+python3 -m unittest discover -s Tests/Repository -v  # native test-inventory guard
 bash scripts/verify-core.sh       # Swift build + tests on any host
 bash scripts/smoke.sh             # fixture → reconstruct → compare on any host
 swift run --configuration release traktion-lab evaluate --output /tmp/evaluation-report.json
@@ -89,7 +134,11 @@ confirm the order, and select **Reconstruct locally**. A failed replacement
 keeps the previous workspace. Reset/remove only affect the workspace; original
 files remain unchanged. Select **Inspect pixels and joints** on the result for
 1:1 source pixels, pan/zoom and each joint’s original-capture evidence. The
-viewport stays bounded while the full reconstruction remains intact.
+viewport stays bounded while the full reconstruction remains intact. In a joint,
+choose **Adjust this seam**, preview a boundary inside its proven overlap, then apply
+or cancel. Undo/redo preserves committed changes across inspector reopening;
+reset or replacement clears this in-memory history. There is no saved-project
+or export workflow yet.
 See [ADR-021](docs/adr/ADR-021-native-png-workspace.md) for input and resource limits.
 
 Captures whose order is unknown can be ordered from byte-exact evidence (`--order exact`) or from uniquely registered near-exact overlaps (`--order near-exact`); missing or ambiguous ordering evidence is a typed failure:
@@ -106,6 +155,7 @@ swift run traktion-lab reconstruct --order exact \
 
 - **Stack:** Swift 6, SwiftPM and Xcode, shared native SwiftUI workspace, Apple ImageIO PNG boundary, dependency-free platform-neutral reconstruction core ([ADR-001](docs/adr/ADR-001-native-swift.md)).
 - **Environment variables:** verification supports `TRAKTION_SMOKE_DIR` for synthetic smoke output and `TRAKTION_GOLDEN_ARTIFACTS` for opt-in test failure evidence; see the [verification runbook](docs/runbooks/verification.md). No runtime secrets or model API are needed.
+- **Dependencies and CI:** [inventory](docs/DEPENDENCIES.md), [verification runbook](docs/runbooks/verification.md), and [historical failure analysis](docs/notes/2026-09-17-repository-health.md). No external Swift package dependency.
 - **Architecture:** module boundaries and data flow in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md); layout in [`docs/REPO_LAYOUT.md`](docs/REPO_LAYOUT.md).
 
 ## Notes & updates

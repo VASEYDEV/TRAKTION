@@ -2,10 +2,15 @@ import Dispatch
 import Foundation
 import Observation
 import TraktionDomain
+import TraktionCore
 
 @MainActor
 @Observable
 final class NativeInspectionModel {
+  let editing: NativeSeamEditingModel
+
+  var displayedPlan: ReconstructionPlan? { editing.plan ?? result?.plan }
+
   enum Source: String, CaseIterable { case result, preceding, following }
 
   private(set) var isOpen = false
@@ -22,21 +27,26 @@ final class NativeInspectionModel {
   private(set) var sourceHeight = 0
 
   @ObservationIgnored private var captures: [CaptureAsset] = []
-  @ObservationIgnored private var sourceRaster: RasterImage?
+  @ObservationIgnored private var sourceRaster: InspectionPixelSource?
   @ObservationIgnored private let renderer: any InspectionRendering
   @ObservationIgnored private let queue = DispatchQueue(label: "dev.vasey.traktion.inspection", qos: .userInitiated)
   @ObservationIgnored private var generation = UUID()
   @ObservationIgnored private var activeToken: NativeWorkspaceCancellation?
   @ObservationIgnored private var pending: InspectionViewport?
 
-  init(renderer: any InspectionRendering = InspectionRasterRenderer()) { self.renderer = renderer }
+  init(renderer: any InspectionRendering = InspectionRasterRenderer(), editing: NativeSeamEditingModel = NativeSeamEditingModel()) {
+    self.renderer = renderer
+    self.editing = editing
+    editing.onPlanChange = { [weak self] in self?.refreshPlan() }
+  }
 
   func open(result: ReconstructionResult, captures: [CaptureAsset], retainedBytes: Int, budget: Int) throws {
-    guard !isRendering, retainedBytes >= 0,
+    guard !isRendering, !editing.isRendering, retainedBytes >= 0,
       budget >= InspectionViewport.reservedBytes,
       retainedBytes <= budget - InspectionViewport.reservedBytes
     else { throw InspectionFailure.resourceLimit }
     close()
+    editing.admit(retainedBytes: retainedBytes, budget: budget)
     self.result = result
     self.captures = captures
     isOpen = true
@@ -46,6 +56,8 @@ final class NativeInspectionModel {
   /// A draining job keeps its slot until completion, including after dismissal/reset.
   /// The workspace blocks replacement work while this is true.
   func close() {
+    isOpen = false
+    editing.cancelDraft()
     generation = UUID()
     activeToken?.cancel()
     pending = nil
@@ -65,11 +77,12 @@ final class NativeInspectionModel {
   }
 
   func selectJoint(_ index: Int?) {
-    guard isOpen, let result else { return }
+    guard isOpen, let plan = displayedPlan else { return }
+    guard editing.draft == nil || editing.draftJointIndex == index else { return }
     do {
       if let index {
-        guard result.plan.joints.indices.contains(index) else { throw InspectionFailure.invalidJoint }
-        joint = try InspectionJoint(result.plan.joints[index], result: result, captures: captures)
+        guard plan.joints.indices.contains(index) else { throw InspectionFailure.invalidJoint }
+        joint = try InspectionJoint(plan.joints[index], plan: plan, captures: captures)
       } else { joint = nil }
       jointIndex = index
       selectSource(.result)
@@ -79,15 +92,20 @@ final class NativeInspectionModel {
     }
   }
 
-  func selectSource(_ source: Source) {
+  func selectSource(_ source: Source, preserveCamera: Bool = false) {
     guard isOpen, let result else { return }
     let image: RasterImage
+    var composition: PlannedRasterRenderer?
     let name: String
     let seam: Int?
     switch source {
     case .result:
       image = result.image
-      name = "Result"
+      if let plan = editing.plan, plan != result.plan {
+        do { composition = try PlannedRasterRenderer(plan: plan, captures: captures) }
+        catch { failure = "The selected seam plan is invalid."; return }
+      }
+      name = editing.draft != nil ? "Draft result" : (editing.isModified ? "Modified result" : "Result")
       seam = joint?.diagnosis.outputSeamRow
     case .preceding:
       guard let joint else { return }
@@ -103,13 +121,17 @@ final class NativeInspectionModel {
     invalidateFrame()
     self.source = source
     sourceName = name
-    sourceRaster = image
+    sourceRaster = composition.map(InspectionPixelSource.composition) ?? .raster(image)
     sourceWidth = image.width
     sourceHeight = image.height
     if let viewport {
-      let zoom = seam == nil ? fitZoom(width: viewport.width, height: viewport.height) : 1
-      update(width: viewport.width, height: viewport.height, x: 0,
-        y: Double(seam ?? 0) - Double(viewport.height) / (2 * zoom), zoom: zoom)
+      if preserveCamera {
+        update(width: viewport.width, height: viewport.height, x: viewport.x, y: viewport.y, zoom: viewport.zoom)
+      } else {
+        let zoom = seam == nil ? fitZoom(width: viewport.width, height: viewport.height) : 1
+        update(width: viewport.width, height: viewport.height, x: 0,
+          y: Double(seam ?? 0) - Double(viewport.height) / (2 * zoom), zoom: zoom)
+      }
     }
   }
 
@@ -149,6 +171,18 @@ final class NativeInspectionModel {
     guard let viewport else { return }
     update(width: viewport.width, height: viewport.height, x: viewport.x,
       y: bottom ? Double(sourceHeight) : 0, zoom: viewport.zoom)
+  }
+
+  private func refreshPlan() {
+    guard isOpen, let plan = displayedPlan else { return }
+    if let index = jointIndex {
+      guard plan.joints.indices.contains(index),
+        let next = try? InspectionJoint(plan.joints[index], plan: plan, captures: captures) else {
+        invalidateFrame(); failure = "This joint could not be mapped to original pixels."; return
+      }
+      joint = next
+    }
+    selectSource(source, preserveCamera: true)
   }
 
   private func fitZoom(width: Int, height: Int) -> Double {
@@ -194,7 +228,10 @@ final class NativeInspectionModel {
     let renderer = self.renderer
     queue.async { [weak self] in
       let outcome: Result<InspectionFrame, Error> = Result {
-        try renderer.render(image, viewport: next, isCancelled: { token.isCancelled })
+        switch image {
+        case .raster(let raster): return try renderer.render(raster, viewport: next, isCancelled: { token.isCancelled })
+        case .composition(let source): return try renderer.renderComposition(source, viewport: next, isCancelled: { token.isCancelled })
+        }
       }
       Task { @MainActor [weak self] in
         guard let self else { return }

@@ -126,12 +126,15 @@ xcodebuild test-without-building "${build_args[@]}" \
   -skip-testing:TRAKTIONUITests/TRAKTIONLaunchTests/testLongPixelInspectionPanZoomJointSourcesAndReturn \
   -resultBundlePath "$run_dir/TRAKTION.xcresult" | tee "$run_dir/tests.log"
 
+python3 scripts/check-ui-test-results.py \
+  --source Tests/UITests/TRAKTIONLaunchTests.swift --log "$run_dir/tests.log" --phase debug
+
 mkdir -p "$run_dir/attachments"
 xcrun xcresulttool export attachments --path "$run_dir/TRAKTION.xcresult" \
   --output-path "$run_dir/attachments/debug"
 
 # Full phone-size core work is verified with production optimization, matching
-# the portable performance gate. Keep the six small-input Debug UI tests above.
+# the portable performance gate. Keep all small-input Debug UI tests above.
 # This flag enables only the existing synthetic-fixture bootstrap in this test
 # build; ordinary Release apps do not include it.
 release_args=(
@@ -156,16 +159,9 @@ xcodebuild test-without-building "${release_args[@]}" \
   -only-testing:TRAKTIONUITests/TRAKTIONLaunchTests/testLongPixelInspectionPanZoomJointSourcesAndReturn \
   -resultBundlePath "$run_dir/TRAKTION-Release.xcresult" | tee "$run_dir/release-tests.log"
 
-# An obsolete -only-testing selector must not turn this gate into a zero-test pass.
-python3 - "$run_dir/release-tests.log" <<'VERIFY_RELEASE'
-import pathlib
-import sys
-
-log = pathlib.Path(sys.argv[1]).read_text()
-required = "Test Case '-[TRAKTIONUITests.TRAKTIONLaunchTests testLongPixelInspectionPanZoomJointSourcesAndReturn]' passed"
-if required not in log:
-    sys.exit("The required optimized phone-size inspection test did not pass.")
-VERIFY_RELEASE
+# Require the intended case, not a zero-test success from a stale selector.
+python3 scripts/check-ui-test-results.py \
+  --source Tests/UITests/TRAKTIONLaunchTests.swift --log "$run_dir/release-tests.log" --phase release
 
 # Export retained synthetic screenshots alongside xcresult for direct visual review.
 xcrun xcresulttool export attachments --path "$run_dir/TRAKTION-Release.xcresult" \

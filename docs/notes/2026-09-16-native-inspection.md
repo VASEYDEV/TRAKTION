@@ -166,3 +166,15 @@ Independent review found no blocker in the revised geometry or shell cleanup.
 An isolated execution of the actual cleanup function preserved both successful
 and failing original exit codes even when diagnostic export/cleanup failed;
 shell syntax, repository policy and whitespace checks passed.
+
+## Final closure — 2026-09-17
+
+[PR #19](https://github.com/VASEYDEV/TRAKTION/pull/19) was merged at
+`c279264e9d7e552561a7e52ec5368df17e99af84`; its feature branch was deleted.
+The final [PR run 35162902248](https://github.com/VASEYDEV/TRAKTION/actions/runs/35162902248)
+and subsequent [main run 35163939876](https://github.com/VASEYDEV/TRAKTION/actions/runs/35163939876)
+passed all five jobs. Main ran 178 XCTest cases on each core platform, the
+45-case evaluation corpus on each, six Debug UI cases and one full-phone Release
+UI case. The final portrait and landscape attachments were actually inspected;
+the full-screen landscape capture no longer has the earlier black clipping region.
+Task 0019 is complete. Earlier pending statements above preserve the chronology.

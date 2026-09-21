@@ -196,6 +196,98 @@ final class TRAKTIONLaunchTests: XCTestCase {
     XCTAssertFalse(app.buttons["workspace.result.inspect"].exists)
   }
 
+  func testSeamAdjustmentCancelApplyUndoRedoAndReopen() {
+    let app = launch(scenario: "baseline")
+    confirmOrder(in: app)
+    app.buttons["workspace.reconstruct"].tap()
+    XCTAssertTrue(app.staticTexts["workspace.result.dimensions"].waitForExistence(timeout: 30))
+    openInspection(in: app)
+    let scroll = app.scrollViews["inspection.scroll"]
+    let region = app.buttons["inspection.region"]
+    reveal(region, in: scroll); region.tap()
+    app.buttons["inspection.region.joint.0"].tap()
+    let seam = app.staticTexts["inspection.joint.seam"]
+    let automatic = app.staticTexts["inspection.joint.automaticSeam"].label
+    let initial = seam.label
+    XCTAssertTrue(initial.contains("output row 136; overlap row 24"))
+    let confidence = app.staticTexts["inspection.joint.confidence"].label
+    func tap(_ id: String) {
+      let button = app.buttons[id]
+      reveal(button, in: scroll)
+      let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == true"), object: button)
+      XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 10), .completed)
+      button.tap()
+    }
+    tap("inspection.edit.begin")
+    tap("inspection.edit.down")
+    XCTAssertTrue(seam.label.contains("output row 137; overlap row 25"))
+    XCTAssertEqual(app.staticTexts["inspection.joint.automaticSeam"].label, automatic)
+    tap("inspection.edit.cancel")
+    XCTAssertEqual(seam.label, initial)
+    XCTAssertFalse(app.buttons["inspection.edit.undo"].isEnabled)
+    tap("inspection.edit.begin")
+    tap("inspection.edit.down")
+    let changed = seam.label
+    tap("inspection.edit.apply")
+    let state = app.staticTexts["inspection.edit.state"]
+    let applied = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == 'Modified seams'"), object: state)
+    XCTAssertEqual(XCTWaiter.wait(for: [applied], timeout: 10), .completed)
+    XCTAssertEqual(seam.label, changed)
+    XCTAssertEqual(app.staticTexts["inspection.joint.confidence"].label, confidence)
+    tap("inspection.edit.undo")
+    let restored = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", initial), object: seam)
+    XCTAssertEqual(XCTWaiter.wait(for: [restored], timeout: 10), .completed)
+    tap("inspection.edit.redo")
+    let redone = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", changed), object: seam)
+    XCTAssertEqual(XCTWaiter.wait(for: [redone], timeout: 10), .completed)
+    reveal(state, in: scroll)
+    attachScreenshot(app, name: "Applied seam with reversible history")
+    app.buttons["inspection.done"].tap()
+    XCTAssertTrue(app.staticTexts["workspace.result.editState"].label.contains("Modified seams"))
+    openInspection(in: app)
+    XCTAssertTrue(app.buttons["inspection.edit.undo"].isEnabled)
+    reveal(region, in: scroll); region.tap()
+    app.buttons["inspection.region.joint.0"].tap()
+    XCTAssertEqual(seam.label, changed)
+    app.buttons["inspection.done"].tap()
+    reset(in: app)
+    XCTAssertFalse(app.buttons["workspace.result.inspect"].exists)
+  }
+
+  func testDraftSeamOriginalSourcesAndOrientation() {
+    let app = launch(scenario: "baseline")
+    confirmOrder(in: app)
+    app.buttons["workspace.reconstruct"].tap()
+    XCTAssertTrue(app.staticTexts["workspace.result.dimensions"].waitForExistence(timeout: 30))
+    openInspection(in: app)
+    let scroll = app.scrollViews["inspection.scroll"]
+    app.buttons["inspection.region"].tap()
+    app.buttons["inspection.region.joint.0"].tap()
+    let begin = app.buttons["inspection.edit.begin"]
+    reveal(begin, in: scroll); begin.tap()
+    let down = app.buttons["inspection.edit.down"]
+    reveal(down, in: scroll); down.tap()
+    let source = app.buttons["inspection.source.choose"]
+    reveal(source, in: scroll); source.tap()
+    app.buttons["inspection.source.preceding"].tap()
+    XCTAssertEqual(app.staticTexts["inspection.source"].label, "Pixels: capture-001.png")
+    source.tap(); app.buttons["inspection.source.following"].tap()
+    XCTAssertEqual(app.staticTexts["inspection.source"].label, "Pixels: capture-002.png")
+    source.tap(); app.buttons["inspection.source.result"].tap()
+    XCTAssertEqual(app.staticTexts["inspection.source"].label, "Pixels: Draft result")
+    XCUIDevice.shared.orientation = .landscapeLeft
+    waitForOrientation(in: app, landscape: true)
+    let draft = app.staticTexts["inspection.edit.draft"]
+    reveal(draft, in: scroll)
+    XCTAssertEqual(draft.label, "Draft seam: overlap row 25")
+    assertHorizontallyContained(draft, in: app)
+    attachScreenshot(app, name: "Seam draft in landscape")
+    let cancel = app.buttons["inspection.edit.cancel"]
+    reveal(cancel, in: scroll); cancel.tap()
+    XCTAssertTrue(app.staticTexts["inspection.joint.seam"].label.contains("output row 136; overlap row 24"))
+    app.buttons["inspection.done"].tap()
+  }
+
   func testLargeTextInspectionControlsRemainReachable() {
     let app = XCUIApplication()
     XCUIDevice.shared.orientation = .portrait
@@ -215,6 +307,23 @@ final class TRAKTIONLaunchTests: XCTestCase {
       XCTAssertTrue(button.isEnabled)
       button.tap()
     }
+    app.buttons["inspection.done"].tap()
+  }
+
+  // Keep viewport and editing accessibility flows independently below the
+  // existing per-case time budget; every original assertion remains exercised.
+  func testLargeTextSeamControlsRemainReachable() {
+    let app = XCUIApplication()
+    XCUIDevice.shared.orientation = .portrait
+    app.launchEnvironment["TRAKTION_UI_FIXTURE"] = "baseline"
+    app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
+    app.launch()
+    waitForImport(in: app, count: 3)
+    confirmOrder(in: app)
+    app.buttons["workspace.reconstruct"].tap()
+    XCTAssertTrue(app.staticTexts["workspace.result.dimensions"].waitForExistence(timeout: 30))
+    openInspection(in: app)
+    let scroll = app.scrollViews["inspection.scroll"]
     let region = app.buttons["inspection.region"]
     reveal(region, in: scroll)
     region.tap()
@@ -223,6 +332,15 @@ final class TRAKTIONLaunchTests: XCTestCase {
     reveal(seam, in: scroll)
     assertHorizontallyContained(seam, in: app)
     attachScreenshot(app, name: "Large text joint evidence")
+    let begin = app.buttons["inspection.edit.begin"]
+    reveal(begin, in: scroll); begin.tap()
+    for id in ["inspection.edit.up", "inspection.edit.down", "inspection.edit.apply", "inspection.edit.cancel"] {
+      let button = app.buttons[id]
+      reveal(button, in: scroll)
+      assertHorizontallyContained(button, in: app)
+    }
+    attachScreenshot(app, name: "Large text deliberate seam controls")
+    app.buttons["inspection.edit.cancel"].tap()
     app.buttons["inspection.done"].tap()
   }
 
@@ -317,7 +435,8 @@ final class TRAKTIONLaunchTests: XCTestCase {
 
   private func reveal(_ element: XCUIElement, in scroll: XCUIElement) {
     // A previous action or rotation can retain a position below this element.
-    for _ in 0..<20 where !element.isHittable {
+    for _ in 0..<20 {
+      if element.isHittable { break }
       if scroll.identifier == "inspection.scroll" {
         // The image intentionally consumes drags for pixel panning. Scroll the
         // padding and move the target toward the viewport center. Fixed full

@@ -6,6 +6,9 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -15,16 +18,18 @@ jobs:
     name: verify / repository
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, verified on main
       - name: Check repository policy and structured files
         run: bash scripts/check-repository.sh
+      - name: Verify native test-discovery guard
+        run: python3 -m unittest discover -s Tests/Repository -v
 
   core-linux:
     name: verify / core (Linux)
     runs-on: ubuntu-24.04
     container: swift:6.0-noble
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, verified on main
       - name: Build and test platform-neutral targets
         env:
           TRAKTION_GOLDEN_ARTIFACTS: ${{ runner.temp }}/traktion-synthetic-artifacts/tests
@@ -42,7 +47,7 @@ jobs:
           python3 -m json.tool evaluation-report.json >/dev/null
       - name: Upload evaluation report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4, verified on main
         with:
           name: traktion-evaluation-report
           path: |
@@ -52,7 +57,7 @@ jobs:
 
       - name: Retain synthetic golden and evaluation diagnostics on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4, verified on main
         with:
           name: traktion-synthetic-failure-diagnostics-linux
           path: ${{ runner.temp }}/traktion-synthetic-artifacts
@@ -62,7 +67,7 @@ jobs:
     name: verify / Apple package and PNG smoke
     runs-on: macos-15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, verified on main
       - name: Run complete verification gate
         env:
           TRAKTION_SMOKE_DIR: ${{ runner.temp }}/traktion-smoke
@@ -76,7 +81,7 @@ jobs:
           "$(swift build --configuration release --show-bin-path)/traktion-lab" evaluate --case performance-long-10 --output performance-long-10-apple.json
       - name: Upload Apple evaluation reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4, verified on main
         with:
           name: traktion-evaluation-report-apple
           path: |
@@ -85,7 +90,7 @@ jobs:
           if-no-files-found: ignore
       - name: Retain synthetic diagnostics on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4, verified on main
         with:
           name: traktion-synthetic-smoke-diagnostics
           path: ${{ runner.temp }}/traktion-smoke
@@ -93,7 +98,7 @@ jobs:
 
       - name: Retain synthetic golden diagnostics on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4, verified on main
         with:
           name: traktion-synthetic-failure-diagnostics-apple
           path: ${{ runner.temp }}/traktion-synthetic-artifacts
@@ -104,14 +109,14 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, verified on main
       - name: Build, install, launch, and test the native PNG workflow
         env:
           TRAKTION_IOS_ARTIFACTS: ${{ runner.temp }}/traktion-ios
         run: bash scripts/verify-ios.sh
       - name: Retain simulator test results and build logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4, verified on main
         with:
           name: traktion-ios-verification
           path: |
