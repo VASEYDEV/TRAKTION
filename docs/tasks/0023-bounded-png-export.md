@@ -1,6 +1,6 @@
 # Task: Bounded committed-result PNG export
 
-Status: in progress — implementation and verification.
+Status: complete — implementation, independent review and native verification passed.
 Writer: Codex, branch `codex/bounded-png-export`.
 
 ## Goal
@@ -64,8 +64,8 @@ source deletion and physical-device distribution.
       transparency and midstream writer failures have independent pixel/failure oracles.
 - [x] Failed writes and precommit cancellation preserve existing destinations.
 - [x] Postcommit status remains truthful and owned temporary cleanup is explicit.
-- [ ] Real native Files export, cancellation and accessible controls are verified.
-- [ ] Core/PNG/native gates, independent review, ADR and documentation pass.
+- [x] Real native Files export, cancellation and accessible controls are verified.
+- [x] Core/PNG/native gates, independent review, ADR and documentation pass.
 
 ## Verification record
 
@@ -79,4 +79,19 @@ Exact commands: `swift build --build-tests --configuration release
 --use-integrated-swift-driver -j 2 -Xswiftc -enable-testing`, followed by
 `.build/x86_64-unknown-linux-gnu/release/TRAKTIONPackageTests.xctest`;
 `bash scripts/check-repository.sh`; `python3 -m unittest discover -s Tests/Repository -v`.
-Apple, native Files UI and current-head CI remain required before integration.
+Apple and native Files UI passed in run 35908973342; final-head CI remains the merge gate.
+
+Independent read-only review at `ea134fbd` found no actionable defect in streaming
+framing/checksums, memory admission, exact source-row selection, shared atomic
+publication, or export snapshot/cancellation draining. All 11 targeted tests were
+independently reproduced (4 streaming, 5 export store/Core, 2 workspace model),
+zero failures. No production assertion, native inventory or timeout was relaxed.
+
+[CI run 35908973342](https://github.com/VASEYDEV/TRAKTION/actions/runs/35908973342)
+at `ea134fbd3e2ba148d65ca8bbc229f5a393e02771` passed all five jobs on attempt 1:
+232 Linux / 231 Apple XCTest cases, PNG smoke and 45-case evaluation gates;
+14 native Debug cases in 654.455 seconds and one full-phone Release case in
+68.893 seconds. Both inventory guards passed. The real Files PNG export,
+cancellation and collision case passed in 55.769 seconds. Final documentation-head
+CI and the authorized squash/branch cleanup are recorded in PR #22 rather than
+creating recursive verification-only commits.

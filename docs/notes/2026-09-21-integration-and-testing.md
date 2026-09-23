@@ -135,3 +135,13 @@ The prior health audit also recorded unrelated AKTION/VIZION About text. Correct
 that metadata when repository-settings access is available; the suggested text
 is in the September 17 health note. These settings issues are distinct from app
 implementation and simulator verification.
+
+### September 23 follow-up
+
+Postmerge main run 35579691926 at `3aebc6e` completed successfully on September 21.
+The About description and ruleset follow-ups above were resolved on September 23
+using authenticated repository settings. Ruleset 22592746 now targets
+`~DEFAULT_BRANCH` (currently main), requires `verification / required` from
+GitHub Actions (integration 15368), and requires up-to-date branches. Existing
+pull-request parameters and admin bypass were preserved. The historical findings
+above describe the earlier state. Task 0023 / PR #22 implements bounded PNG export.
