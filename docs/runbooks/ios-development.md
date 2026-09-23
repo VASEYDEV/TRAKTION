@@ -128,7 +128,7 @@ closing/reopening the inspector keeps committed history while discarding a draft
 Reset, replacement and capture-order changes clear that workspace's edits.
 The preview samples original source strips through the core without retaining a
 second full-size composite. Project saving preserves committed seams as described
-below; edited export remains a separate task.
+below; committed PNG export is described after local projects.
 
 ## Local projects
 
@@ -173,3 +173,28 @@ Both native phase logs are checked against the source test inventory after
 Xcode succeeds. Missing, silently unselected, failed or repeated cases fail the
 gate, as do timeout/restart markers followed by passing records. The repository
 lane exercises this guard with Python standard-library tests.
+
+## PNG export
+
+After reconstruction and any applied seam edits, choose **Export PNG**, enter a
+name, and choose a folder in Files. Prefer **On My iPhone → TRAKTION**. Existing
+names are refused; there is no overwrite mode. Export includes committed seams,
+not an uncommitted inspector draft or the scaled preview. Source files, saved
+projects and undo/redo remain unchanged. Export remains offline.
+
+Cancel before publication prevents a destination file. Reset clears the workspace
+but keeps the worker occupied until export drains. If publication already happened,
+the exported filename remains reported after reset or late cancellation. Cleanup
+failure explicitly reports whether the PNG was committed. Unsupported providers
+and cross-filesystem locations are refused without a non-atomic copy fallback.
+
+The encoder supports up to 67,108,864 output pixels, 1 MiB per RGBA row and 300 MiB
+encoded output, subject to the current workspace plus bounded scratch budget.
+Capture decoding retains its smaller 16,777,216-pixel limit. PNGs use stored
+DEFLATE blocks and can be large. See ADR-025 for the exact admission contract.
+
+Native test `testPNGExportUsesFilesAndRefusesCollisionWithoutChangingResult`
+checks the actual name dialog, Files cancellation, local folder selection, export
+receipt and collision refusal. Package tests separately decode the exported PNG
+and compare it with source-pixel oracles, including committed near-exact seams.
+Physical-device storage providers and memory behavior remain release checks.

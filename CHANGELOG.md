@@ -9,16 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Repository About metadata now describes the native screenshot product. The active
+  ruleset targets the actual default branch and requires the GitHub Actions
+  verification aggregate with up-to-date branches (settings verified September 23).
+
 - Reject project names whose complete filename exceeds 255 UTF-8 bytes before
   filesystem access. Long Unicode names now report a name-validation failure;
   a regression covers real save/reopen at 255 bytes and refusal at 256/329 bytes.
 
 ### Added
 
+- **Bounded PNG export** (task 0023, ADR-025): export committed original-source
+  pixels through a row-streaming encoder and real Files name/folder selection.
+  Checked resource admission, atomic create-only publication, cancellation/draining
+  and truthful committed/cleanup status preserve existing files and edit history.
+  Project saving shares the same verified publication primitive.
+
 - **Integration and testing handoff** (task 0024): reconcile the #20/#21 stack
   with a squash followed by a content-preserving rebase and squash, refresh the
   roadmap/task index, and distinguish simulator verification from signed-device
-  and TestFlight readiness. Bounded PNG export remains the next implementation.
+  and TestFlight readiness. Bounded PNG export subsequently landed as task 0023.
 - **Local project persistence** (task 0022, ADR-024): save exact original PNG
   bytes, capture identity/order, automatic evidence and committed seams in one
   bounded `.traktion` file. Real Files save/open, create-only saves and explicit

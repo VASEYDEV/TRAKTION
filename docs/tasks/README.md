@@ -16,14 +16,15 @@ unmerged packet is renumbered on port (see task 0009 for the PR #8 example).
 Completed packets below are historical evidence, not queued work. Check current
 `main` and the explicit dependencies below; never restart a superseded branch.
 
-1. **[0023](0023-bounded-png-export.md):** next implementation packet,
-   bounded export of the committed result to PNG.
+1. **[0023](0023-bounded-png-export.md)** is complete: bounded committed PNG export,
+   independent review and native verification passed. PR #22 records final integration.
 2. Physical-device signing/resource verification and production artwork require
    release preparation. The [current handoff](../notes/2026-09-21-integration-and-testing.md)
    separates simulator testing, a signed device alpha, and TestFlight readiness.
-3. Repository-settings follow-ups: correct About metadata and the active ruleset's
-   literal `Default` branch target. No settings or access controls were changed
-   during reconciliation; all five CI jobs are explicitly required for integration.
+3. Repository settings corrected September 23: About describes the native product;
+   ruleset 22592746 targets the actual default branch and requires the GitHub Actions
+   `verification / required` aggregate with up-to-date branches. Existing PR and
+   admin-bypass settings were preserved.
 
 Task 0024 reconciles PR #20 and dependent PR #21 under Sean's September 21
 merge/cleanup authorization. That instruction supersedes the earlier leave-open
@@ -56,7 +57,7 @@ section are the integration evidence; develop subsequent work from current main.
 | [0020](0020-nondestructive-seam-adjustment.md) | Non-destructive seam adjustment and undo | first editing step | done | Codex | PR #20 |
 | [0021](0021-repository-health-and-product-handoff.md) | Repository health and product handoff | workflow/docs | done | Codex | PR #20 |
 | [0022](0022-local-project-persistence.md) | Local project persistence | editor | done | Codex | PR #21 |
-| [0023](0023-bounded-png-export.md) | Bounded committed-result PNG export | export | queued | assign at start | — |
+| [0023](0023-bounded-png-export.md) | Bounded committed-result PNG export | export | complete | Codex | PR #22; ADR-025; run 35908973342 |
 | [0024](0024-stack-integration-and-testing-handoff.md) | Stack integration and testing handoff | workflow/docs | verified handoff; final integration evidence in PR | Codex | PR #21 |
 
 ## Superseded packets and pull requests
@@ -93,5 +94,5 @@ core/CLI tests. Task 0017 adds real PNG import, explicit supplied-order reconstr
 result/failure presentation. Task 0019 adds bounded 1:1 pixel/joint inspection
 and original-capture evidence. Task 0020 adds deliberate seam editing and
 reversible in-memory history. Task 0022 implements local saved projects; PNG export
-is queued as task 0023. A simulator
+is verified in task 0023. A simulator
 pass does not establish physical-device signing or App Store readiness.
