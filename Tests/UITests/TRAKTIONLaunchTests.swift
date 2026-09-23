@@ -534,6 +534,47 @@ final class TRAKTIONLaunchTests: XCTestCase {
     attachScreenshot(app, name: "Existing saved project survives refused overwrite")
   }
 
+  func testPNGExportUsesFilesAndRefusesCollisionWithoutChangingResult() {
+    let app = launch(scenario: "baseline")
+    let export = app.buttons["workspace.export"]
+    XCTAssertFalse(export.isEnabled)
+    confirmOrder(in: app)
+    app.buttons["workspace.reconstruct"].tap()
+    let dimensions = app.staticTexts["workspace.result.dimensions"]
+    XCTAssertTrue(dimensions.waitForExistence(timeout: 30))
+    let scroll = app.scrollViews["workspace.scroll"]
+    reveal(export, in: scroll); export.tap()
+    let field = app.alerts["Export PNG"].textFields.matching(
+      NSPredicate(format: "placeholderValue == %@", "PNG name")).firstMatch
+    XCTAssertTrue(field.waitForExistence(timeout: 5))
+    let name = "Native export " + String(UUID().uuidString.prefix(8))
+    field.tap(); field.typeText(name)
+    XCTAssertEqual(field.value as? String, name)
+    app.alerts["Export PNG"].buttons["Choose folder"].firstMatch.tap()
+    guard dismissFilesSheet(in: app, confirmingFolder: true) else { return }
+    XCTAssertEqual(dimensions.label, "96 × 384 pixels")
+    XCTAssertFalse(app.staticTexts["workspace.project.status"].exists)
+    reveal(export, in: scroll); export.tap()
+    XCTAssertTrue(field.waitForExistence(timeout: 5))
+    app.alerts["Export PNG"].buttons["Choose folder"].firstMatch.tap()
+    guard chooseCurrentFilesFolder(in: app) else { return }
+    let status = app.staticTexts["workspace.project.status"]
+    XCTAssertTrue(status.waitForExistence(timeout: 15))
+    XCTAssertEqual(status.label, "Exported " + name + ".png.")
+    XCTAssertEqual(dimensions.label, "96 × 384 pixels")
+    XCTAssertTrue(app.buttons["workspace.project.save"].isEnabled)
+    reveal(export, in: scroll); export.tap()
+    XCTAssertTrue(field.waitForExistence(timeout: 5))
+    app.alerts["Export PNG"].buttons["Choose folder"].firstMatch.tap()
+    guard chooseCurrentFilesFolder(in: app) else { return }
+    let failure = app.staticTexts["workspace.failure"]
+    XCTAssertTrue(failure.waitForExistence(timeout: 15))
+    XCTAssertTrue(failure.label.contains("Choose another name"))
+    XCTAssertEqual(dimensions.label, "96 × 384 pixels")
+    reveal(failure, in: scroll)
+    attachScreenshot(app, name: "PNG export collision preserves reconstruction")
+  }
+
   private func projectNameField(in app: XCUIApplication) -> XCUIElement? {
     // UIKit's SwiftUI alert bridge exposes the placeholder, but does not carry
     // the TextField accessibility identifier through to the native alert.

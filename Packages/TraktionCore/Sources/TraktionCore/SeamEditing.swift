@@ -157,6 +157,21 @@ public struct PlannedRasterRenderer: Sendable {
     orderedCaptures = ordered
   }
 
+  /// Exact original pixels, with no scaling or full-composite allocation.
+  /// The caller admits its overall working set before requesting rows.
+  public func rgbaRow(_ row: Int, isCancelled: @Sendable () -> Bool) throws -> [UInt8] {
+    guard row >= 0, row < plan.outputHeight else { throw SeamEditingFailure.invalidRegion }
+    let (bytes, overflow) = plan.outputWidth.multipliedReportingOverflow(by: 4)
+    guard !overflow, bytes <= 1_048_576 else { throw SeamEditingFailure.invalidRegion }
+    guard !isCancelled() else { throw SeamEditingFailure.cancelled }
+    let index = plan.joints.prefix { row >= $0.outputSeamRow }.count
+    let source = orderedCaptures[index].image
+    let start = (row - plan.placements[index].originY) * bytes
+    let pixels = Array(source.pixels[start..<start + bytes])
+    guard !isCancelled() else { throw SeamEditingFailure.cancelled }
+    return pixels
+  }
+
   public func renderPreview(width: Int, height: Int, isCancelled: @Sendable () -> Bool) throws -> RasterImage {
     guard (1...Self.maximumSampleEdge).contains(width), (1...Self.maximumSampleEdge).contains(height),
       width * height <= Self.maximumSamplePixels else { throw SeamEditingFailure.invalidRegion }

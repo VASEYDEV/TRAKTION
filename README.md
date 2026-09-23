@@ -18,7 +18,7 @@
 
 TRAKTION is a native, offline-first utility for turning **overlapping screenshots into one continuous image you can inspect and correct**. Its purpose is to recover the content you captured, preserve the original evidence, and make every join understandable.
 
-The current app imports PNG screenshots, reconstructs them in a confirmed order, exposes the source pixels behind each seam, and saves originals and committed edits in local projects. The longer-term product adds export, scroll-recording reconstruction, and web capture. Those later capabilities are planned, not available in this build.
+The current app imports PNG screenshots, reconstructs them in a confirmed order, exposes the source pixels behind each seam, saves originals and committed edits in local projects, and exports committed pixels to PNG. The longer-term product adds broader export formats, scroll-recording reconstruction, and web capture. Those later capabilities are planned, not available in this build.
 
 Full-page capture often fails: content scrolls inside nested frames, headers stay fixed, floating controls cover content, or the source app simply has no full-page capture. Manual stitching is slow because every adjacent capture overlaps and must be aligned and trimmed precisely. TRAKTION's deterministic reconstruction engine does that alignment — and reports what it cannot prove instead of inventing it.
 
@@ -32,8 +32,8 @@ Full-page capture often fails: content scrolls inside nested frames, headers sta
 ## Status
 
 **Experimental native iOS build.** The reconstruction core, PNG import, bounded
-pixel/joint inspection, reversible seam editor, and local project save/open are implemented.
-The app is not yet a distribution-ready product: export, device
+pixel/joint inspection, reversible seam editor, local project save/open, and bounded PNG export are implemented.
+The app is not yet a distribution-ready product: device
 signing, and broader capture modes remain on the [roadmap](docs/ROADMAP.md).
 [Task packets](docs/tasks/README.md) record acceptance evidence and the next work;
 [testing readiness and integration](docs/notes/2026-09-21-integration-and-testing.md)
@@ -46,6 +46,7 @@ records the current handoff and remaining release work.
 | Pixel and joint inspection | Bounded pan/zoom, 1:1 pixels, original-capture views, seam coordinates and confidence |
 | Deliberate seam adjustment | Move inside an already proven overlap; preview, apply/cancel, undo/redo; original captures and registration evidence retained |
 | Local projects | Save exact original PNGs, confirmed order and committed seams in one `.traktion` file; reopen through Files with evidence validation and a fresh undo history |
+| PNG export | Full-resolution committed source pixels; bounded streaming encoder; real Files folder/name selection; atomic create-only saves |
 | Ordering tools | Exact and near-exact order recovery in the core and Lab; missing/ambiguous evidence is refused |
 | Reproducible diagnostics | Composite/manifest/joint diagnostics, synthetic failure bundles, 45-case evaluation corpus and memory/throughput reports |
 
@@ -72,7 +73,7 @@ polish remain release work.
 
 | Planned feature | Purpose |
 | --- | --- |
-| PNG export, then broader formats | Publish the exact edited result with clear uncertainty handling; later PDF/JPEG/HEIC and split export |
+| Broader export formats | PDF/JPEG/HEIC, split export and target-size controls |
 | More correction tools | Trim/cut, translation correction, difference/edge views, pixel loupe and snapping |
 | Fixed viewport recovery | Detect sticky headers, footers and floating controls; recover from genuine alternate-source pixels |
 | Scroll Recording and Web Capture | Reconstruct from selected frames and capture difficult scrollable documents |
@@ -149,8 +150,10 @@ Choose **Save project**, enter a name, then **Choose folder** in Files. Use
 existing files are never overwritten. **Open project** restores
 the original captures, confirmed order, automatic evidence and committed seams;
 undo/redo starts fresh after reopening. Failed or cancelled opening keeps the
-current workspace. Saving excludes uncommitted inspector drafts. There is no
-export workflow yet. [Project format and limits](docs/adr/ADR-024-local-project-container.md)
+current workspace. Saving excludes uncommitted inspector drafts. Choose **Export PNG**, enter a new name, then **Choose folder** to publish the
+full-resolution committed result. Export excludes drafts and never overwrites an existing item.
+Use the local TRAKTION folder; unsupported destinations are refused.
+[PNG export limits](docs/adr/ADR-025-bounded-png-export.md) describe resource admission. [Project format and limits](docs/adr/ADR-024-local-project-container.md)
 and [save/open instructions](docs/runbooks/ios-development.md#local-projects)
 describe compatibility and cancellation behavior.
 Some external locations cannot support safe saves; choose the local TRAKTION

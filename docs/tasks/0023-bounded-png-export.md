@@ -1,7 +1,7 @@
 # Task: Bounded committed-result PNG export
 
-Status: queued — next implementation packet after verified task 0022.
-Writer: assign one implementation owner at start.
+Status: in progress — implementation and verification.
+Writer: Codex, branch `codex/bounded-png-export`.
 
 ## Goal
 
@@ -50,19 +50,33 @@ source deletion and physical-device distribution.
 
 ## Acceptance criteria
 
-- [ ] Decoded exported pixels match independent automatic and edited-source oracles.
-- [ ] Exact and near-exact joins retain dimensions and selected source pixels.
-- [ ] A valid output beyond preview edge/pixel limits proves unsampled row export;
+- [x] Decoded exported pixels match independent automatic and edited-source oracles.
+- [x] Exact and near-exact joins retain dimensions and selected source pixels.
+- [x] A valid output beyond preview edge/pixel limits proves unsampled row export;
       instrumentation bounds requested rows and encoded chunks.
-- [ ] Representative output decodes through both Apple and pure-Swift PNG paths
+- [x] Representative output decodes through both Apple and pure-Swift PNG paths
       to the same RGBA oracle. Larger export verification has separate admission
       without widening production capture-decoder limits.
-- [ ] Draft/rendering exclusion, immutable committed snapshots and reset/cancel
+- [x] Draft/rendering exclusion, immutable committed snapshots and reset/cancel
       draining prevent mixed-state output or overlapping workers.
-- [ ] Large/invalid outputs and overflow refuse before exceeding resource limits.
-- [ ] Seam/strip/DEFLATE boundaries, partial final blocks, malformed rows,
+- [x] Large/invalid outputs and overflow refuse before exceeding resource limits.
+- [x] Seam/strip/DEFLATE boundaries, partial final blocks, malformed rows,
       transparency and midstream writer failures have independent pixel/failure oracles.
-- [ ] Failed writes and precommit cancellation preserve existing destinations.
-- [ ] Postcommit status remains truthful and owned temporary cleanup is explicit.
+- [x] Failed writes and precommit cancellation preserve existing destinations.
+- [x] Postcommit status remains truthful and owned temporary cleanup is explicit.
 - [ ] Real native Files export, cancellation and accessible controls are verified.
 - [ ] Core/PNG/native gates, independent review, ADR and documentation pass.
+
+## Verification record
+
+2026-09-23 local Linux: Swift 6.0.3 release build with testable imports passed;
+all 232 XCTest cases passed, including 11 export/streaming/model tests. Repository
+policy and eight native-inventory guard tests passed. `git diff --check` passed.
+The large streaming case decodes 4096 × 4097 pixels with an explicit test-only
+allowance; production capture decoding remains capped at 16,777,216 pixels.
+
+Exact commands: `swift build --build-tests --configuration release
+--use-integrated-swift-driver -j 2 -Xswiftc -enable-testing`, followed by
+`.build/x86_64-unknown-linux-gnu/release/TRAKTIONPackageTests.xctest`;
+`bash scripts/check-repository.sh`; `python3 -m unittest discover -s Tests/Repository -v`.
+Apple, native Files UI and current-head CI remain required before integration.

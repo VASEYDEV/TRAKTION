@@ -11,8 +11,10 @@ import TraktionDomain
     @State private var isImportPresented = false
     @State private var picker: Picker = .captures
     @State private var isSaveNamePresented = false
+    @State private var isExportNamePresented = false
+    @State private var exportName = ""
     @State private var projectName = ""
-    private enum Picker { case captures, project, folder }
+    private enum Picker { case captures, project, folder, exportFolder }
     private var documents: URL? {
       FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
     }
@@ -25,7 +27,7 @@ import TraktionDomain
         #else
         return [.data] // SwiftPM previews have no exported-type Info.plist bundle.
         #endif
-      case .folder: return [.folder]
+      case .folder, .exportFolder: return [.folder]
       }
     }
 
@@ -89,6 +91,7 @@ import TraktionDomain
             case .captures: model.importCaptures(from: urls)
             case .project: model.openProject(first)
             case .folder: model.saveProject(folder: first, name: projectName)
+            case .exportFolder: model.exportPNG(folder: first, name: exportName)
             }
           case .failure(let error):
             let cocoaError = error as NSError
@@ -107,6 +110,19 @@ import TraktionDomain
           do { try FileManager.default.createDirectory(at: documents, withIntermediateDirectories: true) }
           catch { model.reportPickerFailure("The local project folder could not be prepared.") }
         }
+      }
+      .alert("Export PNG", isPresented: $isExportNamePresented) {
+        TextField("PNG name", text: $exportName)
+          .accessibilityIdentifier("export.name")
+        Button("Choose folder") {
+          do { _ = try PNGExportStore.filename(exportName) }
+          catch { model.reportPickerFailure(PNGExportFailure.invalidName.message); return }
+          picker = .exportFolder; isImportPresented = true
+        }
+        .accessibilityIdentifier("export.folder")
+        Button("Cancel", role: .cancel) {}
+      } message: {
+        Text("Export full-resolution committed pixels under a new name. Existing files and originals are unchanged.")
       }
       .alert("Save project", isPresented: $isSaveNamePresented) {
         TextField("Project name", text: $projectName)
@@ -134,6 +150,9 @@ import TraktionDomain
         Button("Save project") { isSaveNamePresented = true }
           .disabled(!model.canSaveProject)
           .accessibilityIdentifier("workspace.project.save")
+        Button("Export PNG") { isExportNamePresented = true }
+          .disabled(!model.canExportPNG)
+          .accessibilityIdentifier("workspace.export")
         if let message = model.projectMessage {
           Text(message).font(.callout).foregroundStyle(.secondary)
             .accessibilityIdentifier("workspace.project.status")

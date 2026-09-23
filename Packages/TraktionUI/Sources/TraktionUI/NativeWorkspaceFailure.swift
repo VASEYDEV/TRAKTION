@@ -5,6 +5,7 @@ public enum NativeWorkspaceFailure: Error, Equatable, Sendable {
   case importFailure(PNGImportFailure)
   case reconstruction(ReconstructionFailure)
   case selection(String)
+  case export(PNGExportFailure)
   case project(LocalProjectFailure)
   case unexpected
 
@@ -23,6 +24,8 @@ public enum NativeWorkspaceFailure: Error, Equatable, Sendable {
       return "Import failed. Your current captures were kept. \(error)"
     case .selection(let detail):
       return "Could not open the selection. \(detail)"
+    case .export(let error):
+      return error.message
     case .project(let error):
       return error.message
     case .unexpected:

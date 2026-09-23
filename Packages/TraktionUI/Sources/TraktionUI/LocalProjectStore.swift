@@ -242,28 +242,8 @@ public struct LocalProjectStore: LocalProjectWorking {
 
   private func write(_ snapshot: LocalProjectSnapshot, manifest: Data, destination: URL,
     cancellation: LocalProjectCancellation) throws -> URL {
-    try cancellation.check()
-    try requireAbsentDestination(destination)
-    // A writer with access to the chosen folder must never be able to replace
-    // the source pathname between flushing it and publishing its hard link.
-    let privateParent = FileManager.default.temporaryDirectory.resolvingSymlinksInPath()
-    let selectedFolder = destination.deletingLastPathComponent().resolvingSymlinksInPath()
-    guard !privateParent.pathComponents.starts(with: selectedFolder.pathComponents) else {
-      throw LocalProjectFailure.unsupportedLocation
-    }
-    let stage = privateParent.appendingPathComponent("traktion-save-\(UUID().uuidString)", isDirectory: true)
-    // mkdir is exclusive: an existing directory must never become ours to clean.
-    guard mkdir(stage.path, mode_t(0o700)) == 0 else { throw LocalProjectFailure.fileAccess }
-    return try withCleanup(stage, cancellation: cancellation) {
-      let temporary = stage.appendingPathComponent("project.tmp")
-      #if canImport(Darwin)
-      let descriptor = Darwin.open(temporary.path, O_WRONLY | O_CREAT | O_EXCL, mode_t(0o600))
-      #else
-      let descriptor = Glibc.open(temporary.path, O_WRONLY | O_CREAT | O_EXCL, mode_t(0o600))
-      #endif
-      guard descriptor >= 0 else { throw LocalProjectFailure.fileAccess }
-      let output = FileHandle(fileDescriptor: descriptor, closeOnDealloc: true)
-      defer { try? output.close() }
+    try AtomicOutputPublisher(beforeCommit: beforeCommit, afterCommit: afterCommit,
+      removeOwned: removeOwned).publish(destination: destination, cancellation: cancellation) { output in
       try output.write(contentsOf: Self.magic + Self.uint32(1) + Self.uint32(UInt32(manifest.count)))
       try output.write(contentsOf: manifest)
       for capture in snapshot.captures {
@@ -276,30 +256,7 @@ public struct LocalProjectStore: LocalProjectWorking {
           offset = end
         }
       }
-      try output.synchronize()
-      try output.close()
-      try beforeCommit()
-      try cancellation.commit {
-        // The atomic no-clobber publication is the authority. A destination
-        // appearing after the early check must be refused by link itself.
-        guard link(temporary.path, destination.path) == 0 else {
-          let failure = errno
-          if failure == EEXIST { throw LocalProjectFailure.destinationExists }
-          if failure == EXDEV || failure == ENOTSUP || failure == EOPNOTSUPP {
-            throw LocalProjectFailure.unsupportedLocation
-          }
-          throw LocalProjectFailure.fileAccess
-        }
-      }
-      afterCommit()
-      return destination
     }
-  }
-
-  private func requireAbsentDestination(_ url: URL) throws {
-    var info = stat()
-    if lstat(url.path, &info) == 0 { throw LocalProjectFailure.destinationExists }
-    guard errno == ENOENT else { throw LocalProjectFailure.fileAccess }
   }
 
   private func read(_ url: URL, retainedRasterBytes: Int, retainedEncodedBytes: Int,

@@ -9,6 +9,7 @@ public enum NativeWorkspaceOperation: Equatable, Sendable {
   case importing
   case reconstructing
   case openingProject
+  case exportingPNG
   case savingProject
 }
 
@@ -29,6 +30,7 @@ public final class NativeWorkspaceModel {
   public private(set) var orderConfirmed = false
 
   @ObservationIgnored private let worker: any NativeWorkspaceWorking
+  @ObservationIgnored private let exports: any PNGExportWorking
   @ObservationIgnored private let projects: any LocalProjectWorking
   @ObservationIgnored private let limits: PNGImportLimits
   @ObservationIgnored private let queue = DispatchQueue(
@@ -56,10 +58,12 @@ public final class NativeWorkspaceModel {
   public init(
     worker: (any NativeWorkspaceWorking)? = nil,
     limits: PNGImportLimits = PNGImportLimits(),
-    projects: (any LocalProjectWorking)? = nil
+    projects: (any LocalProjectWorking)? = nil,
+    exports: (any PNGExportWorking)? = nil
   ) {
     self.worker = worker ?? NativeWorkspaceWorker(limits: limits)
     self.projects = projects ?? LocalProjectStore(limits: limits)
+    self.exports = exports ?? PNGExportStore(maximumWorkingBytes: limits.maximumRetainedRasterBytes)
     self.limits = limits
     self.inspection = NativeInspectionModel()
   }
@@ -67,6 +71,7 @@ public final class NativeWorkspaceModel {
   init(worker: any NativeWorkspaceWorking, inspection: NativeInspectionModel) {
     self.worker = worker
     self.projects = LocalProjectStore()
+    self.exports = PNGExportStore()
     self.limits = PNGImportLimits()
     self.inspection = inspection
   }
@@ -76,6 +81,10 @@ public final class NativeWorkspaceModel {
   public var canSaveProject: Bool {
     !isBusy && result != nil && inspection.editing.document != nil
       && inspection.editing.draft == nil && captures.allSatisfy { $0.originalPNG != nil }
+  }
+
+  public var canExportPNG: Bool {
+    !isBusy && result != nil && inspection.editing.document != nil && inspection.editing.draft == nil
   }
 
   public var canReconstruct: Bool {
@@ -92,6 +101,7 @@ public final class NativeWorkspaceModel {
     case .importing: return "Reading and validating PNG captures…"
     case .reconstructing: return "Reconstructing on this device…"
     case .openingProject: return "Validating and reopening the local project…"
+    case .exportingPNG: return "Exporting committed pixels to PNG…"
     case .savingProject: return "Saving original captures and committed seams…"
     case nil:
       if result != nil { return isModified ? "Seams adjusted. Original files and registration evidence are unchanged." : "Reconstruction complete. Original files are unchanged." }
@@ -175,6 +185,39 @@ public final class NativeWorkspaceModel {
         }
         switch outcome {
         case .success(let url): self.projectMessage = "Saved \(url.lastPathComponent)."
+        case .failure(let error): self.failure = error
+        }
+      }
+    }
+  }
+
+  public func exportPNG(folder: URL, name: String) {
+    guard canExportPNG, let document = inspection.editing.document else { return }
+    inspection.close()
+    let retained: Int
+    do { retained = try ownedRasterBytes() }
+    catch { failure = .export(.resourceLimit); return }
+    let snapshot = LocalProjectSnapshot(captures: captures,
+      originalPlan: document.originalPlan, committedPlan: document.plan)
+    let exports = self.exports
+    let job = begin(.exportingPNG)
+    queue.async { [weak self] in
+      let outcome: Result<URL, NativeWorkspaceFailure>
+      do { outcome = .success(try exports.export(snapshot, folder: folder, name: name,
+        retainedRasterBytes: retained, cancellation: job.token)) }
+      catch let error as PNGExportFailure { outcome = .failure(.export(error)) }
+      catch { outcome = .failure(.unexpected) }
+      Task { @MainActor [weak self] in
+        guard let self, self.activeJob?.id == job.id else { return }
+        let committed = job.token.didCommit
+        guard self.finishJob(id: job.id) || committed else {
+          if case .failure(.export(.cleanupFailed(let saved))) = outcome {
+            self.failure = .export(.cleanupFailed(saved: saved))
+          }
+          return
+        }
+        switch outcome {
+        case .success(let url): self.projectMessage = "Exported \(url.lastPathComponent)."
         case .failure(let error): self.failure = error
         }
       }
