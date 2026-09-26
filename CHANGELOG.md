@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### CI minute reduction (2026-09-26)
+
+- **Apple lanes run only on Apple-path changes** (task 0026): the `ci` workflow gains a `changes` job (`dorny/paths-filter` v4.0.3, SHA-pinned) so the macOS lanes (`apple`, `ios-release`, `ios`) run on pull requests only when Apple-relevant paths changed, on manual dispatch always, and never on push to `main`. `verification / required` keeps its name and passes when Apple lanes skip. Removes the duplicate post-merge Apple runs (about a third of Apple minutes in September 2026).
+
 ### Device testing preparation (2026-09-26)
 
 - Add a required ordinary iOS device-SDK Release build, separate from fixture-enabled
