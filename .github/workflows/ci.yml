@@ -14,6 +14,34 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: detect / changed paths
+    runs-on: ubuntu-24.04
+    outputs:
+      apple: ${{ steps.filter.outputs.apple }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1, Node 24
+        with:
+          fetch-depth: 0
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        continue-on-error: true
+        with:
+          filters: |
+            apple:
+              - 'App/**'
+              - 'Packages/**'
+              - 'Tests/**'
+              - 'Tools/**'
+              - 'Package.swift'
+              - 'config/**'
+              - 'scripts/gate.sh'
+              - 'scripts/verify-ios.sh'
+              - 'scripts/verify-ios-release.py'
+              - 'scripts/check-ui-test-results.py'
+              - 'scripts/collect-ios-diagnostics.py'
+              - '.github/workflows/ci.yml'
+
   repository:
     name: verify / repository
     runs-on: ubuntu-24.04
@@ -65,6 +93,8 @@ jobs:
 
   apple:
     name: verify / Apple package and PNG smoke
+    needs: changes
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && needs.changes.outputs.apple != 'false')
     runs-on: macos-15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1, Node 24
@@ -106,6 +136,8 @@ jobs:
 
   ios-release:
     name: verify / iOS device Release
+    needs: changes
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && needs.changes.outputs.apple != 'false')
     runs-on: macos-15
     timeout-minutes: 20
     steps:
@@ -125,6 +157,8 @@ jobs:
 
   ios:
     name: verify / iOS simulator
+    needs: changes
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && needs.changes.outputs.apple != 'false')
     runs-on: macos-15
     timeout-minutes: 30
     steps:
@@ -149,19 +183,27 @@ jobs:
   required:
     name: verification / required
     if: always()
-    needs: [repository, core-linux, apple, ios-release, ios]
+    needs: [changes, repository, core-linux, apple, ios-release, ios]
     runs-on: ubuntu-24.04
     steps:
       - name: Require every verification lane
         env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
           REPOSITORY_RESULT: ${{ needs.repository.result }}
           CORE_LINUX_RESULT: ${{ needs.core-linux.result }}
           APPLE_RESULT: ${{ needs.apple.result }}
           IOS_RESULT: ${{ needs.ios.result }}
           IOS_RELEASE_RESULT: ${{ needs.ios-release.result }}
         run: |
+          test "$CHANGES_RESULT" = success
           test "$REPOSITORY_RESULT" = success
           test "$CORE_LINUX_RESULT" = success
-          test "$APPLE_RESULT" = success
-          test "$IOS_RESULT" = success
-          test "$IOS_RELEASE_RESULT" = success
+          for result in "$APPLE_RESULT" "$IOS_RESULT" "$IOS_RELEASE_RESULT"; do
+            case "$result" in
+              success|skipped) ;;
+              *)
+                echo "Apple lane result was '$result'; expected success or skipped" >&2
+                exit 1
+                ;;
+            esac
+          done
