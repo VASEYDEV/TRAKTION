@@ -643,7 +643,8 @@ final class TRAKTIONLaunchTests: XCTestCase {
   }
 
   private func recordFilesState(_ app: XCUIApplication) {
-    let tree = XCTAttachment(string: app.debugDescription)
+    let context = "Test: \(name)\nUTC: \(ISO8601DateFormatter().string(from: Date()))\n"
+    let tree = XCTAttachment(string: context + app.debugDescription)
     tree.name = "Actual Files picker accessibility tree"
     tree.lifetime = .keepAlways
     add(tree)

@@ -3,7 +3,7 @@
 The Xcode target imports 2–10 opaque equal-width PNG captures from Files,
 requires explicit top-to-bottom order confirmation, and shows local supplied-order
 reconstruction or a typed failure, pixel/joint inspection and reversible seam
-adjustment, plus local project save/open. Export remains a subsequent task.
+adjustment, local project save/open and committed full-resolution PNG export.
 No production icon or physical-device release is claimed.
 
 ## Open and run
@@ -60,6 +60,14 @@ Set `TRAKTION_IOS_ARTIFACTS` to change that parent directory. Runs do not
 overwrite each other's diagnostics. `TRAKTION.xcresult` contains XCTest
 results; `build.log`, `launch.log`, `tests.log`, and toolchain/device JSON
 support diagnosis. CI uploads those files as `traktion-ios-verification`.
+Build, launch and test logs retain stderr as well as stdout. Before a failed
+run's dedicated simulator is deleted, `collect-ios-diagnostics.py` requests the
+last 25 minutes of TRAKTION, SpringBoard and document/FileProvider service logs.
+Collection stops after 20 seconds or 8 MiB per output file. The service log,
+error log and status JSON distinguish collected, unavailable, failed, timed-out
+and size-limited evidence. Collection failure never replaces the original
+verification failure. These logs come only from the dedicated simulator seeded
+with synthetic fixtures, not a personal simulator or physical device.
 Screenshots are attached to `TRAKTION.xcresult`; test assertion success and
 actual human/agent visual inspection must be reported separately. These tests
 do not automate third-party Files provider selection or physical-device use.
@@ -67,9 +75,42 @@ Build products remain under the run's `DerivedData` directory and are not
 uploaded. Missing prerequisites, build failures, launch failures, and failed
 UI assertions make the lane and required aggregator fail.
 
+Issue [#23](https://github.com/VASEYDEV/TRAKTION/issues/23) records one intermittent
+blank system Files sheet during PNG export. The unchanged rerun and subsequent
+main run 35916314107 passed; a root cause is not established. Files failure
+attachments include the test name and UTC timestamp for service-log correlation.
+Diagnostics do not repair or suppress the failure. Assertions, wait durations and
+the complete native test inventory remain mandatory; no automatic retry was added.
+
 On Linux, `bash -n scripts/verify-ios.sh` checks shell syntax and
 `bash scripts/check-repository.sh` checks repository policy. Neither runs
 Xcode, compiles SwiftUI, or establishes that the app boots.
+
+## Ordinary device Release verification
+
+On a Mac with Xcode, run:
+
+```sh
+python3 scripts/verify-ios-release.py
+```
+
+This builds the shared scheme's ordinary Release for `generic/platform=iOS` in
+a unique `.traktion-local/ios-release/run.*` directory. Signing is disabled for
+this invocation only. It does not enable the simulator test fixture flag.
+The required CI job `verify / iOS device Release` runs the same command separately
+from native UI verification; both jobs must pass the existing required aggregate.
+
+The checker validates effective Release/device settings, optimization, bundle ID,
+version and minimum OS, then checks the built app's metadata, arm64 architecture,
+iPhone/iPad support and exclusion of test bundles, fixture resources and compiled
+fixture-bootstrap markers. It refuses `DEBUG` or `TRAKTION_UI_TESTING`, including
+Swift `-D` flags. CI retains `build.log`, settings errors, Xcode version,
+allowlisted effective settings and `validation.json`
+(or `failure.txt`) as `traktion-ios-device-release`; it does not upload app binaries.
+Use `--artifacts /absolute/path` to select a different diagnostics parent.
+
+This is an unsigned device-SDK build, not an installable signed alpha, an archive
+validated for App Store distribution, or proof of device runtime behavior.
 
 ## Physical-device signing
 Simulator CI needs no Apple account or team. A physical device does.
@@ -87,7 +128,23 @@ accepts these as command-line build settings. UI test bundle identifiers are
 derived from the app identifier so they remain distinct.
 
 Choose the intended team in Xcode, connect your device, and use its normal
-signing flow. Do not add account credentials, private keys, certificates,
+signing flow. After configuring your actual team and bundle identifier, the
+same checker can explicitly build for the connected device identifier shown
+in Xcode's Devices and Simulators window:
+
+```sh
+python3 scripts/verify-ios-release.py --signed-device YOUR_CONNECTED_DEVICE_ID
+```
+
+The command refuses absent/invalid team settings or disabled signing. It retains
+normal automatic-signing behavior without enabling provisioning updates or device
+registration. Existing signing assets must already permit the build. After building,
+it verifies the signature, matching team and embedded profile. It does not install,
+launch, register an App ID, accept agreements, export an IPA or upload anything.
+Use Xcode to install/run the built app, then record physical-device QA separately.
+The command's existence and orchestration tests do not establish a signed build.
+
+Do not add account credentials, private keys, certificates,
 provisioning profiles, or the local signing file to git. The simulator script
 does not register App IDs, manage certificates, accept agreements, or enable
 automatic provisioning updates. Device installation must be verified with

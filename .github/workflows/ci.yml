@@ -21,7 +21,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1, Node 24
       - name: Check repository policy and structured files
         run: bash scripts/check-repository.sh
-      - name: Verify native test-discovery guard
+      - name: Verify native inventory, Release validation and diagnostics guards
         run: python3 -m unittest discover -s Tests/Repository -v
 
   core-linux:
@@ -104,6 +104,25 @@ jobs:
           path: ${{ runner.temp }}/traktion-synthetic-artifacts
           if-no-files-found: ignore
 
+  ios-release:
+    name: verify / iOS device Release
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1, Node 24
+      - name: Build and validate ordinary unsigned device Release
+        run: python3 scripts/verify-ios-release.py --artifacts "${{ runner.temp }}/traktion-ios-release"
+      - name: Retain device Release verification evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1, Node 24
+        with:
+          name: traktion-ios-device-release
+          path: |
+            ${{ runner.temp }}/traktion-ios-release/run.*/*.log
+            ${{ runner.temp }}/traktion-ios-release/run.*/*.json
+            ${{ runner.temp }}/traktion-ios-release/run.*/*.txt
+          if-no-files-found: warn
+
   ios:
     name: verify / iOS simulator
     runs-on: macos-15
@@ -130,7 +149,7 @@ jobs:
   required:
     name: verification / required
     if: always()
-    needs: [repository, core-linux, apple, ios]
+    needs: [repository, core-linux, apple, ios-release, ios]
     runs-on: ubuntu-24.04
     steps:
       - name: Require every verification lane
@@ -139,8 +158,10 @@ jobs:
           CORE_LINUX_RESULT: ${{ needs.core-linux.result }}
           APPLE_RESULT: ${{ needs.apple.result }}
           IOS_RESULT: ${{ needs.ios.result }}
+          IOS_RELEASE_RESULT: ${{ needs.ios-release.result }}
         run: |
           test "$REPOSITORY_RESULT" = success
           test "$CORE_LINUX_RESULT" = success
           test "$APPLE_RESULT" = success
           test "$IOS_RESULT" = success
+          test "$IOS_RELEASE_RESULT" = success
