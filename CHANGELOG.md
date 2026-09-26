@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Device testing preparation (2026-09-26)
+
+- Add a required ordinary iOS device-SDK Release build, separate from fixture-enabled
+  simulator testing, with effective-settings and built-product validation.
+- Add explicit local signed-device build mode using the configured actual team;
+  no automatic provisioning updates, installation or distribution is performed.
+- Preserve stderr and bounded failure-only simulator service diagnostics before
+  cleanup; correlate Files failure attachments by test name and UTC timestamp.
+- Keep issue #23 open: the intermittent blank Files sheet has no confirmed root cause.
+
 ### Fixed
 
 - Repository About metadata now describes the native screenshot product. The active

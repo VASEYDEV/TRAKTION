@@ -18,7 +18,9 @@ Completed packets below are historical evidence, not queued work. Check current
 
 1. **[0023](0023-bounded-png-export.md)** is complete: bounded committed PNG export,
    independent review and native verification passed. PR #22 records final integration.
-2. Physical-device signing/resource verification and production artwork require
+2. **[0025](0025-device-release-readiness.md)** adds ordinary device Release
+   verification and bounded native failure diagnostics. Its PR records exact CI
+   and integration status. Actual physical-device signing/resource verification and production artwork require
    release preparation. The [current handoff](../notes/2026-09-21-integration-and-testing.md)
    separates simulator testing, a signed device alpha, and TestFlight readiness.
 3. Repository settings corrected September 23: About describes the native product;
@@ -59,6 +61,7 @@ section are the integration evidence; develop subsequent work from current main.
 | [0022](0022-local-project-persistence.md) | Local project persistence | editor | done | Codex | PR #21 |
 | [0023](0023-bounded-png-export.md) | Bounded committed-result PNG export | export | complete | Codex | PR #22; ADR-025; run 35908973342 |
 | [0024](0024-stack-integration-and-testing-handoff.md) | Stack integration and testing handoff | workflow/docs | verified handoff; final integration evidence in PR | Codex | PR #21 |
+| [0025](0025-device-release-readiness.md) | Device Release verification and native failure diagnostics | testing readiness | implemented; PR verification gates integration | Codex | current continuation; issue #23 remains open |
 
 ## Superseded packets and pull requests
 

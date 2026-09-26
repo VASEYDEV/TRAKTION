@@ -15,6 +15,12 @@ simulator_id=""
 cleanup() {
   result=$?
   trap - EXIT
+  # Preserve remote Files/provider evidence before the dedicated simulator goes
+  # away. The collector bounds duration and file size, and never changes result.
+  if (( result != 0 )) && [[ -n "$simulator_id" ]]; then
+    python3 scripts/collect-ios-diagnostics.py --simulator "$simulator_id" --output "$run_dir" \
+      || echo "Could not collect simulator service diagnostics" >&2
+  fi
   # Keep visible evidence even when a UI assertion stops the script before its
   # normal export. Preserve the original failure status if diagnostics fail.
   for configuration in debug release; do
@@ -86,7 +92,7 @@ build_args=(
   -derivedDataPath "$run_dir/DerivedData"
   CODE_SIGNING_ALLOWED=NO
 )
-xcodebuild build-for-testing "${build_args[@]}" | tee "$run_dir/build.log"
+xcodebuild build-for-testing "${build_args[@]}" 2>&1 | tee "$run_dir/build.log"
 
 app_path="$run_dir/DerivedData/Build/Products/Debug-iphonesimulator/TRAKTION.app"
 test -d "$app_path"
@@ -124,7 +130,7 @@ import sys
 Path(sys.argv[1]).write_bytes(b"TRAKTION" + (1).to_bytes(4, "big") + (2).to_bytes(4, "big") + b"{}")
 PYFIXTURE
 
-xcrun simctl launch --terminate-running-process "$simulator_id" "$bundle_id" | tee "$run_dir/launch.log"
+xcrun simctl launch --terminate-running-process "$simulator_id" "$bundle_id" 2>&1 | tee "$run_dir/launch.log"
 
 xcodebuild test-without-building "${build_args[@]}" \
   -parallel-testing-enabled NO \
@@ -133,7 +139,7 @@ xcodebuild test-without-building "${build_args[@]}" \
   -default-test-execution-time-allowance 120 \
   -maximum-test-execution-time-allowance 180 \
   -skip-testing:TRAKTIONUITests/TRAKTIONLaunchTests/testLongPixelInspectionPanZoomJointSourcesAndReturn \
-  -resultBundlePath "$run_dir/TRAKTION.xcresult" | tee "$run_dir/tests.log"
+  -resultBundlePath "$run_dir/TRAKTION.xcresult" 2>&1 | tee "$run_dir/tests.log"
 
 python3 scripts/check-ui-test-results.py \
   --source Tests/UITests/TRAKTIONLaunchTests.swift --log "$run_dir/tests.log" --phase debug
@@ -156,7 +162,7 @@ release_args=(
   SWIFT_ACTIVE_COMPILATION_CONDITIONS=TRAKTION_UI_TESTING
   CODE_SIGNING_ALLOWED=NO
 )
-xcodebuild build-for-testing "${release_args[@]}" | tee "$run_dir/release-build.log"
+xcodebuild build-for-testing "${release_args[@]}" 2>&1 | tee "$run_dir/release-build.log"
 xcrun simctl terminate "$simulator_id" "$bundle_id" || true
 xcrun simctl install "$simulator_id" "$run_dir/DerivedData/Build/Products/Release-iphonesimulator/TRAKTION.app"
 xcodebuild test-without-building "${release_args[@]}" \
@@ -166,7 +172,7 @@ xcodebuild test-without-building "${release_args[@]}" \
   -default-test-execution-time-allowance 120 \
   -maximum-test-execution-time-allowance 180 \
   -only-testing:TRAKTIONUITests/TRAKTIONLaunchTests/testLongPixelInspectionPanZoomJointSourcesAndReturn \
-  -resultBundlePath "$run_dir/TRAKTION-Release.xcresult" | tee "$run_dir/release-tests.log"
+  -resultBundlePath "$run_dir/TRAKTION-Release.xcresult" 2>&1 | tee "$run_dir/release-tests.log"
 
 # Require the intended case, not a zero-test success from a stale selector.
 python3 scripts/check-ui-test-results.py \

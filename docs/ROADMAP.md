@@ -1,6 +1,6 @@
 # TRAKTION Roadmap
 
-## Status (2026-09-23)
+## Status (2026-09-26)
 
 | Milestone | State | Evidence |
 | --- | --- | --- |
@@ -41,9 +41,14 @@ Horizontal reconstruction, web capture, share extension, PDF, JPEG/HEIC, split e
 
 1. Bounded committed PNG export [0023](tasks/0023-bounded-png-export.md) is verified.
    Track further correction tools in a new packet; do not reopen completed stacks.
-2. Establish a signed device build using the actual developer team, then verify
+2. Task [0025](tasks/0025-device-release-readiness.md) adds required ordinary
+   device-SDK Release verification, an explicit local signed-build command and
+   bounded native failure diagnostics. Establish a signed device build using
+   the actual developer team, then verify
    real captures, resource behavior, Files save/reopen, accessibility and lifecycle
    behavior. Simulator checks already support developer testing of current features.
+   Investigate intermittent blank Files presentation in issue #23; an unchanged
+   passing rerun and successful post-merge CI do not establish its root cause.
 3. Finish production icon packaging, release configuration and distribution
    provisioning before a TestFlight build. Broader capture modes are later scope.
 
