@@ -62,6 +62,7 @@ section are the integration evidence; develop subsequent work from current main.
 | [0023](0023-bounded-png-export.md) | Bounded committed-result PNG export | export | complete | Codex | PR #22; ADR-025; run 35908973342 |
 | [0024](0024-stack-integration-and-testing-handoff.md) | Stack integration and testing handoff | workflow/docs | verified handoff; final integration evidence in PR | Codex | PR #21 |
 | [0025](0025-device-release-readiness.md) | Device Release verification and native failure diagnostics | testing readiness | implemented; PR verification gates integration | Codex | current continuation; issue #23 remains open |
+| [0026](0026-ci-minute-reduction.md) | CI Apple-lane minute reduction | workflow | implemented; PR verification gates integration | Muse | — |
 
 ## Superseded packets and pull requests
 
